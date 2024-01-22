@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+#set -e
+
+ROOT_PATH="$(git rev-parse --show-toplevel)"
+source ${ROOT_PATH}/scripts/_helper
+
+cat <<EOF >"${ROOT_PATH}/tygo.yaml"
+packages:
+  - path: "github.com/shurco/gosign/internal/models"
+    output_path: "web/src/models/index.ts"
+EOF
+
+tygo generate --config ${ROOT_PATH}/tygo.yaml
+rm -rf ${ROOT_PATH}/tygo.yaml

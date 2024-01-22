@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+#set -e
+
+ROOT_PATH="$(git rev-parse --show-toplevel)"
+source ${ROOT_PATH}/scripts/_helper
+
+support_arch
+
+case "$OS" in
+Darwin)
+  brew install goose protobuf protoc-gen-go
+  ;;
+Linux)
+  mkdir -p "${HOME}/.local/bin"
+
+  print_header "Install/Update goose"
+  go install github.com/pressly/goose/v3/cmd/goose@latest >/dev/null 2>&1
+  print_answer "SUCCESS" green
+
+  print_header "Install/Update tygo"
+  go go install github.com/gzuidhof/tygo@latest >/dev/null 2>&1
+  print_answer "SUCCESS" green
+
+  source ~/.profile
+  ;;
+*)
+  print_header "Install/Update tools"
+  print_answer "ERROR" red
+  echo "Unsupported OS: $OS"
+  exit
+  ;;
+esac

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+ROOT_PATH="$(git rev-parse --show-toplevel)"
+source ${ROOT_PATH}/scripts/_helper
+
+CORE_DIR="${ROOT_PATH}/docker/core"
+
+mkdir -p "${CORE_DIR}"
+
+case "$1" in
+postgres)
+  print_header "Generate PostgresQL keys"
+  openssl genrsa -out "${CORE_DIR}/postgres_private.key" 2048
+  openssl req -nodes -new -x509 -days 1825 -sha256 \
+    -subj "/C=US/ST=Delaware/L=Middletown/O=Werbot, Inc./OU=werbot/CN=werbot.com" \
+    -addext "subjectAltName=DNS:werbot.com" \
+    -key "${CORE_DIR}/postgres_private.key" \
+    -out "${CORE_DIR}/postgres_certificate.key"
+  sudo chown 70 "${CORE_DIR}/postgres_private.key"
+  sudo chmod 600 "${CORE_DIR}/postgres_private.key"
+  print_answer "SUCCESS" green
+  ;;
+
+*)
+  echo "Parameters not passed"
+  echo
+  echo "$0 <command>"
+  echo
+  echo "command:"
+  print_help postgres "Generate PostgresQL keys"
+  ;;
+esac
