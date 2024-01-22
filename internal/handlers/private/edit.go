@@ -92,7 +92,10 @@ func Template(c *fiber.Ctx) error {
 		if serviceName == "disk" {
 			document.URL = "http://localhost:8088/drive/pages"
 		}
-		document.Metadata.Pdf.NumberOfPages = 1
+
+		if document.Metadata.Pdf.NumberOfPages == 0 {
+			document.Metadata.Pdf.NumberOfPages = 1
+		}
 		document.PreviewImages = previewImages
 
 		response.Documents = append(response.Documents, *document)

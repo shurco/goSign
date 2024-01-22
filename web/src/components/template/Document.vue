@@ -7,7 +7,7 @@
   </div>
 </template>
 <script>
-import Page from "@/components/document/Page.vue";
+import Page from "@/components/template/Page.vue";
 
 export default {
   components: {

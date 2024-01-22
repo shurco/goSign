@@ -43,8 +43,8 @@
 
 <script setup lang="ts">
 import { nextTick, ref, computed, provide, onMounted, onUnmounted } from "vue";
-import Document from "@/components/document/Document.vue";
-import DocumentPreview from "@/components/document/Preview.vue";
+import Document from "@/components/template/Document.vue";
+import DocumentPreview from "@/components/template/Preview.vue";
 import Fields from "@/components/field/List.vue";
 import type { Template } from "@/models";
 import { apiGet } from "@/utils/api";

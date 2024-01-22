@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import FieldArea from "@/components/document/Area.vue"
+import FieldArea from "@/components/template/Area.vue"
 
 export default {
   components: {
