@@ -12,8 +12,8 @@ postgres)
   print_header "Generate PostgresQL keys"
   openssl genrsa -out "${CORE_DIR}/postgres_private.key" 2048
   openssl req -nodes -new -x509 -days 1825 -sha256 \
-    -subj "/C=US/ST=Delaware/L=Middletown/O=Werbot, Inc./OU=werbot/CN=werbot.com" \
-    -addext "subjectAltName=DNS:werbot.com" \
+    -subj "/C=US/ST=Delaware/L=Middletown/O=goSign/OU=goSign/CN=goSign.io" \
+    -addext "subjectAltName=DNS:goSign.io" \
     -key "${CORE_DIR}/postgres_private.key" \
     -out "${CORE_DIR}/postgres_certificate.key"
   sudo chown 70 "${CORE_DIR}/postgres_private.key"

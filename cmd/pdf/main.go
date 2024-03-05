@@ -17,7 +17,7 @@ func main() {
 
 	// ----
 	pdf.AddPage()
-	tpl1 := pdf.ImportPage("example-pdf.pdf", 1, "/MediaBox")
+	tpl1 := pdf.ImportPage("example.pdf", 1, "/MediaBox")
 	pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
 
 	// ----
@@ -50,5 +50,5 @@ func main() {
 		Creator: "goSign (https://github.com/shurco/goSign)",
 		// Producer: "Producer",
 	})
-	pdf.WritePdf("example.pdf")
+	pdf.WritePdf("new.pdf")
 }

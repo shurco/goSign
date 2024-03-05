@@ -52,11 +52,13 @@ func Template(c *fiber.Ctx) error {
 		SELECT
 			storage_attachment.id,
 			storage_attachment.service_name,
-			jsonb_agg(jsonb_build_object (
-				'id', storage_blob.id,
-				'metadata', storage_blob.metadata,
-				'filename', storage_blob.filename
-			)) AS preview_images,
+			jsonb_agg(
+				jsonb_build_object(
+					'id', storage_blob.id,
+					'metadata', storage_blob.metadata,
+					'filename', storage_blob.filename
+				)
+			) AS preview_images,
 			storage_attachment.created_at
 		FROM
 			"storage_attachment"
