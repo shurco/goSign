@@ -36,7 +36,7 @@
     "typescript": "~5.4.4",
     "vite": "^5.2.8",
     "vite-plugin-svg-icons": "^2.0.1",
-    "vite-plugin-vue-devtools": "^7.0.26",
+    "vite-plugin-vue-devtools": "^7.0.27",
     "vue-tsc": "^2.0.11"
   }
 }
