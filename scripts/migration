@@ -81,13 +81,21 @@ elif [[ $MIGRATION == "dev" ]]; then
   arr_goose=(up down reset)
   if [[ " ${arr_goose[*]} " =~ " $GOOSE_ACTION " ]]; then
     SOURCE=${BASH_SOURCE[0]}
-    if [ $GOOSE_ACTION == "up" ]; then     
-      mkdir -p "${LC_PAGES_DIR}"
-      cp -R ${ROOT_PATH}/fixtures/pages/* ${LC_PAGES_DIR}
-      mkdir -p "${LC_SIGNED_DIR}"
-      cp -R ${ROOT_PATH}/fixtures/signed/* ${LC_SIGNED_DIR}
-      mkdir -p "${LC_UPLOADS_DIR}"
-      cp -R ${ROOT_PATH}/fixtures/uploads/* ${LC_UPLOADS_DIR}
+    if [ $GOOSE_ACTION == "up" ]; then
+      declare -A FIXTURES_MAP=(
+        ["pages"]="${LC_PAGES_DIR}"
+        ["signed"]="${LC_SIGNED_DIR}"
+        ["uploads"]="${LC_UPLOADS_DIR}"
+      )
+
+      for fixture in "${!FIXTURES_MAP[@]}"; do
+        src_dir="${ROOT_PATH}/fixtures/${fixture}/"
+        dest_dir="${FIXTURES_MAP[$fixture]}"
+        mkdir -p "${dest_dir}"
+        if [ "$(ls -A "${src_dir}")" ]; then
+          cp -R "${src_dir}"* "${dest_dir}"
+        fi
+      done
 
       $SOURCE up
       $SOURCE test up

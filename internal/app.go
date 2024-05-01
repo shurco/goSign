@@ -7,10 +7,12 @@ import (
 	"os/signal"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 
+	"github.com/shurco/gosign/internal/config"
+	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
-	"github.com/shurco/gosign/pkg/config"
+	"github.com/shurco/gosign/internal/trust"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
@@ -18,45 +20,62 @@ import (
 )
 
 func New() error {
+	fmt.Print("✍️ Sign documents without stress\n")
+
 	log := logging.Log
 
-	godotenv.Load(".env", "./.env")
+	if err := config.Load(); err != nil {
+		log.Err(err).Send()
+		return err
+	}
+	cfg := config.Data()
 
-	// directories init
-	if err := dirInit(); err != nil {
+	// directories create
+	if err := createDirs(); err != nil {
 		log.Err(err).Send()
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// redis init
-	redis.NewClient(
-		ctx,
-		config.GetString("REDIS_ADDR", "localhost:6379"),
-		config.GetString("REDIS_PASSWORD", "redisPassword"),
-	)
-	defer redis.Conn.Close()
+	redis.New(context.Background(), cfg.Redis.Address, cfg.Redis.Password)
 	if err := redis.Conn.Ping(); err != nil {
 		log.Err(err).Send()
 		return err
 	}
+	defer redis.Conn.Close()
 
-	// pastgresql init
-	err := postgres.NewClient(ctx, &postgres.PgSQLConfig{
-		DSN: fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=require",
-			config.GetString("POSTGRES_USER", "goSign"),
-			config.GetString("POSTGRES_PASSWORD", "postgresPassword"),
-			config.GetString("POSTGRES_HOST", "localhost:5432"),
-			config.GetString("POSTGRES_DB", "goSign"),
-		),
+	// postgresql init
+	pool, err := postgres.New(context.Background(), cfg.Postgres)
+	if err != nil {
+		log.Err(err).Send()
+		return err
+	}
+	defer pool.Close()
+
+	// db init
+	if err := queries.Init(pool); err != nil {
+		log.Err(err).Send()
+		return err
+	}
+
+	// update trust certs
+	if err = trust.Update(cfg.Trust); err != nil {
+		log.Err(err).Send()
+		return err
+	}
+
+	task := cron.New()
+	_, err = task.AddFunc("0 */12 * * *", func() {
+		fmt.Print("cron")
+		if err := trust.Update(cfg.Trust); err != nil {
+			log.Err(err).Send()
+		}
 	})
 	if err != nil {
 		log.Err(err).Send()
 		return err
 	}
-	defer postgres.Pool.Close()
+	task.Start()
 
 	// web init
 	app := fiber.New(fiber.Config{
@@ -73,24 +92,30 @@ func New() error {
 	routes.ApiRoutes(app)
 	routes.NotFoundRoute(app)
 
-	fmt.Print("✍️ Sign documents without stress\n")
+	fmt.Printf("├─[🚀] Admin UI: http://%s/_/\n", cfg.HTTPAddr)
+	fmt.Printf("├─[🚀] Public UI: http://%s/\n", cfg.HTTPAddr)
+	fmt.Printf("└─[🚀] Public API: http://%s/api/\n", cfg.HTTPAddr)
 
-	idleConnsClosed := make(chan struct{})
-	go func() {
-		sigint := make(chan os.Signal, 1)
-		signal.Notify(sigint, os.Interrupt)
-		<-sigint
+	if cfg.DevMode {
+		StartServer(cfg.HTTPAddr, app)
+	} else {
+		idleConnsClosed := make(chan struct{})
 
-		if err := app.Shutdown(); err != nil {
-			log.Err(err).Send()
-		}
+		go func() {
+			sigint := make(chan os.Signal, 1)
+			signal.Notify(sigint, os.Interrupt)
+			<-sigint
 
-		close(idleConnsClosed)
-	}()
+			if err := app.Shutdown(); err != nil {
+				log.Err(err).Send()
+			}
 
-	appPort := config.GetString("APP_PORT", ":8080")
-	StartServer(appPort, app)
-	<-idleConnsClosed
+			close(idleConnsClosed)
+		}()
+
+		StartServer(cfg.HTTPAddr, app)
+		<-idleConnsClosed
+	}
 
 	return nil
 }
@@ -105,7 +130,7 @@ func StartServer(addr string, a *fiber.App) {
 	}
 }
 
-func dirInit() error {
+func createDirs() error {
 	dirsToCheck := []struct {
 		path string
 		name string

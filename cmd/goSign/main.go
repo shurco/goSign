@@ -31,6 +31,7 @@ func main() {
 	})
 
 	rootCmd.AddCommand(cmdServe())
+	rootCmd.AddCommand(cmdGen())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -48,5 +49,27 @@ func cmdServe() *cobra.Command {
 		},
 	}
 
+	return cmd
+}
+
+func cmdGen() *cobra.Command {
+	var configFile, keyJWT, keyLicense bool
+	cmd := &cobra.Command{
+		Use:   "gen [flags]",
+		Short: "Generate keys and config files",
+		Run: func(serveCmd *cobra.Command, args []string) {
+			if !configFile && !keyJWT && !keyLicense {
+				serveCmd.Help()
+			}
+			if configFile {
+				if err := app.GenConfigFile(); err != nil {
+					fmt.Print("Config file generated")
+					os.Exit(1)
+				}
+			}
+		},
+	}
+
+	cmd.PersistentFlags().BoolVar(&configFile, "config", false, "config file")
 	return cmd
 }

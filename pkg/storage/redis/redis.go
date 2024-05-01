@@ -9,6 +9,12 @@ import (
 
 var Conn Handler
 
+// Config is ...
+type Config struct {
+	Address  string `toml:"address"`
+	Password string `toml:"password"`
+}
+
 // Handler is ...
 type Handler interface {
 	Close() error
@@ -26,8 +32,8 @@ type rdb struct {
 	client *redis.Client
 }
 
-// NewClient creates a new Handler backed by Redis using the given options.
-func NewClient(ctx context.Context, addr, password string) Handler {
+// New creates a new Handler backed by Redis using the given options.
+func New(ctx context.Context, addr, password string) Handler {
 	Conn = &rdb{
 		ctx: ctx,
 		client: redis.NewClient(&redis.Options{
@@ -51,8 +57,7 @@ func (c rdb) Ping() error {
 
 // Set is provides a way to set values in Redis.
 func (c rdb) Set(key string, value any, expiration time.Duration) error {
-	err := c.client.Set(c.ctx, key, value, expiration).Err()
-	return err
+	return c.client.Set(c.ctx, key, value, expiration).Err()
 }
 
 // Get is provides a way to retrieve values from Redis.

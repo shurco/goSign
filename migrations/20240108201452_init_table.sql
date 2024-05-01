@@ -150,10 +150,20 @@ CREATE TABLE "public"."country" (
   "name" varchar(255) NOT NULL,
   PRIMARY KEY ("code")
 );
+
+CREATE TABLE "public"."trust_list" (
+  "list" varchar(10) NOT NULL,
+  "name" varchar NOT NULL,
+  "aki" varchar NOT NULL,
+  "ski" varchar NOT NULL,
+  "created_at" timestamp DEFAULT NOW()
+);
+CREATE INDEX "trust_list_aki" ON "public"."trust_list" USING BTREE ("aki");
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS "trust_list";
 DROP TABLE IF EXISTS "country";
 DROP TABLE IF EXISTS "storage_attachment";
 DROP TABLE IF EXISTS "storage_blob";

@@ -153,6 +153,6 @@ export interface TimeStamp {
   time: number /* int64 */;
 }
 export interface CertSubject {
-  organisation: string[];
+  organization: string[];
   common_name: string;
 }

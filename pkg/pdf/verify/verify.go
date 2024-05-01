@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	ErrNoSignatire           = errors.New("No digital signature in document")
-	ErrNoResultWithSignatire = errors.New("Document looks to have a signature but got no results")
+	ErrNoSignature           = errors.New("no digital signature in document")
+	ErrNoResultWithSignature = errors.New("document looks to have a signature but got no results")
 )
 
 type Response struct {
@@ -75,12 +75,12 @@ type DocumentInfo struct {
 }
 
 func File(file *os.File) (apiResp *Response, err error) {
-	finfo, _ := file.Stat()
+	info, _ := file.Stat()
 	if _, err := file.Seek(0, 0); err != nil {
 		return nil, err
 	}
 
-	return Reader(file, finfo.Size())
+	return Reader(file, info.Size())
 }
 
 func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
@@ -97,13 +97,13 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 
 	rdr, err := pdf.NewReader(file, size)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open file: %v", err)
+		return nil, fmt.Errorf("failed to open file: %v", err)
 	}
 
 	// AcroForm will contain a SigFlags value if the form contains a digital signature
 	t := rdr.Trailer().Key("Root").Key("AcroForm").Key("SigFlags")
 	if t.IsNull() {
-		return nil, ErrNoSignatire
+		return nil, ErrNoSignature
 	}
 
 	// Walk over the cross references in the document
@@ -180,8 +180,6 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 				// fmt.Printf("U: %v, %#v\n", s.IssuerAndSerialNumber.SerialNumber, attr.Type)
 
 				if attr.Type.Equal(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14}) {
-					// fmt.Println("Found timestamp")
-
 					signer.TimeStamp, err = timestamp.Parse(attr.Value.Bytes)
 					if err != nil {
 						apiResp.Error = fmt.Sprintln("Failed to parse timestamp", err)
@@ -215,10 +213,8 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 		}
 
 		// Verify the digital signature of the pdf file.
-		err = p7.VerifyWithChain(certPool)
-		if err != nil {
-			err = p7.Verify()
-			if err == nil {
+		if err := p7.VerifyWithChain(certPool); err != nil {
+			if err := p7.Verify(); err == nil {
 				signer.ValidSignature = true
 				signer.TrustedIssuer = false
 			} else {
@@ -330,7 +326,7 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 	}
 
 	if apiResp == nil {
-		err = ErrNoResultWithSignatire
+		err = ErrNoResultWithSignature
 	}
 
 	apiResp.DocumentInfo = documentInfo

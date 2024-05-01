@@ -1,13 +1,18 @@
 package handlers
 
 import (
+	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/pdf/verify"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -41,14 +46,17 @@ func VerifyPDF(c *fiber.Ctx) error {
 		os.Remove(tempFile.Name())
 	}()
 
-	_, err = io.Copy(tempFile, file)
-	if err != nil {
+	if _, err := io.Copy(tempFile, file); err != nil {
 		return webutil.StatusBadRequest(c, err.Error())
 	}
 
 	verifyInfo, err := verify.File(tempFile)
 	if err != nil {
 		response.Error = err.Error()
+		return webutil.StatusOK(c, "Verify", response)
+	}
+
+	if verifyInfo.Signers == nil {
 		return webutil.Response(c, fiber.StatusOK, "Verify", response)
 	}
 
@@ -57,9 +65,11 @@ func VerifyPDF(c *fiber.Ctx) error {
 			Name:           value.Name,
 			Reason:         value.Reason,
 			ValidSignature: value.ValidSignature,
-			TrustedIssuer:  value.TrustedIssuer,
+			TrustedIssuer: models.TrustedIssuer{
+				Valid: value.TrustedIssuer,
+			},
 			CertSubject: &models.CertSubject{
-				Organisation: value.Certificates[0].Certificate.Subject.Organization,
+				Organization: value.Certificates[0].Certificate.Subject.Organization[0],
 				CommonName:   value.Certificates[0].Certificate.Subject.CommonName,
 			},
 			RevokedCertificate: value.RevokedCertificate,
@@ -70,17 +80,38 @@ func VerifyPDF(c *fiber.Ctx) error {
 				Time: value.TimeStamp.Time.Unix(),
 			}
 		}
+
+		// check in trusted base
+		if !value.TrustedIssuer {
+			for _, cert := range value.Certificates {
+				aki := cert.Certificate.AuthorityKeyId
+				trustCert, err := queries.DB.CheckAKI(context.Background(), strings.ToUpper(hex.EncodeToString(aki[:])))
+				if err != nil && err != pgx.ErrNoRows {
+					return webutil.StatusInternalServerError(c)
+				}
+				fmt.Print(trustCert)
+				if trustCert != nil && trustCert.List != "" {
+					signer.TrustedIssuer = models.TrustedIssuer{
+						Valid: true,
+						List:  trustCert.List,
+						Name:  trustCert.Name,
+					}
+				}
+			}
+		}
+
 		response.Signers = append(response.Signers, signer)
 	}
+
 	response.Verify = true
 	//response.Document = &Document{
 	//	Creator: verifyInfo.DocumentInfo.Creator,
 	//	Hash:    verifyInfo.DocumentInfo.Hash,
 	//}
 
-	if verifyInfo.DocumentInfo.Creator == "goSign (https://github.com/shurco/goSign)" {
-		fmt.Print("check in database")
-	}
+	//if verifyInfo.DocumentInfo.Creator == "goSign (https://github.com/shurco/goSign)" {
+	//	fmt.Print("check in database")
+	//}
 
 	return webutil.Response(c, fiber.StatusOK, "Verify", response)
 }

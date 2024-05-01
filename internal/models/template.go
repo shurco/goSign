@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// Template is ...
 type Template struct {
 	ID         string      `json:"id"`
 	FolderID   string      `json:"folder_id"`
@@ -18,6 +19,7 @@ type Template struct {
 	ArchivedAt *time.Time  `json:"archived_at,omitempty"`
 }
 
+// Author is ...
 type Author struct {
 	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
@@ -25,11 +27,13 @@ type Author struct {
 	Email     string `json:"email"`
 }
 
+// Submitter is ...
 type Submitter struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
+// Field is ...
 type Field struct {
 	ID          string   `json:"id"`
 	SubmitterID string   `json:"submitter_id"`
@@ -39,6 +43,7 @@ type Field struct {
 	Areas       []*Areas `json:"areas,omitempty"`
 }
 
+// Areas is ...
 type Areas struct {
 	AttachmentID string  `json:"attachment_id"`
 	Page         int     `json:"page"`
@@ -48,11 +53,13 @@ type Areas struct {
 	H            float64 `json:"z"`
 }
 
+// Schema is ...
 type Schema struct {
 	AttachmentID string `json:"attachment_id"`
 	Name         string `json:"name"`
 }
 
+// Document is ...
 type Document struct {
 	ID            string          `json:"id"`
 	URL           string          `json:"url"`
@@ -62,17 +69,20 @@ type Document struct {
 	CreatedAt     time.Time       `json:"created_at"`
 }
 
+// DocMetadata is ...
 type DocMetadata struct {
 	Analyzed bool   `json:"analyzed,omitempty"`
 	Pdf      Pdf    `json:"pdf"`
 	Sha256   string `json:"sha256,omitempty"`
 }
 
+// Pdf os ...
 type Pdf struct {
 	Annotations   []*Annotations `json:"annotations,omitempty"`
 	NumberOfPages int            `json:"number_of_pages"`
 }
 
+// Annotations is ...
 type Annotations struct {
 	Type  string  `json:"type"`
 	Value string  `json:"value"`
@@ -83,6 +93,7 @@ type Annotations struct {
 	H     float64 `json:"z"`
 }
 
+// PreviewImages is ...
 type PreviewImages struct {
 	ID         string      `json:"id"`
 	RecordType string      `json:"record_type,omitempty"`
@@ -92,6 +103,7 @@ type PreviewImages struct {
 	FileName   string      `json:"filename"`
 }
 
+// ImgMetadata is ...
 type ImgMetadata struct {
 	Analyzed   bool `json:"analyzed,omitempty"`
 	Identified bool `json:"identified,omitempty"`

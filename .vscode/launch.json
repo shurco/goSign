@@ -9,6 +9,7 @@
       "program": "${workspaceFolder}/cmd/goSign",
       "envFile": "${workspaceFolder}/docker/.env",
       "args": ["serve"],
+      //"args": ["gen", "--config"],
     },
     {
       "name": "pdf",

@@ -41,18 +41,17 @@
             <div v-for="(item, index) in verifyInfo.data.signers" :key="index">
               <div class="flex items-center space-x-1">
                 <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="item.valid_signature" />
-                <SvgIcon name="x-circle" class="text-red-500 w-5 h-5" v-else />
+                <SvgIcon name="check-badge" class="text-red-500 w-5 h-5" v-else />
                 <span>Signature valid</span>
               </div>
 
               <div class="flex items-center space-x-1">
-                <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="item.time_stamp != null" />
-                <SvgIcon name="x-circle" class="text-red-500 w-5 h-5" v-else />
-                <span>Timestamp</span>
+                <SvgIcon name="check-badge" class="w-5 h-5" :class="(item.time_stamp != null ? `text-green-500` : `text-gray-400`)" />
+                <span :class="{ 'text-gray-400': item.time_stamp === null }">Timestamp</span>
               </div>
 
               <div class="flex items-center space-x-1">
-                <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="item.trusted_issuer" />
+                <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="item.trusted_issuer.valid" />
                 <SvgIcon name="x-circle" class="text-red-500 w-5 h-5" v-else />
                 <span>Trusted issuer</span>
               </div>
@@ -61,15 +60,6 @@
                 <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="!item.revoked_certificate" />
                 <SvgIcon name="x-circle" class="text-red-500 w-5 h-5" v-else />
                 <span>Active certificate</span>
-              </div>
-
-              <div class="flex items-center space-x-1">
-
-                <SvgIcon name="check-badge" class="text-green-500 w-5 h-5" v-if="item.cert_subject.organisation[0] === 'goSign'" />
-                <SvgIcon name="x-circle" class="text-red-500 w-5 h-5" v-else />
-
-
-                <span>Signed with external certificate</span>
               </div>
 
               <div class="flex items-center space-x-1">
@@ -84,7 +74,7 @@
 
               <div class="flex items-center space-x-1">
                 <SvgIcon name="sign" class="w-5 h-5" />
-                <span>{{ item.cert_subject.common_name ? item.cert_subject.common_name : item.cert_subject.organisation[0] }}</span>
+                <span>{{ item.cert_subject.common_name ? item.cert_subject.common_name : item.cert_subject.organization }}</span>
               </div>
 
               <div class="flex items-center space-x-1">
