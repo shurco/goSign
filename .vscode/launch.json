@@ -28,6 +28,14 @@
       "args": [""]
     },
     {
+      "name": "pdf-cert2",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/pdf-cert2",
+      "args": [""]
+    },
+    {
       "name": "cert",
       "type": "go",
       "request": "launch",

@@ -9,12 +9,12 @@ import (
 func main() {
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+
 	pdf.AddTTFFont("Arial", "./fonts/Arial.ttf")
 	pdf.AddTTFFont("Arial-Bold", "./fonts/Arial-Bold.ttf")
 
 	// ---------
 	pdf.AddPage()
-	// pdf.Image("./fon/cert-fon.jpg", 0, 0, gopdf.PageSizeA4)
 	cert := pdf.ImportPage("./img/cert-fon.pdf", 1, "/MediaBox")
 	pdf.UseImportedTemplate(cert, 0, 0, 0, 0)
 
@@ -45,11 +45,9 @@ func main() {
 	pdf.SetLineType("solid")
 	pdf.SetStrokeColor(153, 153, 153)
 	pdf.Line(75, 167, 525, 167)
-
 	// ------ END HEADER -----
 
 	// ---- START BLOCK ------
-
 	type Signer struct {
 		UserName            string `json:"user_name"`
 		Email               string `json:"email"`
@@ -77,54 +75,56 @@ func main() {
 			Location:            "Barcelona, Spain",
 			SignerURL:           "",
 		},
-		{
-			UserName:            "User Name 2",
-			Email:               "user@mail.com",
-			Sent:                "02 Feb 2023 09:59:25 UTC",
-			Viewed:              "02 Feb 2023 10:05:59 UTC",
-			Signed:              "02 Feb 2023 10:06:21 UTC",
-			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-			EmailVerifiedStatus: "x",
-			IP:                  "79.153.222.202",
-			Location:            "Barcelona, Spain",
-			SignerURL:           "",
-		},
-		{
-			UserName:            "User Name 3",
-			Email:               "user@mail.com",
-			Sent:                "02 Feb 2023 09:59:25 UTC",
-			Viewed:              "02 Feb 2023 10:05:59 UTC",
-			Signed:              "02 Feb 2023 10:06:21 UTC",
-			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-			EmailVerifiedStatus: "x",
-			IP:                  "79.153.222.202",
-			Location:            "Barcelona, Spain",
-			SignerURL:           "",
-		},
-		{
-			UserName:            "User Name 4",
-			Email:               "user@mail.com",
-			Sent:                "02 Feb 2023 09:59:25 UTC",
-			Viewed:              "02 Feb 2023 10:05:59 UTC",
-			Signed:              "02 Feb 2023 10:06:21 UTC",
-			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-			EmailVerifiedStatus: "x",
-			IP:                  "79.153.222.202",
-			Location:            "Barcelona, Spain",
-			SignerURL:           "",
-		},
-		{
-			UserName:            "User Name 5",
-			Email:               "user@mail.com",
-			Sent:                "02 Feb 2023 09:59:25 UTC",
-			Viewed:              "02 Feb 2023 10:05:59 UTC",
-			Signed:              "02 Feb 2023 10:06:21 UTC",
-			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-			EmailVerifiedStatus: "x",
-			IP:                  "79.153.222.202",
-			Location:            "Barcelona, Spain",
-			SignerURL:           "",
-		},
+		/*
+			{
+				UserName:            "User Name 2",
+				Email:               "user@mail.com",
+				Sent:                "02 Feb 2023 09:59:25 UTC",
+				Viewed:              "02 Feb 2023 10:05:59 UTC",
+				Signed:              "02 Feb 2023 10:06:21 UTC",
+				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+				EmailVerifiedStatus: "x",
+				IP:                  "79.153.222.202",
+				Location:            "Barcelona, Spain",
+				SignerURL:           "",
+			},
+			{
+				UserName:            "User Name 3",
+				Email:               "user@mail.com",
+				Sent:                "02 Feb 2023 09:59:25 UTC",
+				Viewed:              "02 Feb 2023 10:05:59 UTC",
+				Signed:              "02 Feb 2023 10:06:21 UTC",
+				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+				EmailVerifiedStatus: "x",
+				IP:                  "79.153.222.202",
+				Location:            "Barcelona, Spain",
+				SignerURL:           "",
+			},
+			{
+				UserName:            "User Name 4",
+				Email:               "user@mail.com",
+				Sent:                "02 Feb 2023 09:59:25 UTC",
+				Viewed:              "02 Feb 2023 10:05:59 UTC",
+				Signed:              "02 Feb 2023 10:06:21 UTC",
+				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+				EmailVerifiedStatus: "x",
+				IP:                  "79.153.222.202",
+				Location:            "Barcelona, Spain",
+				SignerURL:           "",
+			},
+			{
+				UserName:            "User Name 5",
+				Email:               "user@mail.com",
+				Sent:                "02 Feb 2023 09:59:25 UTC",
+				Viewed:              "02 Feb 2023 10:05:59 UTC",
+				Signed:              "02 Feb 2023 10:06:21 UTC",
+				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+				EmailVerifiedStatus: "x",
+				IP:                  "79.153.222.202",
+				Location:            "Barcelona, Spain",
+				SignerURL:           "",
+			},
+		*/
 	}
 
 	var shiftSignerBlock float64
@@ -225,11 +225,12 @@ func main() {
 
 	// ---------
 	pdf.SetInfo(gopdf.PdfInfo{
-		Title:   "Title",
-		Author:  "goSign (https://github.com/shurco/goSign)",
-		Subject: "Subject",
-		Creator: "goSign (https://github.com/shurco/goSign)",
-		// Producer: "Producer",
+		Title:    "Title",
+		Author:   "goSign (https://github.com/shurco/goSign)",
+		Subject:  "Subject",
+		Creator:  "goSign (https://github.com/shurco/goSign)",
+		Producer: "goSign (https://github.com/shurco/goSign)",
 	})
+
 	pdf.WritePdf("example.pdf")
 }

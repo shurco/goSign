@@ -109,9 +109,5 @@ func VerifyPDF(c *fiber.Ctx) error {
 	//	Hash:    verifyInfo.DocumentInfo.Hash,
 	//}
 
-	//if verifyInfo.DocumentInfo.Creator == "goSign (https://github.com/shurco/goSign)" {
-	//	fmt.Print("check in database")
-	//}
-
 	return webutil.Response(c, fiber.StatusOK, "Verify", response)
 }
