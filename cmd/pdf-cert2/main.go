@@ -1,15 +1,17 @@
 package main
 
+/*
 import (
-	"bytes"
-	"encoding/json"
 	"log"
 	"os"
 
 	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/skip2/go-qrcode"
 )
 
@@ -21,9 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	model.VersionStr = "goSign"
-
-	certData := primitives.PDF{
+	rootPDF := &primitives.PDF{
 		Origin:     "UpperLeft",
 		Debug:      false,
 		ContentBox: false,
@@ -56,6 +56,7 @@ func main() {
 					// BackgroundColor: "#C1C1C1",
 					TextBoxes: []*primitives.TextBox{
 						{
+							Name:     "test",
 							Value:    "Signature Certificate",
 							Position: [2]float64{80, 100},
 							Font:     &primitives.FormFont{Name: "$helvetica-bold", Size: 20},
@@ -219,23 +220,45 @@ func main() {
 				},
 			},
 		},
-		XRefTable: &model.XRefTable{
-			Author:   "goSign (https://github.com/shurco/goSign)",
-			Creator:  "goSign (https://github.com/shurco/goSign)",
-			Producer: "goSign",
-		},
 	}
 
-	certBytes, err := json.Marshal(certData)
+	conf := model.NewDefaultConfiguration()
+	conf.Cmd = model.CREATE
+
+	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	substrate, err := os.ReadFile("./img/substrate.pdf")
+	rootPDF.Conf = ctx.Configuration
+	rootPDF.XRefTable = ctx.XRefTable
+	rootPDF.Optimize = ctx.Optimize
+
+	if err := rootPDF.Validate(); err != nil {
+		log.Fatal(err)
+	}
+
+	pages, fontMap, err := rootPDF.RenderPages()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	if _, _, err := create.UpdatePageTree(ctx, pages, fontMap); err != nil {
+		log.Fatal(err)
+	}
+
+	if err = api.ValidateContext(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	// ctx.EmptyPage(nil, nil)
+	//ctx.XRefTable.
+	//_, err := api.Ima
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	// save certificate
 	fileName := "cert.pdf"
 	certFile, err := os.Create(fileName)
 	if err != nil {
@@ -243,11 +266,12 @@ func main() {
 	}
 	defer certFile.Close()
 
-	if err = api.Create(bytes.NewReader(substrate), bytes.NewReader(certBytes), certFile, nil); err != nil {
-		log.Fatal(err)
-	}
+	model.VersionStr = "goSign"
+	api.WriteContext(ctx, certFile)
 
+	// remove tmp qrcode file
 	if err := os.Remove(fileUUID); err != nil {
 		log.Fatal(err)
 	}
 }
+*/

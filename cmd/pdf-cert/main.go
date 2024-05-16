@@ -1,24 +1,41 @@
 package main
 
 import (
+	"log"
+
 	"github.com/google/uuid"
 	"github.com/signintech/gopdf"
 	"github.com/skip2/go-qrcode"
 )
 
 func main() {
-	pdf := gopdf.GoPdf{}
+	pdf := &gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
 
-	pdf.AddTTFFont("Arial", "./fonts/Arial.ttf")
-	pdf.AddTTFFont("Arial-Bold", "./fonts/Arial-Bold.ttf")
+	if err := pdf.AddTTFFont("Arial", "./fonts/Arial.ttf"); err != nil {
+		log.Print(err.Error())
+		return
+	}
+
+	if err := pdf.AddTTFFont("Arial-Bold", "./fonts/Arial-Bold.ttf"); err != nil {
+		log.Print(err.Error())
+		return
+	}
 
 	// ---------
 	pdf.AddPage()
 	cert := pdf.ImportPage("./img/cert-fon.pdf", 1, "/MediaBox")
 	pdf.UseImportedTemplate(cert, 0, 0, 0, 0)
 
+	// pdf.SetFillColor(59, 157, 79)
+	// pdf.Rectangle(23, 19, 576, 830, "F", 0, 0)
+	// pdf.SetFillColor(255, 255, 255)
+	// pdf.Rectangle(40, 35, 558, 813, "F", 0, 0)
+	// pdf.SetStrokeColor(59, 157, 79)
+	// pdf.Rectangle(48, 44, 550, 804, "D", 0, 0)
+
 	// ------ START HEADER -----
+	pdf.SetFillColor(0, 0, 0)
 	pdf.SetFont("Arial-Bold", "", 20)
 	pdf.SetXY(80, 80)
 	pdf.Cell(nil, "Signature Certificate")
@@ -75,56 +92,54 @@ func main() {
 			Location:            "Barcelona, Spain",
 			SignerURL:           "",
 		},
-		/*
-			{
-				UserName:            "User Name 2",
-				Email:               "user@mail.com",
-				Sent:                "02 Feb 2023 09:59:25 UTC",
-				Viewed:              "02 Feb 2023 10:05:59 UTC",
-				Signed:              "02 Feb 2023 10:06:21 UTC",
-				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-				EmailVerifiedStatus: "x",
-				IP:                  "79.153.222.202",
-				Location:            "Barcelona, Spain",
-				SignerURL:           "",
-			},
-			{
-				UserName:            "User Name 3",
-				Email:               "user@mail.com",
-				Sent:                "02 Feb 2023 09:59:25 UTC",
-				Viewed:              "02 Feb 2023 10:05:59 UTC",
-				Signed:              "02 Feb 2023 10:06:21 UTC",
-				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-				EmailVerifiedStatus: "x",
-				IP:                  "79.153.222.202",
-				Location:            "Barcelona, Spain",
-				SignerURL:           "",
-			},
-			{
-				UserName:            "User Name 4",
-				Email:               "user@mail.com",
-				Sent:                "02 Feb 2023 09:59:25 UTC",
-				Viewed:              "02 Feb 2023 10:05:59 UTC",
-				Signed:              "02 Feb 2023 10:06:21 UTC",
-				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-				EmailVerifiedStatus: "x",
-				IP:                  "79.153.222.202",
-				Location:            "Barcelona, Spain",
-				SignerURL:           "",
-			},
-			{
-				UserName:            "User Name 5",
-				Email:               "user@mail.com",
-				Sent:                "02 Feb 2023 09:59:25 UTC",
-				Viewed:              "02 Feb 2023 10:05:59 UTC",
-				Signed:              "02 Feb 2023 10:06:21 UTC",
-				EmailVerified:       "02 Feb 2023 10:05:59 UTC",
-				EmailVerifiedStatus: "x",
-				IP:                  "79.153.222.202",
-				Location:            "Barcelona, Spain",
-				SignerURL:           "",
-			},
-		*/
+		{
+			UserName:            "User Name 2",
+			Email:               "user@mail.com",
+			Sent:                "02 Feb 2023 09:59:25 UTC",
+			Viewed:              "02 Feb 2023 10:05:59 UTC",
+			Signed:              "02 Feb 2023 10:06:21 UTC",
+			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+			EmailVerifiedStatus: "x",
+			IP:                  "79.153.222.202",
+			Location:            "Barcelona, Spain",
+			SignerURL:           "",
+		},
+		{
+			UserName:            "User Name 3",
+			Email:               "user@mail.com",
+			Sent:                "02 Feb 2023 09:59:25 UTC",
+			Viewed:              "02 Feb 2023 10:05:59 UTC",
+			Signed:              "02 Feb 2023 10:06:21 UTC",
+			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+			EmailVerifiedStatus: "x",
+			IP:                  "79.153.222.202",
+			Location:            "Barcelona, Spain",
+			SignerURL:           "",
+		},
+		{
+			UserName:            "User Name 4",
+			Email:               "user@mail.com",
+			Sent:                "02 Feb 2023 09:59:25 UTC",
+			Viewed:              "02 Feb 2023 10:05:59 UTC",
+			Signed:              "02 Feb 2023 10:06:21 UTC",
+			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+			EmailVerifiedStatus: "x",
+			IP:                  "79.153.222.202",
+			Location:            "Barcelona, Spain",
+			SignerURL:           "",
+		},
+		{
+			UserName:            "User Name 5",
+			Email:               "user@mail.com",
+			Sent:                "02 Feb 2023 09:59:25 UTC",
+			Viewed:              "02 Feb 2023 10:05:59 UTC",
+			Signed:              "02 Feb 2023 10:06:21 UTC",
+			EmailVerified:       "02 Feb 2023 10:05:59 UTC",
+			EmailVerifiedStatus: "x",
+			IP:                  "79.153.222.202",
+			Location:            "Barcelona, Spain",
+			SignerURL:           "",
+		},
 	}
 
 	var shiftSignerBlock float64
@@ -138,8 +153,8 @@ func main() {
 
 		pdf.SetFillColor(255, 255, 255)
 		pdf.SetTransparency(gopdf.Transparency{
-			Alpha:         0.8,
-			BlendModeType: gopdf.SoftLight,
+			Alpha:         0.6,
+			BlendModeType: gopdf.Overlay,
 		})
 		pdf.Rectangle(75, 69+shiftSignerBlock, 525, 167+shiftSignerBlock, "F", 0, 0)
 		pdf.ClearTransparency()
@@ -172,23 +187,26 @@ func main() {
 		pdf.SetXY(83, 142+shiftSignerBlock)
 		pdf.Cell(nil, "Recipient Verification:")
 		pdf.SetFont("Arial", "", 7)
-		pdf.SetXY(90, 152+shiftSignerBlock)
+		pdf.SetXY(90, 153+shiftSignerBlock)
 		pdf.Cell(nil, "Email verified")
-		pdf.SetXY(83, 152+shiftSignerBlock)
+		pdf.SetXY(83, 153+shiftSignerBlock)
 		pdf.Cell(nil, signer.EmailVerifiedStatus)
-		pdf.SetXY(225, 152+shiftSignerBlock)
+		pdf.SetXY(225, 153+shiftSignerBlock)
 		pdf.Cell(nil, signer.EmailVerified)
 
 		// signature
-		pdf.Rectangle(370, 77+shiftSignerBlock, 515, 132+shiftSignerBlock, "D", 0, 0)
+		pdf.SetFillColor(255, 255, 255)
+		pdf.SetLineWidth(0.5)
+		pdf.SetLineType("dotted")
+		pdf.Rectangle(370, 77+shiftSignerBlock, 515, 132+shiftSignerBlock, "FD", 0, 0)
 
-		pdf.SetXY(370, 142+shiftSignerBlock)
+		pdf.SetXY(370, 143+shiftSignerBlock)
 		pdf.Cell(nil, "IP address:")
-		pdf.SetXY(407, 142+shiftSignerBlock)
+		pdf.SetXY(408, 143+shiftSignerBlock)
 		pdf.Cell(nil, signer.IP)
-		pdf.SetXY(370, 152+shiftSignerBlock)
+		pdf.SetXY(370, 153+shiftSignerBlock)
 		pdf.Cell(nil, "Location:")
-		pdf.SetXY(400, 152+shiftSignerBlock)
+		pdf.SetXY(400, 153+shiftSignerBlock)
 		pdf.Cell(nil, signer.Location)
 	}
 
@@ -216,8 +234,6 @@ func main() {
 	pdf.SetXY(160, 747)
 	pdf.Text("and secure document signing with eSignature.")
 
-	// pdf.SetFillColor(255, 255, 255)
-	// pdf.Rectangle(465, 705, 525, 765, "F", 0, 0)
 	qrCode, _ := qrcode.Encode("https://github.com/shurco/goSign", qrcode.Medium, 256) // dynamic
 	imgQRCode, _ := gopdf.ImageHolderByBytes(qrCode)
 	pdf.ImageByHolder(imgQRCode, 460, 700, &gopdf.Rect{W: 65, H: 65})
@@ -232,5 +248,7 @@ func main() {
 		Producer: "goSign (https://github.com/shurco/goSign)",
 	})
 
-	pdf.WritePdf("example.pdf")
+	if err := pdf.WritePdf("example.pdf"); err != nil {
+		log.Fatal(err)
+	}
 }
