@@ -8,7 +8,7 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofiber/contrib/fiberzerolog v1.0.1
-	github.com/gofiber/fiber/v2 v2.52.4
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
