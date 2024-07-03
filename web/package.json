@@ -14,29 +14,29 @@
     "@types/nprogress": "^0.2.3",
     "nprogress": "^0.2.0",
     "pinia": "^2.1.7",
-    "signature_pad": "^5.0.1",
-    "uuid": "^9.0.1",
-    "volar-service-prettier": "^0.0.47",
-    "vue": "^3.4.27",
-    "vue-router": "^4.3.2"
+    "signature_pad": "^5.0.2",
+    "uuid": "^10.0.0",
+    "volar-service-prettier": "^0.0.54",
+    "vue": "^3.4.31",
+    "vue-router": "^4.4.0"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.4",
-    "@types/node": "^20.14.2",
-    "@types/uuid": "^9.0.8",
+    "@types/node": "^20.14.9",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-vue": "^5.0.5",
     "@vue/tsconfig": "^0.5.1",
     "autoprefixer": "^10.4.19",
     "npm-run-all2": "^6.2.0",
-    "postcss": "^8.4.38",
+    "postcss": "^8.4.39",
     "postcss-import": "^16.1.0",
     "postcss-nesting": "^12.1.5",
-    "prettier": "^3.3.1",
+    "prettier": "^3.3.2",
     "tailwindcss": "^3.4.4",
-    "typescript": "~5.4.5",
-    "vite": "^5.2.13",
+    "typescript": "~5.5.3",
+    "vite": "^5.3.3",
     "vite-plugin-svg-icons": "^2.0.1",
-    "vite-plugin-vue-devtools": "^7.2.1",
-    "vue-tsc": "^2.0.21"
+    "vite-plugin-vue-devtools": "^7.3.5",
+    "vue-tsc": "^2.0.24"
   }
 }
