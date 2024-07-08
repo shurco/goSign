@@ -16,7 +16,7 @@ export const fieldNames: DefInterface = {
   cells: "Cells",
   stamp: "Stamp",
   payment: "Payment",
-  phone: "Phone",
+  phone: "Phone"
 };
 
 export const fieldIcons: DefInterface = {
@@ -33,7 +33,7 @@ export const fieldIcons: DefInterface = {
   cells: "columns-3",
   stamp: "rubber-stamp",
   payment: "credit-card",
-  phone: "phone-check",
+  phone: "phone-check"
 };
 
 export const subColors: string[] = [
@@ -46,7 +46,7 @@ export const subColors: string[] = [
   "bg-cyan-500",
   "bg-orange-500",
   "bg-lime-500",
-  "bg-indigo-500",
+  "bg-indigo-500"
 ];
 
 export const subNames: string[] = [
@@ -59,7 +59,7 @@ export const subNames: string[] = [
   "Seventh Party",
   "Eighth Party",
   "Ninth Party",
-  "Tenth Party",
+  "Tenth Party"
 ];
 
 export const borderColors: string[] = [
@@ -72,7 +72,7 @@ export const borderColors: string[] = [
   "border-cyan-500/80",
   "border-orange-500/80",
   "border-lime-500/80",
-  "border-indigo-500/80",
+  "border-indigo-500/80"
 ];
 
 export const bgColors: string[] = [
@@ -85,5 +85,5 @@ export const bgColors: string[] = [
   "bg-cyan-100/80",
   "bg-orange-100/80",
   "bg-lime-100/80",
-  "bg-indigo-100/80",
+  "bg-indigo-100/80"
 ];

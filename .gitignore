@@ -23,6 +23,7 @@ coverage
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
+!.vscode/settings.json
 .idea
 *.suo
 *.ntvs*
@@ -42,6 +43,8 @@ fixtures/migration/*_private.sql
 docker/core/
 __debug_bin*
 cmd/goSign/lc_*
+
+.eslintcache
 
 EXPERIMENT_*
 web/public/fixtures

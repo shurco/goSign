@@ -5,26 +5,41 @@
 ROOT_PATH="$(git rev-parse --show-toplevel)"
 source ${ROOT_PATH}/scripts/_helper
 
-arr_process=(__debug_bin vite)
-for process in "${arr_process[@]}"; do
-  if pkill -f "$process" >/dev/null; then
-    print_header "Killing $process process"
+arr_process=("__debug_bin" "vite")
+for process_name in "${arr_process[@]}"; do
+  pids=$(pgrep -f "$process_name")
+  for pid in $pids; do
+    exe_path=$(ps -p $pid -o args=)
+    if [[ -n $exe_path && $exe_path == *"$ROOT_PATH"* ]]; then
+      print_header "Killed process ${pid}"
+      kill -9 $pid
+      print_answer "SUCCESS" green
+    fi
+  done
+done
+
+for entry in "${ROOT_PATH}/cmd/"*/; do
+  file_name="${entry}__debug_bin*"
+  if compgen -G "$file_name" >/dev/null; then
+    name=$(basename "${entry}")
+    print_header "Deleting bin file for ${name}"
+    rm -rf ${file_name}
     print_answer "SUCCESS" green
   fi
 done
 
-print_header "Remove old bin and dist files"
-for entry in ${ROOT_PATH}/cmd/*/; do
-  name=$(basename "${entry}")
-  rm -rf ${ROOT_PATH}/cmd/${name}/__debug_bin*
-done
-rm -rf ${ROOT_PATH}/web/dist
-print_answer "SUCCESS" green
+declare -A arr_folders=(
+  ["./web/dist"]="${ROOT_PATH}/web/dist"
+  ["./bin/*"]="${ROOT_PATH}/bin/*"
+  ["./lc_signed"]="${ROOT_PATH}/cmd/goSign/lc_signed"
+  ["./lc_tmp"]="${ROOT_PATH}/cmd/goSign/lc_tmp"
+  ["./lc_uploads"]="${ROOT_PATH}/cmd/goSign/lc_uploads"
+)
 
-
-print_header "Remove uploaded files"
-arr_folders=(lc_signed lc_tmp lc_uploads)
-for folder in "${arr_folders[@]}"; do
-  rm -rf ${ROOT_PATH}/cmd/goSign/${folder}/*
+for folder in "${!arr_folders[@]}"; do
+  if [ -e "${arr_folders[$folder]}" ]; then
+    print_header "Deleting the ${folder} folder"
+    rm -rf "${arr_folders[$folder]}"
+    print_answer "SUCCESS" green
+  fi
 done
-print_answer "SUCCESS" green

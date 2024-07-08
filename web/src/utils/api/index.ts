@@ -1,9 +1,9 @@
-import { start, done } from "nprogress";
+import { done, start } from "nprogress";
 
 export async function apiGet(url: string): Promise<any> {
   return handleRequest(url, {
     credentials: "include",
-    method: "GET",
+    method: "GET"
   });
 }
 
@@ -20,7 +20,7 @@ export async function apiUpdate(url: string, body: any): Promise<any> {
 export async function apiDelete(url: string): Promise<any> {
   return handleRequest(url, {
     credentials: "include",
-    method: "DELETE",
+    method: "DELETE"
   });
 }
 
@@ -39,13 +39,13 @@ async function handleRequest(url: string, options: any): Promise<any> {
 function createOptions(method: string, body: any): any {
   const options: any = {
     credentials: "include",
-    method,
+    method
   };
   if (body) {
     if (Object.keys(body).length > 0) {
       options.body = JSON.stringify(body);
       options.headers = {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       };
     } else {
       options.body = body;

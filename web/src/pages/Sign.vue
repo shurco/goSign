@@ -1,35 +1,41 @@
 <template>
-  <div class="grid grid-cols-1 gap-4 place-content-center h-48">
+  <div class="grid h-48 grid-cols-1 place-content-center gap-4">
     <div>
-
-      <label for="assetsFieldHandle" class="w-96 block h-52 relative hover:bg-[#efeae6]/30 rounded-xl border-2 border-[#e7e2df] border-dashed cursor-pointer"
-        :class="{ 'bg-[#efeae6]/30': status }" @dragover="dragover" @drop="drop" @change="onChange">
-        <div class="absolute top-0 right-0 left-0 bottom-0 flex items-center justify-center">
+      <label
+        for="assetsFieldHandle"
+        class="relative block h-52 w-96 cursor-pointer rounded-xl border-2 border-dashed border-[#e7e2df] hover:bg-[#efeae6]/30"
+        :class="{ 'bg-[#efeae6]/30': status }"
+        @dragover="dragover"
+        @drop="drop"
+        @change="onChange"
+      >
+        <div class="absolute bottom-0 left-0 right-0 top-0 flex items-center justify-center">
           <div class="flex flex-col items-center">
-            <span data-target="file-dropzone.icon" class="flex flex-col items-center" v-if="!status">
+            <span v-if="!status" data-target="file-dropzone.icon" class="flex flex-col items-center">
               <span>
-                <SvgIcon name="cloud-upload" class="w-10 h-10" />
+                <SvgIcon name="cloud-upload" class="h-10 w-10" />
               </span>
-              <div class="font-medium mb-1">
-                Upload New Document
-              </div>
-              <div class="text-xs">
-                <span class="font-medium">Click to upload</span> or drag and drop
-              </div>
+              <div class="mb-1 font-medium">Upload New Document</div>
+              <div class="text-xs"><span class="font-medium">Click to upload</span> or drag and drop</div>
             </span>
-            <span data-target="file-dropzone.loading" class="flex flex-col items-center" v-else>
-              <SvgIcon name="upload" class="w-10 h-10 animate-spin" />
-              <div class="font-medium mb-1">
-                Uploading...
-              </div>
+            <span v-else data-target="file-dropzone.loading" class="flex flex-col items-center">
+              <SvgIcon name="upload" class="h-10 w-10 animate-spin" />
+              <div class="mb-1 font-medium">Uploading...</div>
             </span>
           </div>
 
-          <input id="assetsFieldHandle" name="fields[assetsFieldHandle][]" class="hidden" type="file" ref="file" accept="application/pdf" />
+          <input
+            id="assetsFieldHandle"
+            ref="file"
+            name="fields[assetsFieldHandle][]"
+            class="hidden"
+            type="file"
+            accept="application/pdf"
+          />
         </div>
       </label>
     </div>
-    <div class="w-96" v-if="signInfo.data.file_name_signed">
+    <div v-if="signInfo.data.file_name_signed" class="w-96">
       <div role="info" class="rounded border-s-4 border-green-500 bg-green-50 p-4">
         <a target="_blank" :href="`/drive/signed/${signInfo.data.file_name_signed}`">signed PDF</a>
       </div>
@@ -38,13 +44,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, getCurrentInstance } from "vue";
+import { getCurrentInstance, ref } from "vue";
 
 const signPDF = {
   success: false,
   data: {
     file_name_signed: null
-  },
+  }
 };
 
 const signInfo = ref(signPDF);
@@ -68,7 +74,7 @@ const onChange = async () => {
     status.value = true;
     const response = await fetch("/api/sign", {
       method: "POST",
-      body: formData,
+      body: formData
     });
 
     signInfo.value = await response.json();

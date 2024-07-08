@@ -1,38 +1,67 @@
 <template>
-  <div class="flex h-screen -my-5 pt-5" v-if="template">
-    <div class="w-full overflow-y-hidden md:overflow-y-auto overflow-x-hidden">
-      <div ref="documents" class="pr-3.5 pl-0.5">
+  <div v-if="template" class="-my-5 flex h-screen pt-5">
+    <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
+      <div ref="documents" class="pl-0.5 pr-3.5">
         <template v-for="document in sortedDocuments" :key="document.id">
-          <Document :ref="setDocumentRefs" :areas-index="fieldAreasIndex[document.id]" :selected-submitter="selectedSubmitter" :document="document" :is-drag="!!dragField"
-            :default-fields="defaultFields" :allow-draw="!onlyDefinedFields" :draw-field="drawField" :editable="editable" @draw="onDraw" @drop-field="onDropfield"
-            @remove-area="removeArea" />
+          <Document
+            :ref="setDocumentRefs"
+            :areas-index="fieldAreasIndex[document.id]"
+            :selected-submitter="selectedSubmitter"
+            :document="document"
+            :is-drag="!!dragField"
+            :default-fields="defaultFields"
+            :allow-draw="!onlyDefinedFields"
+            :draw-field="drawField"
+            :editable="editable"
+            @draw="onDraw"
+            @drop-field="onDropfield"
+            @remove-area="removeArea"
+          />
         </template>
       </div>
     </div>
 
-    <div class="relative w-80 flex-none pl-0.5 hidden md:block overflow-y-auto overflow-x-hidden">
-      <div v-if="drawField" class="sticky inset-0 h-full z-20">
-        <div class="bg-base-300 rounded-lg p-5 text-center space-y-4">
+    <div class="relative hidden w-80 flex-none overflow-y-auto overflow-x-hidden pl-0.5 md:block">
+      <div v-if="drawField" class="sticky inset-0 z-20 h-full">
+        <div class="bg-base-300 space-y-4 rounded-lg p-5 text-center">
           <p>Draw {{ drawField.name }} field on the document</p>
           <div>
             <button class="base-button" @click="clearDrawField">Cancel</button>
-            <a v-if="!drawOption && !drawField.areas.length && !['stamp', 'signature', 'initials'].includes(drawField.type)
-              " href="#" class="link block mt-3 text-sm" @click.prevent="[(drawField = null), (drawOption = null)]">
+            <a
+              v-if="
+                !drawOption && !drawField.areas.length && !['stamp', 'signature', 'initials'].includes(drawField.type)
+              "
+              href="#"
+              class="link mt-3 block text-sm"
+              @click.prevent="[(drawField = null), (drawOption = null)]"
+            >
               Or add field without drawing
             </a>
           </div>
         </div>
       </div>
 
-      <Fields ref="fields" :fields="template.fields" :submitters="template.submitters" :selected-submitter="selectedSubmitter" :default-submitters="defaultSubmitters"
-        :default-fields="defaultFields" :only-defined-fields="onlyDefinedFields" :editable="editable" @set-draw="[(drawField = $event.field), (drawOption = $event.option)]"
-        @set-drag="dragField = $event" @change-submitter="selectedSubmitter = $event" @drag-end="dragField = null" @scroll-to-area="scrollToArea" />
+      <Fields
+        ref="fields"
+        :fields="template.fields"
+        :submitters="template.submitters"
+        :selected-submitter="selectedSubmitter"
+        :default-submitters="defaultSubmitters"
+        :default-fields="defaultFields"
+        :only-defined-fields="onlyDefinedFields"
+        :editable="editable"
+        @set-draw="[(drawField = $event.field), (drawOption = $event.option)]"
+        @set-drag="dragField = $event"
+        @change-submitter="selectedSubmitter = $event"
+        @drag-end="dragField = null"
+        @scroll-to-area="scrollToArea"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, computed, provide, onMounted, onUnmounted } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, provide, ref } from "vue";
 import Document from "@/components/template/Document.vue";
 import Fields from "@/components/field/List.vue";
 import type { Template } from "@/models";
@@ -45,7 +74,6 @@ const redoStack: any = ref([]);
 const lastRedoData: any = ref();
 
 const documentRefs: any = ref([]);
-const previewsRef: any = ref([]);
 
 const drawField: any = ref();
 const drawOption: any = ref();
@@ -69,7 +97,7 @@ provide("baseFetch", baseFetch);
 provide("selectedAreaRef", selectedAreaRef); // computed(() => selectedAreaRef.value),
 
 onMounted(async () => {
-  apiGet(`/api/templates`).then(res => {
+  apiGet(`/api/templates`).then((res) => {
     if (res.success) {
       template.value = res.data as Template;
       selectedSubmitter.value = template.value.submitters[0];
@@ -111,7 +139,7 @@ const fieldAreasIndex = computed(() => {
   return areas;
 });
 
-function undo() {
+function undo(): void {
   if (undoStack.value.length > 1) {
     undoStack.value.pop();
     const stringData = undoStack.value[undoStack.value.length - 1];
@@ -125,7 +153,7 @@ function undo() {
   }
 }
 
-function redo() {
+function redo(): void {
   const stringData = redoStack.value.pop();
   lastRedoData.value = stringData;
   const currentStringData: any = JSON.stringify(template.value);
@@ -139,20 +167,20 @@ function redo() {
   }
 }
 
-function setDocumentRefs(el: any) {
+function setDocumentRefs(el: any): void {
   if (el) {
     documentRefs.value.push(el);
   }
 }
 
-function scrollIntoDocument(item: any) {
+function scrollIntoDocument(item: any): void {
   const refElement: any = documentRefs.value.find((e: any) => e.document.id === item.attachment_id);
   if (refElement && refElement.$el) {
     refElement.$el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
-function clearDrawField() {
+function clearDrawField(): void {
   if (drawField.value && !drawOption.value && drawField.value.areas.length === 0) {
     const fieldIndex = template.value.fields.indexOf(drawField.value);
 
@@ -164,7 +192,7 @@ function clearDrawField() {
   drawOption.value = null;
 }
 
-function onKeyUp(e: KeyboardEvent) {
+function onKeyUp(e: KeyboardEvent): void {
   if (e.code === "Escape") {
     clearDrawField();
     selectedAreaRef.value = null;
@@ -180,7 +208,7 @@ function onKeyUp(e: KeyboardEvent) {
   }
 }
 
-function onKeyDown(event: KeyboardEvent) {
+function onKeyDown(event: KeyboardEvent): void {
   if ((event.metaKey && event.shiftKey && event.key === "z") || (event.ctrlKey && event.key === "Z")) {
     event.stopImmediatePropagation();
     event.preventDefault();
@@ -192,7 +220,7 @@ function onKeyDown(event: KeyboardEvent) {
   }
 }
 
-function removeArea(area: any) {
+function removeArea(area: any): void {
   const field = template.value.fields.find((f: any) => f.areas?.includes(area));
   field.areas.splice(field.areas.indexOf(area), 1);
 
@@ -202,7 +230,7 @@ function removeArea(area: any) {
   save;
 }
 
-function pushUndo() {
+function pushUndo(): void {
   const stringData: any = JSON.stringify(template.value);
 
   if (undoStack.value[undoStack.value.length - 1] !== stringData) {
@@ -213,15 +241,12 @@ function pushUndo() {
   }
 }
 
-function onDraw(area: any) {
+function onDraw(area: any): void {
   if (drawField.value) {
     if (drawOption.value) {
       const areaWithoutOption = drawField.value.areas?.find((a: any) => !a.option_id);
 
-      if (
-        areaWithoutOption &&
-        !drawField.value.areas.find((a: any) => a.option_id === drawField.value.options[0].id)
-      ) {
+      if (areaWithoutOption && !drawField.value.areas.find((a: any) => a.option_id === drawField.value.options[0].id)) {
         areaWithoutOption.option_id = drawField.value.options[0].id;
       }
 
@@ -314,7 +339,7 @@ function onDraw(area: any) {
         required: type !== "checkbox",
         type,
         submitter_id: selectedSubmitter.value.id,
-        areas: [area],
+        areas: [area]
       };
 
       template.value.fields.push(field);
@@ -324,13 +349,13 @@ function onDraw(area: any) {
   }
 }
 
-function onDropfield(area: any) {
+function onDropfield(area: any): void {
   const field = {
     name: "",
     id: v4(),
     submitter_id: selectedSubmitter.value.id,
     required: dragField.value.type !== "checkbox",
-    ...dragField.value,
+    ...dragField.value
   };
 
   if (["select", "multiple", "radio"].includes(field.type)) {
@@ -343,7 +368,7 @@ function onDropfield(area: any) {
 
   if (field.type === "date") {
     field.preferences = {
-      format: Intl.DateTimeFormat().resolvedOptions().locale.endsWith("-US") ? "MM/DD/YYYY" : "DD/MM/YYYY",
+      format: Intl.DateTimeFormat().resolvedOptions().locale.endsWith("-US") ? "MM/DD/YYYY" : "DD/MM/YYYY"
     };
   }
 
@@ -351,7 +376,7 @@ function onDropfield(area: any) {
     x: (area.x - 6) / area.maskW,
     y: area.y / area.maskH,
     page: area.page,
-    attachment_id: area.attachment_id,
+    attachment_id: area.attachment_id
   };
 
   const previousField = [...template.value.fields].reverse().find((f: any) => f.type === field.type);
@@ -364,27 +389,27 @@ function onDropfield(area: any) {
     if (["checkbox"].includes(field.type)) {
       baseArea = {
         w: area.maskW / 30 / area.maskW,
-        h: (area.maskW / 30 / area.maskW) * (area.maskW / area.maskH),
+        h: (area.maskW / 30 / area.maskW) * (area.maskW / area.maskH)
       };
     } else if (field.type === "image") {
       baseArea = {
         w: area.maskW / 5 / area.maskW,
-        h: (area.maskW / 5 / area.maskW) * (area.maskW / area.maskH),
+        h: (area.maskW / 5 / area.maskW) * (area.maskW / area.maskH)
       };
     } else if (field.type === "signature" || field.type === "stamp") {
       baseArea = {
         w: area.maskW / 5 / area.maskW,
-        h: ((area.maskW / 5 / area.maskW) * (area.maskW / area.maskH)) / 2,
+        h: ((area.maskW / 5 / area.maskW) * (area.maskW / area.maskH)) / 2
       };
     } else if (field.type === "initials") {
       baseArea = {
         w: area.maskW / 10 / area.maskW,
-        h: area.maskW / 35 / area.maskW,
+        h: area.maskW / 35 / area.maskW
       };
     } else {
       baseArea = {
         w: area.maskW / 5 / area.maskW,
-        h: area.maskW / 35 / area.maskW,
+        h: area.maskW / 35 / area.maskW
       };
     }
   }
@@ -403,21 +428,21 @@ function onDropfield(area: any) {
   save;
 }
 
-function scrollToArea(area: any) {
+function scrollToArea(area: any): void {
   //console.log(documentRefs.value)
   const documentRef = documentRefs.value.find((a: any) => a.document.id === area.attachment_id);
   documentRef.scrollToArea(area);
   selectedAreaRef.value = area;
 }
 
-function baseFetch(path: string, options: RequestInit = {}) {
+function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
   return fetch(path, {
     ...options,
-    headers: { ...fetchOptions.headers, ...options.headers },
+    headers: { ...fetchOptions.headers, ...options.headers }
   });
 }
 
-async function save({ force } = { force: false }) {
+async function save({ force } = { force: false }): Promise<{}> {
   console.log("save");
 
   if (!autosave.value && !force) {
@@ -440,10 +465,10 @@ async function save({ force } = { force: false }) {
         name: template.value.name,
         schema: template.value.schema,
         submitters: template.value.submitters,
-        fields: template.value.fields,
-      },
+        fields: template.value.fields
+      }
     }),
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" }
   });
   if (onSave.value) {
     onSave.value(template.value);

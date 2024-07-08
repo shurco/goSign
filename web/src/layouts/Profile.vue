@@ -11,7 +11,9 @@
         <ul class="py-1.5">
           <li>
             <a href="/" target="_blank" class="bg-white hover:bg-red-50 hover:text-red-500">
-              <div class="group cursor-pointer relative flex justify-center rounded px-2 py-1.5 text-gray-500 hover:bg-red-100 hover:text-red-700">
+              <div
+                class="group relative flex cursor-pointer justify-center rounded px-2 py-1.5 text-gray-500 hover:bg-red-100 hover:text-red-700"
+              >
                 <SvgIcon name="exit" stroke="currentColor" class="h-6 w-6" />
               </div>
             </a>
@@ -20,7 +22,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-hidden overflow-y-auto relative block px-5">
+    <div class="relative block overflow-y-auto overflow-x-hidden px-5">
       <slot />
     </div>
   </div>
