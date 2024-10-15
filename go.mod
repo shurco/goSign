@@ -16,7 +16,7 @@ require (
 	github.com/pdfcpu/pdfcpu v0.8.1
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/pressly/goose/v3 v3.22.1
-	github.com/redis/go-redis/v9 v9.6.1
+	github.com/redis/go-redis/v9 v9.6.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.33.0
 	github.com/signintech/gopdf v0.27.1
