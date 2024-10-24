@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/mattetti/filebuffer v1.0.1
-	github.com/pdfcpu/pdfcpu v0.8.1
+	github.com/pdfcpu/pdfcpu v0.9.0
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/pressly/goose/v3 v3.22.1
 	github.com/redis/go-redis/v9 v9.7.0
