@@ -22,7 +22,7 @@
     "@vitejs/plugin-vue": "^5.1.4",
     "@eslint/js": "^9.12.0",
     "@types/uuid": "^10.0.0",
-    "@vue/tsconfig": "^0.6.0",
+    "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
