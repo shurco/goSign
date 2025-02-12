@@ -12,7 +12,7 @@
   "dependencies": {
     "@types/nprogress": "^0.2.3",
     "nprogress": "^0.2.0",
-    "pinia": "^2.2.4",
+    "pinia": "^3.0.0",
     "signature_pad": "^5.0.3",
     "uuid": "^11.0.1",
     "vue": "^3.5.12",
