@@ -1,6 +1,7 @@
 module github.com/shurco/gosign
 
 go 1.22
+toolchain go1.23.6
 
 require (
 	github.com/digitorus/pdf v0.1.2
@@ -22,7 +23,7 @@ require (
 	github.com/signintech/gopdf v0.29.2
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.9.1
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.34.0
 	golang.org/x/text v0.22.0
 )
 
