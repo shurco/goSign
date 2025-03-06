@@ -29,7 +29,7 @@
     "eslint-plugin-no-relative-import-paths": "^1.5.5",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "eslint-plugin-vue": "^9.29.0",
+    "eslint-plugin-vue": "^10.0.0",
     "postcss": "^8.4.47",
     "postcss-import": "^16.1.0",
     "postcss-nesting": "^13.0.0",
