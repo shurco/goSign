@@ -16,7 +16,7 @@ require (
 	github.com/mattetti/filebuffer v1.0.1
 	github.com/pdfcpu/pdfcpu v0.10.2
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/pressly/goose/v3 v3.24.2
+	github.com/pressly/goose/v3 v3.24.3
 	github.com/redis/go-redis/v9 v9.8.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.34.0
