@@ -1,6 +1,7 @@
 module github.com/shurco/gosign
 
-go 1.22
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
@@ -12,7 +13,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.7.5
 	github.com/mattetti/filebuffer v1.0.1
 	github.com/pdfcpu/pdfcpu v0.10.2
 	github.com/pelletier/go-toml/v2 v2.2.4
