@@ -21,5 +21,11 @@
   "[shellscript]": {
     "editor.defaultFormatter": "foxundermoon.shell-format",
     "editor.formatOnSave": true
-  }
+  },
+
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "file": "./copilot/commit-message-instructions.md"
+    }
+  ]
 }
