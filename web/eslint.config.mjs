@@ -45,7 +45,7 @@ export default [
     },
 
     rules: {
-      'vue/component-tags-order': ['error', { order: ['template', 'script', 'style'] }],
+      // 'vue/component-tags-order': ['error', { order: ['template', 'script', 'style'] }],
       "vue/multi-word-component-names": "off",
       "vue/singleline-html-element-content-newline": "off",
 

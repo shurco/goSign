@@ -10,6 +10,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/shurco/gosign/internal/config"
+	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
 	"github.com/shurco/gosign/internal/trust"
@@ -83,8 +84,12 @@ func New() error {
 		BodyLimit:             50 * 1024 * 1024,
 	})
 
-	// middleware.Fiber(app, log)
-	// routes.SiteRoutes(app)
+	// Enable middleware based on mode
+	if cfg.DevMode {
+		middleware.Fiber(app, log)
+		routes.SiteRoutes(app)
+	}
+	
 	app.Static("/drive/pages", "./lc_pages")
 	app.Static("/drive/signed", "./lc_signed")
 	app.Static("/drive/uploads", "./lc_uploads")

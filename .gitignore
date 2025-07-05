@@ -48,3 +48,4 @@ cmd/goSign/lc_*
 EXPERIMENT_*
 web/public/fixtures
 gosign.toml
+gosign-dev.toml
