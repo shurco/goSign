@@ -21,7 +21,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/signintech/gopdf v0.32.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	golang.org/x/crypto v0.39.0
 	golang.org/x/text v0.26.0
 )
@@ -49,7 +49,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.62.0 // indirect
