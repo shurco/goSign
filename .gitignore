@@ -20,7 +20,6 @@ coverage
 /cypress/screenshots/
 
 # Editor directories and files
-.vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json
