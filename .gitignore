@@ -48,3 +48,5 @@ cmd/goSign/lc_*
 EXPERIMENT_*
 web/public/fixtures
 gosign.toml
+
+/.cursor/
