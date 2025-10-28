@@ -5,6 +5,22 @@
 ROOT_PATH="$(git rev-parse --show-toplevel)"
 source ${ROOT_PATH}/scripts/_helper
 
+# Load database connection settings from docker/.env
+if [ -f "${ROOT_PATH}/docker/.env" ]; then
+  source ${ROOT_PATH}/docker/.env
+else
+  print_answer "WARNING" yellow
+  echo "File docker/.env not found, using default values"
+  echo
+fi
+
+# Set default values if not provided in .env
+POSTGRES_USER=${POSTGRES_USER:-goSign}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgresPassword}
+POSTGRES_HOST=${POSTGRES_HOST:-localhost:5432}
+POSTGRES_DB=${POSTGRES_DB:-goSign}
+POSTGRES_SSLMODE=${POSTGRES_SSLMODE:-disable}
+
 MIGRATION_DIR=${ROOT_PATH}/migrations
 MIGRATION_DIR_TMP=${ROOT_PATH}/.vscode/migrate_tmp
 
@@ -20,8 +36,8 @@ GOOSE_ACTION=$2
 run_goose() {
   arr_goose=("create" "up" "up1" "down" "down1" "redo" "status")
   if [[ " ${arr_goose[*]} " =~ " $1 " ]]; then
-    source ${ROOT_PATH}/docker/.env
-    GOOSE_CMD="goose -dir $MIGRATION_DIR -table $DB_POSTFIX postgres "postgres://${POSTGRES_USER:-goSign}:${POSTGRES_PASSWORD:-postgresPassword}@${POSTGRES_HOST:-localhost:5432}/${POSTGRES_DB:-goSign}?sslmode=require""
+    # Database connection settings are loaded from docker/.env at the beginning of the script
+    GOOSE_CMD="goose -dir $MIGRATION_DIR -table $DB_POSTFIX postgres "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}""
 
     case "$1" in
     "create") OTPUT=$($GOOSE_CMD create migration_name sql 2>&1) ;;

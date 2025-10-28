@@ -1,7 +1,7 @@
 <template>
-  <span class="dropdown" @mouseenter="toggleDropdown(true)" @touchstart="toggleDropdown(true)">
+  <span ref="dropdownRef" class="dropdown">
     <slot name="label">
-      <label tabindex="0" :title="fieldNames[modelValue]" class="cursor-pointer">
+      <label tabindex="0" :title="fieldNames[modelValue]" class="cursor-pointer" @click.stop="toggleDropdown()">
         <SvgIcon
           :name="fieldIcons[modelValue]"
           :width="props.buttonWidth"
@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { fieldIcons, fieldNames } from "@/components/field/constants.ts";
+import { useDropdown } from "@/composables/useDropdown";
 
 const props = defineProps({
   modelValue: {
@@ -60,18 +61,7 @@ const props = defineProps({
   }
 });
 
-const renderDropdown = ref(false);
-const emit = defineEmits(["update:model-value"]);
-
-function closeDropdown(): void {
-  renderDropdown.value = false;
-  const activeElement = document.activeElement as HTMLElement;
-  if (activeElement) {
-    activeElement.blur();
-  }
-}
-
-function toggleDropdown(state: boolean): void {
-  renderDropdown.value = state;
-}
+const dropdownRef = ref<HTMLElement | null>(null);
+const { isOpen: renderDropdown, close: closeDropdown, toggle: toggleDropdown } = useDropdown(dropdownRef);
+defineEmits(["update:model-value"]);
 </script>

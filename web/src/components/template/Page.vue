@@ -1,15 +1,15 @@
 <template>
   <div class="relative cursor-crosshair select-none" :style="drawField ? 'touch-action: none' : ''">
     <img
-      ref="image"
+      ref="imageEl"
       loading="lazy"
-      :src="`${image.url}/${image.filename}`"
+      :src="`${props.image.url}/${props.image.filename}`"
       :width="width"
       :height="height"
-      class="mb-4 rounded border"
+      class="mb-4 rounded border border-[#e7e2df]"
       @load="onImageLoad"
     />
-    <div class="absolute bottom-0 left-0 right-0 top-0" @pointerdown="onStartDraw">
+    <div class="absolute top-0 right-0 bottom-0 left-0" @pointerdown="onStartDraw">
       <FieldArea
         v-for="(item, i) in areas"
         :key="i"
@@ -23,23 +23,19 @@
         @start-drag="isMove = true"
         @stop-drag="isMove = false"
         @remove="$emit('remove-area', item.area)"
+        @select-submitter="$emit('select-submitter', $event)"
       />
-      <FieldArea
-        v-if="newArea"
-        :is-draw="true"
-        :field="{ submitter_id: selectedSubmitter.id, type: drawField?.type || defaultFieldType }"
-        :area="newArea"
-      />
+      <FieldArea v-if="newArea && drawField" :is-draw="true" :field="drawField" :area="newArea" />
     </div>
     <div
-      v-show="resizeDirection || isMove || isDrag || showMask || drawField"
+      v-show="resizeDirection || isMove || isDrag || newArea || drawField"
       id="mask"
       ref="mask"
-      class="absolute bottom-0 left-0 right-0 top-0 z-10"
+      class="absolute top-0 right-0 bottom-0 left-0 z-10"
       :class="{
         'cursor-grab': isDrag || isMove,
-        'cursor-nwse-resize': drawField,
-        [resizeDirectionClasses[resizeDirection]]: !!resizeDirectionClasses
+        'cursor-nwse-resize': drawField || resizeDirection === 'nwse',
+        'cursor-ew-resize': resizeDirection === 'ew'
       }"
       @pointermove="onPointermove"
       @pointerdown="onStartDraw"
@@ -50,177 +46,148 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUpdate, ref } from "vue";
+import type { PreviewImages, Submitters } from "@/models/index";
+import type { Area, Field } from "@/models/template";
 import FieldArea from "@/components/template/Area.vue";
 
-export default {
-  components: {
-    FieldArea
-  },
-  props: {
-    image: {
-      type: Object,
-      required: true
-    },
-    areas: {
-      type: Array,
-      required: false,
-      default: () => []
-    },
-    defaultFields: {
-      type: Array,
-      required: false,
-      default: () => []
-    },
-    allowDraw: {
-      type: Boolean,
-      required: false,
-      default: true
-    },
-    selectedSubmitter: {
-      type: Object,
-      required: true
-    },
-    drawField: {
-      type: Object,
-      required: false,
-      default: null
-    },
-    editable: {
-      type: Boolean,
-      required: false,
-      default: true
-    },
-    isDrag: {
-      type: Boolean,
-      required: false,
-      default: false
-    },
-    number: {
-      type: Number,
-      required: true
-    }
-  },
-  emits: ["draw", "drop-field", "remove-area"],
-  data() {
-    return {
-      areaRefs: [],
-      showMask: false,
-      isMove: false,
-      resizeDirection: null,
-      newArea: null
-    };
-  },
-  computed: {
-    defaultFieldType() {
-      return "text";
-    },
-    resizeDirectionClasses() {
-      return {
-        nwse: "cursor-nwse-resize",
-        ew: "cursor-ew-resize"
-      };
-    },
-    width() {
-      return this.image.metadata.width;
-    },
-    height() {
-      return this.image.metadata.height;
-    }
-  },
-  beforeUpdate() {
-    this.areaRefs = [];
-  },
-  methods: {
-    onImageLoad(e) {
-      e.target.setAttribute("width", e.target.naturalWidth);
-      e.target.setAttribute("height", e.target.naturalHeight);
-    },
-    setAreaRefs(el) {
-      if (el) {
-        this.areaRefs.push(el);
-      }
-    },
-    onDrop(e) {
-      this.$emit("drop-field", {
-        x: e.layerX,
-        y: e.layerY,
-        maskW: this.$refs.mask.clientWidth,
-        maskH: this.$refs.mask.clientHeight,
-        page: this.number
-      });
-    },
-    onStartDraw(e) {
-      if (!this.allowDraw) {
-        return;
-      }
+interface Props {
+  image: PreviewImages;
+  areas?: any[];
+  defaultFields?: Field[];
+  allowDraw?: boolean;
+  selectedSubmitter: Submitters;
+  drawField?: Field | null;
+  editable?: boolean;
+  isDrag?: boolean;
+  number: number;
+}
 
-      if (!this.drawField) {
-        return;
-      }
+const props = withDefaults(defineProps<Props>(), {
+  areas: () => [],
+  defaultFields: () => [],
+  allowDraw: true,
+  drawField: null,
+  editable: true,
+  isDrag: false
+});
 
-      if (!this.editable) {
-        return;
-      }
+interface Emits {
+  draw: [area: Area];
+  "drop-field": [event: any];
+  "remove-area": [area: Area];
+  "select-submitter": [submitterId: string];
+}
 
-      this.showMask = true;
+const emit = defineEmits<Emits>();
 
-      this.$nextTick(() => {
-        this.newArea = {
-          initialX: e.layerX / this.$refs.mask.clientWidth,
-          initialY: e.layerY / this.$refs.mask.clientHeight,
-          x: e.layerX / this.$refs.mask.clientWidth,
-          y: e.layerY / this.$refs.mask.clientHeight,
-          w: 0,
-          h: 0
-        };
-      });
-    },
-    onPointermove(e) {
-      if (this.newArea) {
-        const dx = e.layerX / this.$refs.mask.clientWidth - this.newArea.initialX;
-        const dy = e.layerY / this.$refs.mask.clientHeight - this.newArea.initialY;
+const areaRefs = ref<any[]>([]);
+const isMove = ref(false);
+const resizeDirection = ref<string | null>(null);
+const newArea = ref<Area | null>(null);
+const mask = ref<HTMLDivElement | null>(null);
+const imageEl = ref<HTMLImageElement | null>(null);
 
-        if (dx > 0) {
-          this.newArea.x = this.newArea.initialX;
-        } else {
-          this.newArea.x = e.layerX / this.$refs.mask.clientWidth;
-        }
+const width = computed(() => props.image.metadata.width);
+const height = computed(() => props.image.metadata.height);
 
-        if (dy > 0) {
-          this.newArea.y = this.newArea.initialY;
-        } else {
-          this.newArea.y = e.layerY / this.$refs.mask.clientHeight;
-        }
+onBeforeUpdate(() => {
+  areaRefs.value = [];
+});
 
-        if (this.drawField?.type === "cells") {
-          this.newArea.cell_w = this.newArea.h * (this.$refs.mask.clientHeight / this.$refs.mask.clientWidth);
-        }
+function onImageLoad(e: Event): void {
+  const target = e.target as HTMLImageElement;
+  target.setAttribute("width", target.naturalWidth.toString());
+  target.setAttribute("height", target.naturalHeight.toString());
+}
 
-        this.newArea.w = Math.abs(dx);
-        this.newArea.h = Math.abs(dy);
-      }
-    },
-    onPointerup(e) {
-      if (this.newArea) {
-        const area = {
-          x: this.newArea.x,
-          y: this.newArea.y,
-          w: this.newArea.w,
-          h: this.newArea.h,
-          page: this.number
-        };
-
-        if ("cell_w" in this.newArea) {
-          area.cell_w = this.newArea.cell_w;
-        }
-
-        this.$emit("draw", area);
-      }
-
-      this.showMask = false;
-      this.newArea = null;
-    }
+function setAreaRefs(el: any): void {
+  if (el) {
+    areaRefs.value.push(el);
   }
-};
+}
+
+function onDrop(e: DragEvent): void {
+  e.preventDefault();
+  if (!mask.value) return;
+
+  const rect = mask.value.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  emit("drop-field", {
+    x,
+    y,
+    maskW: mask.value.clientWidth,
+    maskH: mask.value.clientHeight,
+    page: props.number
+  });
+}
+
+function onStartDraw(e: PointerEvent): void {
+  if (!props.allowDraw || !props.drawField || !props.editable || !mask.value) {
+    return;
+  }
+
+  nextTick(() => {
+    if (!mask.value) return;
+
+    const initialX = e.layerX / mask.value.clientWidth;
+    const initialY = e.layerY / mask.value.clientHeight;
+
+    newArea.value = {
+      initialX,
+      initialY,
+      x: initialX,
+      y: initialY,
+      w: 0,
+      h: 0,
+      page: props.number,
+      attachment_id: ""
+    };
+  });
+}
+
+function onPointermove(e: PointerEvent): void {
+  if (!newArea.value || !mask.value) return;
+
+  const dx = e.layerX / mask.value.clientWidth - (newArea.value.initialX || 0);
+  const dy = e.layerY / mask.value.clientHeight - (newArea.value.initialY || 0);
+
+  newArea.value.x = dx > 0 ? newArea.value.initialX || 0 : e.layerX / mask.value.clientWidth;
+  newArea.value.y = dy > 0 ? newArea.value.initialY || 0 : e.layerY / mask.value.clientHeight;
+
+  if (props.drawField?.type === "cells") {
+    newArea.value.cell_w = newArea.value.h * (mask.value.clientHeight / mask.value.clientWidth);
+  }
+
+  newArea.value.w = Math.abs(dx);
+  newArea.value.h = Math.abs(dy);
+}
+
+function onPointerup(): void {
+  if (newArea.value) {
+    const area: Area = {
+      x: newArea.value.x,
+      y: newArea.value.y,
+      w: newArea.value.w,
+      h: newArea.value.h,
+      page: props.number,
+      attachment_id: ""
+    };
+
+    if (newArea.value.cell_w) {
+      area.cell_w = newArea.value.cell_w;
+    }
+
+    emit("draw", area);
+  }
+
+  newArea.value = null;
+}
+
+defineExpose({
+  areaRefs
+});
 </script>

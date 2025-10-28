@@ -1,7 +1,7 @@
 <template>
   <div class="group/contenteditable relative overflow-visible" :class="{ 'flex items-center': !iconInline }">
     <span
-      ref="contenteditable"
+      ref="contenteditableRef"
       dir="auto"
       :contenteditable="editable"
       style="min-width: 2px"
@@ -18,7 +18,7 @@
     >
     <SvgIcon
       name="pencil"
-      class="flex-none cursor-pointer align-middle opacity-0 group-hover/contenteditable-container:opacity-100 group-hover/contenteditable:opacity-100 peer-focus:hidden"
+      class="flex-none cursor-pointer align-middle opacity-0 group-hover/contenteditable:opacity-100 group-hover/contenteditable-container:opacity-100 peer-focus:hidden"
       :style="iconInline ? {} : { right: -(1.1 * iconWidth) + 'px' }"
       title="Edit"
       :class="{
@@ -90,12 +90,16 @@ watch(
 );
 
 function selectContent(): void {
-  const el = contenteditableRef.value;
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const sel = window.getSelection();
-  sel?.removeAllRanges();
-  sel?.addRange(range);
+  setTimeout(() => {
+    const el = contenteditableRef.value;
+    if (!el) return;
+
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, 10);
 }
 
 function onBlur(e: any): void {

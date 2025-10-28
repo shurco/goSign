@@ -9,7 +9,7 @@
         @drop="drop"
         @change="onChange"
       >
-        <div class="absolute bottom-0 left-0 right-0 top-0 flex items-center justify-center">
+        <div class="absolute top-0 right-0 bottom-0 left-0 flex items-center justify-center">
           <div class="flex flex-col items-center">
             <span v-if="!status" data-target="file-dropzone.icon" class="flex flex-col items-center">
               <span>
@@ -56,7 +56,6 @@ const signPDF = {
 const signInfo = ref(signPDF);
 const status = ref(false);
 const instance: any = getCurrentInstance();
-const emits = defineEmits(["added"]);
 
 const onChange = async () => {
   const files = instance?.refs.file.files;

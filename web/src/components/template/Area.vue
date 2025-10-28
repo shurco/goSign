@@ -2,20 +2,24 @@
   <div
     class="group absolute overflow-visible"
     :style="positionStyle"
-    @pointerdown.stop
-    @mousedown.stop="startDrag"
-    @touchstart="startTouchDrag"
+    @pointerdown.stop="handleDragStart"
+    @dblclick.stop="handleDoubleClick"
   >
     <div
       v-if="isSelected || isDraw"
-      class="border-1.5 pointer-events-none absolute bottom-0 left-0 right-0 top-0 border"
+      class="border-1.5 pointer-events-none absolute top-0 right-0 bottom-0 left-0 border"
       :class="borderColors[submitterIndex]"
     />
-    <div v-if="field.type === 'cells' && (isSelected || isDraw)" class="absolute bottom-0 left-0 right-0 top-0">
+    <div
+      v-if="!field?.required"
+      class="pointer-events-none absolute top-0 right-0 bottom-0 left-0 border border-dashed"
+      :class="borderColors[submitterIndex]"
+    />
+    <div v-if="field?.type === 'cells' && (isSelected || isDraw)" class="absolute top-0 right-0 bottom-0 left-0">
       <div
         v-for="(cellW, index) in cells"
         :key="index"
-        class="absolute bottom-0 top-0 border-r"
+        class="absolute top-0 bottom-0 border-r"
         :class="borderColors[submitterIndex]"
         :style="{ left: (cellW / area.w) * 100 + '%' }"
       >
@@ -23,14 +27,14 @@
           v-if="index === 0 && editable"
           class="absolute -bottom-1 z-10 h-2.5 w-2.5 cursor-ew-resize rounded-full border border-gray-400 bg-white shadow-md"
           style="left: -4px"
-          @mousedown.stop="startResizeCell"
+          @pointerdown.stop="handleResizeCellStart"
         />
       </div>
     </div>
 
     <div
       v-if="field?.type"
-      class="absolute overflow-visible whitespace-nowrap rounded-t border bg-white group-hover:z-10 group-hover:flex"
+      class="absolute overflow-visible rounded-t border bg-white whitespace-nowrap group-hover:z-10 group-hover:flex"
       :class="{ 'z-10 flex': isNameFocus || isSelected, invisible: !isNameFocus && !isSelected }"
       style="top: -25px; height: 25px"
       @mousedown.stop
@@ -43,7 +47,7 @@
         :editable="editable && !defaultField"
         :menu-classes="'dropdown-content bg-white menu menu-xs p-2 shadow rounded-box w-52 rounded-t-none -left-[1px]'"
         :submitters="template.submitters"
-        @update:model-value="save"
+        @update:model-value="[save(), emit('select-submitter', $event)]"
         @click="selectedAreaRef = area"
       />
       <FieldType
@@ -52,7 +56,7 @@
         :editable="editable && !defaultField"
         :button-classes="'px-1'"
         :menu-classes="'bg-white rounded-t-none'"
-        @update:model-value="[maybeUpdateOptions(), save]"
+        @update:model-value="[maybeUpdateOptions(), save()]"
         @click="selectedAreaRef = area"
       />
       <span
@@ -67,21 +71,17 @@
         @blur="onNameBlur"
         >{{ optionIndexText }} {{ field.name || defaultName }}</span
       >
-      <div v-if="isNameFocus && !['checkbox', 'phone'].includes(field.type)" class="ml-1.5 flex items-center">
+      <div
+        v-if="isNameFocus && !['checkbox', 'phone'].includes(field.type)"
+        class="ml-1.5 flex items-center gap-1.5 pr-2"
+      >
         <input
           :id="`required-checkbox-${field.id}`"
           v-model="field.required"
           type="checkbox"
-          class="checkbox checkbox-xs no-animation rounded"
+          class="toggle toggle-xs"
           @mousedown.prevent
         />
-        <label
-          :for="`required-checkbox-${field.id}`"
-          class="label text-xs"
-          @click.prevent="field.required = !field.required"
-          @mousedown.prevent
-          >Required</label
-        >
       </div>
       <button v-else-if="editable" class="pr-1" title="Remove" @click.prevent="$emit('remove')">
         <SvgIcon name="x" class="h-4 w-4" />
@@ -90,7 +90,11 @@
 
     <div
       class="flex h-full w-full items-center"
-      :class="[bgColors[submitterIndex], field?.default_value ? '' : 'justify-center']"
+      :class="[
+        bgColors[submitterIndex],
+        field?.default_value ? '' : 'justify-center',
+        !field?.required ? 'opacity-50' : ''
+      ]"
     >
       <span v-if="field" class="flex h-full items-center justify-center space-x-1">
         <div
@@ -105,312 +109,362 @@
       </span>
     </div>
 
-    <div ref="touchTarget" class="absolute bottom-0 left-0 right-0 top-0 cursor-pointer" />
+    <div ref="touchTarget" class="absolute top-0 right-0 bottom-0 left-0 cursor-pointer" />
     <span
       v-if="field?.type && editable"
-      class="absolute -bottom-1 -right-1 h-4 w-4 cursor-nwse-resize rounded-full border border-gray-400 bg-white shadow-md md:h-2.5 md:w-2.5"
-      @mousedown.stop="startResize"
-      @touchstart="startTouchResize"
+      class="absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border border-gray-400 bg-white shadow-md md:h-2.5 md:w-2.5"
+      @pointerdown.stop="handleResizeStart"
     />
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
 import FieldSubmitter from "@/components/field/Submitter.vue";
 import FieldType from "@/components/field/Type.vue";
-import { bgColors, borderColors, fieldIcons, fieldNames } from "@/components/field/constants.ts";
-import { v4 } from "uuid";
+import { bgColors, borderColors, fieldIcons, fieldNames, subNames } from "@/components/field/constants.ts";
+import type { Template } from "@/models/index";
+import type { Area, Field } from "@/models/template";
 
-export default {
-  name: "FieldArea",
-  components: {
-    FieldType,
-    FieldSubmitter
-  },
+interface Props {
+  area: Area;
+  isDraw?: boolean;
+  defaultField?: Field | null;
+  editable?: boolean;
+  field: Field | null;
+}
 
-  inject: ["template", "selectedAreaRef", "save"],
+const props = withDefaults(defineProps<Props>(), {
+  isDraw: false,
+  defaultField: null,
+  editable: true
+});
 
-  props: {
-    area: {
-      type: Object,
-      required: true
-    },
-    isDraw: {
-      type: Boolean,
-      required: false,
-      default: false
-    },
-    defaultField: {
-      type: Object,
-      required: false,
-      default: null
-    },
-    editable: {
-      type: Boolean,
-      required: false,
-      default: true
-    },
-    field: {
-      type: Object,
-      required: false,
-      default: null
-    }
-  },
+interface Emits {
+  "start-resize": [direction: "nwse" | "ew"];
+  "stop-resize": [];
+  "start-drag": [];
+  "stop-drag": [];
+  remove: [];
+  "select-submitter": [submitterId: string];
+}
 
-  emits: ["start-resize", "stop-resize", "start-drag", "stop-drag", "remove"],
+const emit = defineEmits<Emits>();
 
-  data() {
-    return {
-      isResize: false,
-      isDragged: false,
-      isNameFocus: false,
-      textOverflowChars: 0,
-      dragFrom: { x: 0, y: 0 }
-    };
-  },
-  computed: {
-    defaultName() {
-      return "name";
-    },
-    borderColors() {
-      return borderColors;
-    },
-    fieldNames() {
-      return fieldNames;
-    },
-    fieldIcons() {
-      return fieldIcons;
-    },
-    bgColors() {
-      return bgColors;
-    },
+const template = inject<Ref<Template>>("template")!;
+const selectedAreaRef = inject<Ref<Area | null>>("selectedAreaRef")!;
+const save = inject<() => void>("save")!;
 
-    optionIndexText() {
-      if (this.area.option_id && this.field.options) {
-        return `${this.field.options.findIndex((o) => o.id === this.area.option_id) + 1}.`;
-      } else {
-        return "";
-      }
-    },
-    cells() {
-      const cells = [];
-      let currentWidth = 0;
-      while (currentWidth + (this.area.cell_w + this.area.cell_w / 4) < this.area.w) {
-        currentWidth += this.area.cell_w || 9999999;
-        cells.push(currentWidth);
-      }
-      return cells;
-    },
-    submitter() {
-      return this.template.submitters.find((s) => s.id === this.field.submitter_id);
-    },
-    submitterIndex() {
-      return this.template.submitters.indexOf(this.submitter);
-    },
+const name = ref<HTMLElement | null>(null);
+const textContainer = ref<HTMLElement | null>(null);
+const touchTarget = ref<HTMLElement | null>(null);
 
-    isSelected() {
-      return this.selectedAreaRef === this.area;
-    },
+const isDragged = ref(false);
+const isNameFocus = ref(false);
+const textOverflowChars = ref(0);
+const dragFrom = ref({ x: 0, y: 0 });
+const pointerMode = ref<"drag" | "resize" | "resize-cell" | null>(null);
+const lastClickTime = ref(0);
 
-    positionStyle() {
-      const { x, y, w, h } = this.area;
+const defaultName = computed(() => {
+  if (!props.field) {
+    return "Field";
+  }
 
-      return {
-        top: y * 100 + "%",
-        left: x * 100 + "%",
-        width: w * 100 + "%",
-        height: h * 100 + "%"
-      };
-    }
-  },
-  watch: {
-    "field.default_value"() {
-      if (
-        this.field.type === "text" &&
-        this.field.default_value &&
-        this.$refs.textContainer &&
-        (this.textOverflowChars === 0 || this.textOverflowChars - 4 > this.field.default_value.length)
-      ) {
-        this.textOverflowChars =
-          this.$el.clientHeight < this.$refs.textContainer.clientHeight ? this.field.default_value.length : 0;
-      }
-    }
-  },
-  mounted() {
+  if (props.field.type === "payment" && props.field.preferences?.price) {
+    const { price, currency } = props.field.preferences;
+    const formattedPrice = new Intl.NumberFormat([], {
+      style: "currency",
+      currency
+    }).format(price ?? 0);
+    return `${fieldNames[props.field.type]} ${formattedPrice}`;
+  }
+
+  const partyName = subNames[submitterIndex.value]?.replace(" Party", "") || "First";
+  const typeName = fieldNames[props.field.type] || "Field";
+  const sameTypeAndPartyFields = template.value.fields.filter(
+    (f: any) => f.type === props.field!.type && f.submitter_id === props.field!.submitter_id && f.id !== props.field!.id
+  );
+  const fieldNumber = sameTypeAndPartyFields.length + 1;
+
+  return `${partyName} ${typeName} ${fieldNumber}`;
+});
+
+const optionIndexText = computed(() => {
+  if (props.area.option_id && props.field?.options) {
+    return `${props.field.options.findIndex((o) => o.id === props.area.option_id) + 1}.`;
+  }
+  return "";
+});
+
+const cells = computed(() => {
+  const cellsList: number[] = [];
+  const cellWidth = props.area.cell_w;
+  if (!cellWidth) return cellsList;
+
+  let currentWidth = 0;
+  while (currentWidth + (cellWidth + cellWidth / 4) < props.area.w) {
+    currentWidth += cellWidth;
+    cellsList.push(currentWidth);
+  }
+  return cellsList;
+});
+
+const submitter = computed(() => {
+  return template.value.submitters.find((s: any) => s.id === props.field?.submitter_id);
+});
+
+const submitterIndex = computed(() => {
+  if (!submitter.value) return 0;
+  return template.value.submitters.indexOf(submitter.value);
+});
+
+const isSelected = computed(() => {
+  return selectedAreaRef.value === props.area;
+});
+
+const positionStyle = computed(() => {
+  const { x, y, w, h } = props.area;
+  return {
+    top: y * 100 + "%",
+    left: x * 100 + "%",
+    width: w * 100 + "%",
+    height: h * 100 + "%"
+  };
+});
+
+watch(
+  () => props.field?.default_value,
+  () => {
     if (
-      this.field.type === "text" &&
-      this.field.default_value &&
-      this.$refs.textContainer &&
-      (this.textOverflowChars === 0 || this.textOverflowChars - 4 > this.field.default_value)
+      props.field?.type === "text" &&
+      props.field.default_value &&
+      textContainer.value &&
+      (textOverflowChars.value === 0 || textOverflowChars.value - 4 > props.field.default_value.length)
     ) {
-      this.$nextTick(() => {
-        this.textOverflowChars =
-          this.$el.clientHeight < this.$refs.textContainer.clientHeight ? this.field.default_value.length : 0;
+      nextTick(() => {
+        const el = document.querySelector(".group.absolute.overflow-visible") as HTMLElement;
+        textOverflowChars.value =
+          el && el.clientHeight < textContainer.value!.clientHeight ? props.field!.default_value!.length : 0;
       });
-    }
-  },
-  methods: {
-    onNameFocus(e) {
-      this.selectedAreaRef = this.area;
-      this.isNameFocus = true;
-      this.$refs.name.style.minWidth = this.$refs.name.clientWidth + "px";
-
-      if (!this.field.name) {
-        setTimeout(() => {
-          this.$refs.name.innerText = " ";
-        }, 1);
-      }
-    },
-    startResizeCell(e) {
-      this.$el.getRootNode().addEventListener("mousemove", this.onResizeCell);
-      this.$el.getRootNode().addEventListener("mouseup", this.stopResizeCell);
-      this.$emit("start-resize", "ew");
-    },
-    stopResizeCell(e) {
-      this.$el.getRootNode().removeEventListener("mousemove", this.onResizeCell);
-      this.$el.getRootNode().removeEventListener("mouseup", this.stopResizeCell);
-      this.$emit("stop-resize");
-      this.save;
-    },
-    onResizeCell(e) {
-      if (e.target.id === "mask") {
-        const positionX = e.layerX / (e.target.clientWidth - 1);
-
-        if (positionX > this.area.x) {
-          this.area.cell_w = positionX - this.area.x;
-        }
-      }
-    },
-    maybeUpdateOptions() {
-      delete this.field.default_value;
-
-      if (!["radio", "multiple", "select"].includes(this.field.type)) {
-        delete this.field.options;
-      }
-
-      if (["select", "multiple", "radio"].includes(this.field.type)) {
-        this.field.options ||= [{ value: "", id: v4() }];
-      }
-
-      (this.field.areas || []).forEach((area) => {
-        if (this.field.type === "cells") {
-          area.cell_w = (area.w * 2) / Math.floor(area.w / area.h);
-        } else {
-          delete area.cell_w;
-        }
-      });
-    },
-    onNameBlur(e) {
-      const text = this.$refs.name.innerText.trim();
-      this.isNameFocus = false;
-      this.$refs.name.style.minWidth = "";
-      if (text) {
-        this.field.name = text;
-      } else {
-        this.field.name = "";
-        this.$refs.name.innerText = this.defaultName;
-      }
-
-      this.save;
-    },
-    onNameEnter(e) {
-      this.$refs.name.blur();
-    },
-    resize(e) {
-      if (e.target.id === "mask") {
-        this.area.w = e.layerX / e.target.clientWidth - this.area.x;
-        this.area.h = e.layerY / e.target.clientHeight - this.area.y;
-      }
-    },
-    drag(e) {
-      if (e.target.id === "mask") {
-        this.isDragged = true;
-        this.area.x = (e.layerX - this.dragFrom.x) / e.target.clientWidth;
-        this.area.y = (e.layerY - this.dragFrom.y) / e.target.clientHeight;
-      }
-    },
-    startDrag(e) {
-      this.selectedAreaRef = this.area;
-
-      if (!this.editable) {
-        return;
-      }
-      const rect = e.target.getBoundingClientRect();
-      this.dragFrom = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      this.$el.getRootNode().addEventListener("mousemove", this.drag);
-      this.$el.getRootNode().addEventListener("mouseup", this.stopDrag);
-      this.$emit("start-drag");
-    },
-    startTouchDrag(e) {
-      if (e.target !== this.$refs.touchTarget) {
-        return;
-      }
-      this.$refs?.name?.blur();
-      e.preventDefault();
-      this.isDragged = true;
-      const rect = e.target.getBoundingClientRect();
-      this.selectedAreaRef = this.area;
-      this.dragFrom = { x: rect.left - e.touches[0].clientX, y: rect.top - e.touches[0].clientY };
-      this.$el.getRootNode().addEventListener("touchmove", this.touchDrag);
-      this.$el.getRootNode().addEventListener("touchend", this.stopTouchDrag);
-      this.$emit("start-drag");
-    },
-    touchDrag(e) {
-      const page = this.$parent.$refs.mask.previousSibling;
-      const rect = page.getBoundingClientRect();
-      this.area.x = (this.dragFrom.x + e.touches[0].clientX - rect.left) / rect.width;
-      this.area.y = (this.dragFrom.y + e.touches[0].clientY - rect.top) / rect.height;
-    },
-    stopTouchDrag() {
-      this.$el.getRootNode().removeEventListener("touchmove", this.touchDrag);
-      this.$el.getRootNode().removeEventListener("touchend", this.stopTouchDrag);
-      if (this.isDragged) {
-        this.save;
-      }
-      this.isDragged = false;
-      this.$emit("stop-drag");
-    },
-    stopDrag() {
-      this.$el.getRootNode().removeEventListener("mousemove", this.drag);
-      this.$el.getRootNode().removeEventListener("mouseup", this.stopDrag);
-      if (this.isDragged) {
-        this.save;
-      }
-      this.isDragged = false;
-      this.$emit("stop-drag");
-    },
-    startResize() {
-      this.selectedAreaRef = this.area;
-      this.$el.getRootNode().addEventListener("mousemove", this.resize);
-      this.$el.getRootNode().addEventListener("mouseup", this.stopResize);
-      this.$emit("start-resize", "nwse");
-    },
-    stopResize() {
-      this.$el.getRootNode().removeEventListener("mousemove", this.resize);
-      this.$el.getRootNode().removeEventListener("mouseup", this.stopResize);
-      this.$emit("stop-resize");
-      this.save;
-    },
-    startTouchResize(e) {
-      this.selectedAreaRef = this.area;
-      this.$refs?.name?.blur();
-      e.preventDefault();
-      this.$el.getRootNode().addEventListener("touchmove", this.touchResize);
-      this.$el.getRootNode().addEventListener("touchend", this.stopTouchResize);
-      this.$emit("start-resize", "nwse");
-    },
-    touchResize(e) {
-      const page = this.$parent.$refs.mask.previousSibling;
-      const rect = page.getBoundingClientRect();
-      this.area.w = (e.touches[0].clientX - rect.left) / rect.width - this.area.x;
-      this.area.h = (e.touches[0].clientY - rect.top) / rect.height - this.area.y;
-    },
-    stopTouchResize() {
-      this.$el.getRootNode().removeEventListener("touchmove", this.touchResize);
-      this.$el.getRootNode().removeEventListener("touchend", this.stopTouchResize);
-      this.$emit("stop-resize");
-      this.save;
     }
   }
-};
+);
+
+watch(
+  () => props.field?.submitter_id,
+  (newSubmitterId, oldSubmitterId) => {
+    if (newSubmitterId !== oldSubmitterId && isDefaultName(props.field?.name || "")) {
+      if (props.field) {
+        props.field.name = "";
+        save();
+      }
+    }
+  }
+);
+
+function isDefaultName(name: string): boolean {
+  if (!name) return true;
+  const pattern = /^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+\w+\s+\d+$/;
+  return pattern.test(name);
+}
+
+function onNameFocus(): void {
+  selectedAreaRef.value = props.area;
+  isNameFocus.value = true;
+  if (name.value) {
+    name.value.style.minWidth = name.value.clientWidth + "px";
+  }
+
+  if (!props.field?.name) {
+    setTimeout(() => {
+      if (name.value) {
+        name.value.innerText = " ";
+      }
+    }, 1);
+  }
+}
+
+function onNameBlur(): void {
+  const text = name.value?.innerText.trim() || "";
+  isNameFocus.value = false;
+  if (name.value) {
+    name.value.style.minWidth = "";
+  }
+
+  if (props.field) {
+    props.field.name = text || "";
+    if (!text && name.value) {
+      name.value.innerText = defaultName.value;
+    }
+    save();
+  }
+}
+
+function onNameEnter(): void {
+  name.value?.blur();
+}
+
+function maybeUpdateOptions(): void {
+  if (!props.field) return;
+
+  delete props.field.default_value;
+
+  if (!["radio", "multiple", "select"].includes(props.field.type)) {
+    delete props.field.options;
+  }
+
+  if (["select", "multiple", "radio"].includes(props.field.type)) {
+    props.field.options ||= [{ value: "", id: crypto.randomUUID() }];
+  }
+
+  (props.field.areas || []).forEach((area: Area) => {
+    if (props.field!.type === "cells") {
+      area.cell_w = (area.w * 2) / Math.floor(area.w / area.h);
+    } else {
+      delete area.cell_w;
+    }
+  });
+}
+
+// Handle double click to select submitter
+function handleDoubleClick(): void {
+  if (props.field) {
+    emit("select-submitter", props.field.submitter_id);
+  }
+}
+
+// Unified pointer event handlers
+function handleDragStart(e: PointerEvent): void {
+  selectedAreaRef.value = props.area;
+
+  if (!props.editable) return;
+
+  // Check for double click to prevent drag
+  const now = Date.now();
+  if (now - lastClickTime.value < 300) {
+    lastClickTime.value = 0;
+    return;
+  }
+  lastClickTime.value = now;
+
+  const target = e.target as HTMLElement;
+  if (target !== touchTarget.value && e.pointerType === "touch") return;
+
+  if (e.pointerType === "touch") {
+    name.value?.blur();
+    e.preventDefault();
+  }
+
+  const rect = (e.target as HTMLElement).getBoundingClientRect();
+  dragFrom.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  pointerMode.value = "drag";
+
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
+  emit("start-drag");
+}
+
+function handleResizeStart(e: PointerEvent): void {
+  selectedAreaRef.value = props.area;
+  if (e.pointerType === "touch") {
+    name.value?.blur();
+    e.preventDefault();
+  }
+
+  pointerMode.value = "resize";
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
+  emit("start-resize", "nwse");
+}
+
+function handleResizeCellStart(e: PointerEvent): void {
+  pointerMode.value = "resize-cell";
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
+  emit("start-resize", "ew");
+}
+
+function handlePointerMove(e: PointerEvent): void {
+  if (pointerMode.value === "drag") {
+    handleDrag(e);
+  } else if (pointerMode.value === "resize") {
+    handleResize(e);
+  } else if (pointerMode.value === "resize-cell") {
+    handleResizeCell(e);
+  }
+}
+
+function handlePointerUp(): void {
+  document.removeEventListener("pointermove", handlePointerMove);
+  document.removeEventListener("pointerup", handlePointerUp);
+
+  if (pointerMode.value === "drag") {
+    if (isDragged.value) {
+      save();
+    }
+    isDragged.value = false;
+    emit("stop-drag");
+  } else if (pointerMode.value === "resize" || pointerMode.value === "resize-cell") {
+    emit("stop-resize");
+    save();
+  }
+
+  pointerMode.value = null;
+}
+
+function handleDrag(e: PointerEvent): void {
+  const mask = document.getElementById("mask");
+  if (!mask) return;
+
+  isDragged.value = true;
+
+  if (e.pointerType === "touch") {
+    const page = mask.previousElementSibling as HTMLElement;
+    const rect = page.getBoundingClientRect();
+    props.area.x = (dragFrom.value.x + e.clientX - rect.left) / rect.width;
+    props.area.y = (dragFrom.value.y + e.clientY - rect.top) / rect.height;
+  } else {
+    if ((e.target as HTMLElement).id === "mask") {
+      props.area.x = (e.layerX - dragFrom.value.x) / mask.clientWidth;
+      props.area.y = (e.layerY - dragFrom.value.y) / mask.clientHeight;
+    }
+  }
+}
+
+function handleResize(e: PointerEvent): void {
+  const mask = document.getElementById("mask");
+  if (!mask) return;
+
+  if (e.pointerType === "touch") {
+    const page = mask.previousElementSibling as HTMLElement;
+    const rect = page.getBoundingClientRect();
+    props.area.w = (e.clientX - rect.left) / rect.width - props.area.x;
+    props.area.h = (e.clientY - rect.top) / rect.height - props.area.y;
+  } else {
+    if ((e.target as HTMLElement).id === "mask") {
+      props.area.w = e.layerX / mask.clientWidth - props.area.x;
+      props.area.h = e.layerY / mask.clientHeight - props.area.y;
+    }
+  }
+}
+
+function handleResizeCell(e: PointerEvent): void {
+  const mask = document.getElementById("mask");
+  if (!mask || (e.target as HTMLElement).id !== "mask") return;
+
+  const positionX = e.layerX / (mask.clientWidth - 1);
+  if (positionX > props.area.x) {
+    props.area.cell_w = positionX - props.area.x;
+  }
+}
+
+defineExpose({
+  get area() {
+    return props.area;
+  },
+  get field() {
+    return props.field;
+  }
+});
 </script>

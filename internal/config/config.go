@@ -17,6 +17,14 @@ const (
 
 var cfg *Config
 
+// Settings represents additional application settings
+type Settings struct {
+	Email    map[string]string `toml:"email" comment:"Email settings (provider, smtp_host, smtp_port, smtp_user, smtp_pass, from_email, from_name)"`
+	Storage  map[string]string `toml:"storage" comment:"Storage settings (provider: local/s3/gcs/azure, bucket, region, endpoint, base_path)"`
+	Webhook  map[string]string `toml:"webhook" comment:"Webhook settings (enabled, max_retries, timeout)"`
+	Features map[string]bool   `toml:"features" comment:"Feature flags (reminders_enabled, sms_verification, embedded_signing, bulk_operations)"`
+}
+
 // Config is ...
 type Config struct {
 	HTTPAddr string          `toml:"http-addr" comment:"Ports <= 1024 are privileged ports. You can't use them unless you're root or have the explicit\npermission to use them. See this answer for an explanation or wikipedia or something you trust more.\nsudo setcap 'cap_net_bind_service=+ep' /opt/yourGoBinary"`
@@ -24,6 +32,7 @@ type Config struct {
 	Postgres postgres.Config `toml:"postgres" comment:"Postgres section"`
 	Redis    redis.Config    `toml:"redis" comment:"Redis section"`
 	Trust    trust.Config    `toml:"trust-certs" comment:"Trust certs section"`
+	Settings Settings        `toml:"settings" comment:"Additional settings section"`
 }
 
 // DefaultConfig is ...
@@ -41,6 +50,30 @@ func Default() *Config {
 		Trust: trust.Config{
 			List:   []string{"eutl12", "tl12"},
 			Update: 1,
+		},
+		Settings: Settings{
+			Email: map[string]string{
+				"provider":   "smtp",
+				"smtp_host":  "localhost",
+				"smtp_port":  "1025", 
+				"from_email": "noreply@gosign.local",
+				"from_name":  "goSign",
+			},
+			Storage: map[string]string{
+				"provider":  "local",
+				"base_path": "./uploads",
+			},
+			Webhook: map[string]string{
+				"enabled":     "true",
+				"max_retries": "3",
+				"timeout":     "30", 
+			},
+			Features: map[string]bool{
+				"reminders_enabled":   true,
+				"sms_verification":    false,
+				"embedded_signing":    false,
+				"bulk_operations":     false,
+			},
 		},
 	}
 }

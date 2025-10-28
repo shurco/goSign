@@ -39,6 +39,7 @@ func New(ctx context.Context, addr, password string) Handler {
 		client: redis.NewClient(&redis.Options{
 			Addr:     addr,
 			Password: password,
+			Protocol: 2, // Use RESP2 protocol for compatibility with older Redis versions
 		}),
 	}
 	return Conn

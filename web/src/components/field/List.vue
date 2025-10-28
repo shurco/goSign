@@ -17,7 +17,7 @@
     />
   </div>
 
-  <div ref="fields" class="mb-1 mt-2" @dragover.prevent="onFieldDragover" @drop="reorderFields">
+  <div ref="fields" class="mt-2 mb-1" @dragover.prevent="onFieldDragover" @drop="reorderFields">
     <Field
       v-for="field in submitterFields"
       :key="field.id"
@@ -26,6 +26,7 @@
       :type-index="fields.filter((f: any) => f.type === field.type).indexOf(field)"
       :editable="editable && (!dragField || dragField !== field)"
       :default-field="defaultFields.find((f: any) => f.name === field.name)"
+      :is-selected="selectedField && selectedField.id === field.id"
       :draggable="editable"
       @dragstart="dragField = field"
       @dragend="dragField = null"
@@ -103,6 +104,11 @@ const props = defineProps({
   selectedSubmitter: {
     type: Object,
     required: true
+  },
+  selectedField: {
+    type: Object,
+    required: false,
+    default: null
   }
 });
 
@@ -116,14 +122,6 @@ const fieldsRef = ref();
 const fieldNames = computed(() => fieldNamesConst);
 const fieldIcons = computed(() => fieldIconsConst);
 const submitterFields = computed(() => props.fields.filter((f: any) => f.submitter_id === props.selectedSubmitter.id));
-const submitterDefaultFields = computed(() =>
-  props.defaultFields.filter((f: any) => {
-    return (
-      !submitterFields.value.find((field: any) => field.name === f.name) &&
-      (!f.role || f.role === props.selectedSubmitter.name)
-    );
-  })
-);
 
 onMounted(() => {
   fieldsRef.value = [];
@@ -158,7 +156,7 @@ function reorderFields(): void {
       props.fields.splice(index, 0, field);
     }
   });
-  save;
+  save();
 }
 
 function removeSubmitter(submitter: any): void {
@@ -172,15 +170,15 @@ function removeSubmitter(submitter: any): void {
   if (props.selectedSubmitter === submitter) {
     emit("change-submitter", props.submitters[0]);
   }
-  save;
+  save();
 }
 
 function removeField(field: any): void {
   props.fields.splice(props.fields.indexOf(field), 1);
-  save;
+  save();
 }
 
-function addField(type: any, area = null): void {
+function addField(type: any): void {
   const field: any = {
     name: "",
     id: v4(),
@@ -209,6 +207,6 @@ function addField(type: any, area = null): void {
   if (!["payment", "file"].includes(type)) {
     emit("set-draw", { field });
   }
-  save;
+  save();
 }
 </script>

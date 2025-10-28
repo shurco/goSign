@@ -2,50 +2,72 @@
 
 ✍️ **Sign documents without stress**
 
-A modern web application for digital signing and verification of PDF documents with support for X.509 certificates, visual signatures, and certificate revocation lists.
+A modern, full-featured document signing platform with multi-signer workflows, email notifications, and comprehensive API. Built with Go and Vue.js, goSign provides enterprise-grade capabilities for secure digital document signing.
 
 ## Overview
 
-goSign is a full-stack application that provides a secure and user-friendly platform for digitally signing PDF documents. It combines a powerful Go backend with a modern Vue.js frontend to deliver a seamless document signing experience.
+goSign is a complete document signing solution that combines powerful backend services with an intuitive frontend interface. It supports multi-party signing workflows, automated notifications, embedded signing, and extensive API integration capabilities.
 
-## Features
+## ✨ Key Features
 
-- 🔐 **Digital Signatures**: Sign PDF documents using X.509 certificates with PKCS7/CMS standards
-- ✅ **Document Verification**: Verify signed documents and validate certificate chains
-- 🎨 **Visual Signatures**: Add visible signature fields with customizable appearance
-- 📜 **Certificate Management**: Generate, manage, and revoke certificates with CRL support
-- 🔄 **Trust Certificate Updates**: Automatic trust certificate updates every 12 hours via cron
-- 📁 **Template Support**: Create and manage signature templates for reusable configurations
-- 👤 **User Authentication**: Secure JWT-based authentication system
-- 📊 **Document Management**: Upload, organize, and track signed documents
-- 🌐 **Multi-interface**: Public UI, Admin UI, and REST API
-- 🔍 **Health Monitoring**: Built-in health check endpoints
+### Core Signing Features
+- 🔐 **Digital Signatures**: X.509 certificates with PKCS7/CMS standards
+- ✅ **Document Verification**: Full certificate chain validation
+- 🎨 **Visual Signatures**: Customizable signature appearance and placement
+- 📜 **Certificate Management**: Generate, manage, and revoke certificates with CRL
+- 🔄 **Trust Updates**: Automatic trust certificate updates (every 12h)
 
-## Tech Stack
+### Document Workflow
+- 👥 **Multi-signer Workflow**: Sequential or parallel signing with state machine
+- 📧 **Email Notifications**: Automated invitations, reminders, and status updates
+- 📱 **SMS Support**: Optional SMS notifications for signers
+- ⏰ **Scheduled Reminders**: Configurable reminder system
+- 📊 **Status Tracking**: Real-time submission and signer status
+
+### API & Integration
+- 🔑 **Dual Authentication**: JWT tokens and API keys with rate limiting
+- 📚 **Swagger Documentation**: Interactive API documentation
+- 🔗 **Webhook Support**: Real-time event notifications
+- 🖼️ **Embedded Signing**: JavaScript SDK for iframe integration
+- 📦 **Bulk Operations**: CSV/XLSX import for mass submissions
+
+### Advanced Features
+- 📁 **Template System**: Reusable document templates with 14 field types
+- 🗄️ **Flexible Storage**: Local, S3, GCS, or Azure Blob storage
+- ⚡ **Rate Limiting**: Configurable API rate limits
+- 🔍 **Event Logging**: Comprehensive audit trail
+- 🎯 **Generic CRUD API**: Consistent REST API design
+
+## 🛠️ Tech Stack
 
 ### Backend
 - **Language**: Go 1.22+
-- **Web Framework**: Fiber v2
-- **Database**: PostgreSQL (pgx v5)
-- **Cache**: Redis
-- **Authentication**: JWT (golang-jwt/jwt)
+- **Framework**: Fiber v2 (HTTP server)
+- **Database**: PostgreSQL 14+ with JSONB
+- **Cache**: Redis 6+
+- **Authentication**: JWT + API Keys
+- **Email**: SMTP/SendGrid support
+- **Storage**: Local, S3, GCS, Azure
 - **PDF Processing**: 
-  - digitorus/pdf - PDF signing
-  - pdfcpu - PDF manipulation
+  - digitorus/pdf - Digital signing
+  - pdfcpu - Document manipulation
   - signintech/gopdf - PDF generation
-- **Task Scheduling**: robfig/cron for periodic tasks
+- **Task Scheduling**: robfig/cron v3
 - **Logging**: zerolog
+- **API Docs**: Swagger/OpenAPI
 
 ### Frontend
-- **Framework**: Vue 3 with TypeScript
+- **Framework**: Vue 3 + TypeScript (Composition API)
 - **State Management**: Pinia
 - **Routing**: Vue Router
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
 - **Build Tool**: Vite
 - **Package Manager**: Bun
-- **UI Components**: 
-  - signature_pad - Digital signature capture
-  - nprogress - Progress indicators
+- **Components**: 
+  - **UI Library**: 21 reusable components (Button, Input, Modal, Table, etc.)
+  - **Common Components**: FieldInput (14 field types), ResourceTable, FormModal
+  - **Template Components**: Area, Document, Page, Preview
+  - signature_pad for capture
 
 ## Project Structure
 
@@ -58,31 +80,48 @@ goSign/
 │   └── pdf-cert/            # PDF certificate examples
 ├── internal/                 # Private application code
 │   ├── config/              # Configuration management
-│   ├── handlers/            # HTTP request handlers
-│   │   ├── public/          # Public API endpoints
-│   │   └── private/         # Protected endpoints
-│   ├── middleware/          # HTTP middleware
-│   ├── models/              # Data models
-│   ├── queries/             # Database queries
-│   ├── routes/              # Route definitions
-│   └── trust/               # Trust certificate management
+│   ├── handlers/
+│   │   ├── api/            # REST API v1 handlers
+│   │   ├── public/         # Public endpoints
+│   │   └── private/        # Protected admin endpoints
+│   ├── middleware/          # JWT, rate limiting, CORS
+│   ├── models/              # Data models (14 models)
+│   ├── queries/             # Database repositories
+│   ├── routes/              # API v1 routes
+│   ├── services/            # Business logic
+│   │   ├── submission/     # Multi-signer workflow
+│   │   ├── apikey/         # API key management
+│   │   └── reminder/       # Reminder scheduling
+│   ├── trust/               # Trust certificate management
+│   └── worker/              # Background tasks
 ├── pkg/                      # Public libraries
-│   ├── pdf/                 # PDF operations
-│   │   ├── sign/           # PDF signing
-│   │   ├── verify/         # PDF verification
-│   │   └── revocation/     # Certificate revocation
-│   ├── security/            # Security utilities
-│   │   ├── cert/           # Certificate management
-│   │   └── password/       # Password handling
-│   ├── storage/             # Storage backends
-│   │   ├── postgres/       # PostgreSQL
-│   │   └── redis/          # Redis
-│   └── utils/               # Utility functions
+│   ├── pdf/
+│   │   ├── sign/           # Digital signing
+│   │   ├── verify/         # Signature verification
+│   │   ├── fill/           # PDF form filling
+│   │   └── revocation/     # CRL management
+│   ├── notification/        # Email/SMS service
+│   ├── webhook/             # Webhook dispatcher
+│   ├── storage/             # Multi-provider storage
+│   │   ├── local/          # Local filesystem
+│   │   ├── s3/             # AWS S3/MinIO
+│   │   ├── postgres/       # Database
+│   │   └── redis/          # Cache
+│   ├── security/
+│   │   ├── cert/           # Certificate operations
+│   │   └── password/       # Hashing and validation
+│   └── utils/               # Helper functions
 ├── web/                      # Frontend application
 │   ├── src/
-│   │   ├── components/      # Vue components
-│   │   ├── layouts/         # Page layouts
-│   │   ├── pages/           # Application pages
+│   │   ├── components/
+│   │   │   ├── ui/          # 21 reusable UI components
+│   │   │   ├── common/      # Generic components (FieldInput, FormModal, ResourceTable)
+│   │   │   ├── field/       # Field-specific components
+│   │   │   └── template/    # Document template components
+│   │   ├── composables/     # Vue composables
+│   │   ├── layouts/         # Page layouts (Profile, Sidebar)
+│   │   ├── models/          # TypeScript models
+│   │   ├── pages/           # Application pages (9 pages)
 │   │   ├── stores/          # Pinia stores
 │   │   └── utils/           # Frontend utilities
 ├── migrations/               # Database migrations
@@ -176,15 +215,65 @@ go run cmd/cert/main.go [options]
 ### API Endpoints
 
 #### Public Endpoints
-- `POST /api/sign` - Sign a PDF document
-- `POST /api/verify` - Verify a signed document
-- `GET /api/health` - Health check
-- `POST /api/auth/login` - User authentication
+- `POST /verify/pdf` - Verify signed document
+- `POST /sign` - Sign PDF document
+- `GET /s/:slug` - Submitter signing portal
+- `GET /health` - Health check
 
-#### Protected Endpoints (require JWT)
-- `POST /api/_/edit` - Edit document templates
-- `GET /api/_/templates` - List signature templates
-- `POST /api/_/upload` - Upload documents
+#### Authentication
+- `POST /auth/signin` - User login (returns JWT)
+- `POST /auth/signout` - User logout
+
+#### API v1 (Protected)
+
+> **Note**: Below are key examples. Full API includes **42+ endpoints** across all resources.
+
+**Submissions** (8 endpoints)
+- `GET /api/v1/submissions` - List submissions
+- `GET /api/v1/submissions/:id` - Get submission details
+- `POST /api/v1/submissions` - Create submission
+- `PUT /api/v1/submissions/:id` - Update submission
+- `POST /api/v1/submissions/send` - Send to signers
+- `POST /api/v1/submissions/bulk` - Bulk import from CSV
+
+**Submitters** (6 endpoints)
+- `GET /api/v1/submitters` - List submitters
+- `GET /api/v1/submitters/:id` - Get submitter details
+- `POST /api/v1/submitters/:id/resend` - Resend invitation
+- `POST /api/v1/submitters/:id/complete` - Complete signing
+- `POST /api/v1/submitters/:id/decline` - Decline signing
+
+**Templates** (7 endpoints)
+- `GET /api/v1/templates` - List templates
+- `GET /api/v1/templates/:id` - Get template details
+- `POST /api/v1/templates` - Create template
+- `PUT /api/v1/templates/:id` - Update template
+- `POST /api/v1/templates/clone` - Clone template
+- `POST /api/v1/templates/from-file` - Create from PDF
+
+**API Keys** (6 endpoints)
+- `GET /api/v1/apikeys` - List API keys
+- `POST /api/v1/apikeys` - Create API key
+- `DELETE /api/v1/apikeys/:id` - Revoke key
+- `POST /api/v1/apikeys/:id/enable` - Enable key
+- `POST /api/v1/apikeys/:id/disable` - Disable key
+
+**Webhooks** (5 endpoints)
+- `GET /api/v1/webhooks` - List webhooks
+- `POST /api/v1/webhooks` - Create webhook
+- `PUT /api/v1/webhooks/:id` - Update webhook
+- `DELETE /api/v1/webhooks/:id` - Delete webhook
+
+**Settings** (4 endpoints)
+- `GET /api/v1/settings` - Get settings
+- `PUT /api/v1/settings/email` - Update email config
+- `PUT /api/v1/settings/storage` - Update storage config
+- `PUT /api/v1/settings/branding` - Update branding
+
+**📚 Complete API Reference:**
+- **Interactive Docs**: [Swagger UI](http://localhost:8088/swagger/index.html)
+- **Full Endpoint List**: [docs/SWAGGER.md](docs/SWAGGER.md)
+- **Authentication Guide**: [docs/API_AUTHENTICATION.md](docs/API_AUTHENTICATION.md)
 
 ## Configuration
 
@@ -272,20 +361,61 @@ Utility scripts are located in the `scripts/` directory:
 
 Contributions are welcome! Please read the contributing guidelines before submitting pull requests.
 
-## Support
+## 💬 Support
 
 For issues and questions:
-- GitHub Issues: [https://github.com/shurco/gosign/issues](https://github.com/shurco/gosign/issues)
-- Documentation: [Add documentation link]
+- **GitHub Issues**: [https://github.com/shurco/gosign/issues](https://github.com/shurco/gosign/issues)
+- **Documentation**: [docs/README.md](docs/README.md)
+- **API Reference**: http://localhost:8088/swagger/index.html
 
-## Roadmap
+## 🌟 What's New in v2.0
 
+goSign v2.0 introduces enterprise document signing capabilities:
+
+- ✅ **Multi-party Signing**: Complete workflow with sequential/parallel signing
+- ✅ **Notification System**: Automated emails, SMS, and reminders
+- ✅ **API Keys**: Secure service-to-service authentication
+- ✅ **Rate Limiting**: Protection against abuse (100-10 req/min)
+- ✅ **Embedded Signing**: JavaScript SDK for iframe integration
+- ✅ **Bulk Operations**: CSV/XLSX import for mass creation
+- ✅ **Webhooks**: Real-time event notifications
+- ✅ **Storage Options**: S3, GCS, Azure, or local
+- ✅ **Swagger Docs**: Interactive API documentation
+
+See [IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md) for full details.
+
+## 📖 Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Implementation Report](docs/IMPLEMENTATION_COMPLETE.md)** - Full feature list and architecture
+- **[API Authentication](docs/API_AUTHENTICATION.md)** - JWT and API key setup
+- **[Embedded Signing](docs/EMBEDDED_SIGNING.md)** - JavaScript SDK integration
+- **[Frontend Components](docs/FRONTEND_COMPONENTS.md)** - Component architecture and UI library
+- **[Swagger Guide](docs/SWAGGER.md)** - API documentation generation
+
+**Quick Links:**
+- Swagger UI: http://localhost:8088/swagger/index.html
+- Documentation Index: [docs/README.md](docs/README.md)
+
+## 🗺️ Roadmap
+
+### Completed ✅
+- [x] Multi-signer workflows
+- [x] Email/SMS notifications
+- [x] API keys and rate limiting
+- [x] Embedded signing SDK
+- [x] Bulk operations
+- [x] Webhook system
+- [x] Swagger documentation
+
+### Planned
 - [ ] Multi-language support
-- [ ] Batch signing operations
-- [ ] Advanced certificate templates
-- [ ] Integration with external CA services
-- [ ] Mobile application support
-- [ ] PDF form filling automation
+- [ ] Advanced analytics dashboard
+- [ ] External CA integration
+- [ ] Mobile application
+- [ ] E-signature standards (eIDAS)
+- [ ] Advanced PDF form automation
 
 ---
 

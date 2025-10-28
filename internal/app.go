@@ -89,7 +89,17 @@ func New() error {
 	app.Static("/drive/signed", "./lc_signed")
 	app.Static("/drive/uploads", "./lc_uploads")
 
-	routes.ApiRoutes(app)
+	// Initialize API handlers (nil for now, will be implemented later)
+	apiHandlers := &routes.APIHandlers{
+		Submissions: nil,
+		Submitters:  nil,
+		Templates:   nil,
+		Webhooks:    nil,
+		Settings:    nil,
+		APIKeys:     nil,
+	}
+
+	routes.ApiRoutes(app, apiHandlers)
 	routes.NotFoundRoute(app)
 
 	fmt.Printf("├─[🚀] Admin UI: http://%s/_/\n", cfg.HTTPAddr)

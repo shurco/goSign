@@ -1,8 +1,11 @@
 <template>
   <div class="group pb-2">
-    <div class="group relative rounded rounded-tr-none border border-[#e7e2df] py-1">
-      <div class="group/contenteditable-container relative flex items-center justify-between">
-        <div class="absolute bottom-0 left-0 right-0 top-0 cursor-pointer" @click="scrollToFirstArea()" />
+    <div
+      class="group relative rounded rounded-tr-none border py-1"
+      :class="[isSelected ? borderColors[submitterIndex] : 'border-[#e7e2df]', !field.required ? 'border-dashed' : '']"
+    >
+      <div class="group/contenteditable-container relative flex items-center justify-between" @focusout="onFocusOut">
+        <div class="absolute top-0 right-0 bottom-0 left-0 cursor-pointer" @click="scrollToFirstArea()" />
 
         <div class="flex items-center space-x-1 p-1">
           <FieldType
@@ -19,27 +22,22 @@
             :icon-inline="true"
             :icon-width="18"
             :icon-stroke-width="1.6"
+            :select-on-edit-click="true"
             @focus="[onNameFocus(), scrollToFirstArea()]"
             @blur="onNameBlur"
           />
         </div>
 
-        <div v-if="isNameFocus" class="relative flex items-center">
+        <div v-if="isNameFocus" class="relative flex items-center gap-1.5 pr-2">
           <template v-if="field.type != 'phone'">
             <input
               :id="`required-checkbox-${field.id}`"
               v-model="field.required"
               type="checkbox"
-              class="checkbox checkbox-xs no-animation rounded"
+              class="toggle toggle-xs"
               @mousedown.prevent
+              @change="save"
             />
-            <label
-              :for="`required-checkbox-${field.id}`"
-              class="label text-xs"
-              @click.prevent="field.required = !field.required"
-              @mousedown.prevent
-              >Required</label
-            >
           </template>
         </div>
 
@@ -53,13 +51,13 @@
             <SvgIcon name="section" width="18" height="18" />
           </button>
 
-          <span
-            v-else
-            class="dropdown dropdown-end"
-            @mouseenter="renderDropdown = true"
-            @touchstart="renderDropdown = true"
-          >
-            <label tabindex="0" title="Settings" class="cursor-pointer text-transparent group-hover:text-[#291334]">
+          <span v-else ref="dropdownRef" class="dropdown dropdown-end">
+            <label
+              tabindex="0"
+              title="Settings"
+              class="cursor-pointer text-transparent group-hover:text-[#291334]"
+              @click="renderDropdown = !renderDropdown"
+            >
               <SvgIcon name="settings" width="18" height="18" />
             </label>
 
@@ -69,7 +67,6 @@
               class="dropdown-content menu menu-xs rounded-box z-10 mt-1.5 w-52 bg-[#faf7f5] p-2 shadow"
               draggable="true"
               @dragstart.prevent.stop
-              @click="closeDropdown()"
             >
               <div v-if="field.type === 'text' && !defaultField" class="relative px-1 py-1.5" @click.stop>
                 <input
@@ -77,7 +74,7 @@
                   type="text"
                   placeholder="Default value"
                   dir="auto"
-                  class="input input-bordered input-xs h-7 w-full max-w-xs !outline-0"
+                  class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
                   @blur="save"
                 />
                 <label v-if="field.default_value" class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">
@@ -88,7 +85,7 @@
                 <select
                   v-model="field.preferences.format"
                   placeholder="Format"
-                  class="select select-bordered select-xs !h-7 w-full max-w-xs font-normal !outline-0"
+                  class="select-bordered select select-xs !h-7 w-full max-w-xs font-normal !outline-0"
                   @change="save"
                 >
                   <option v-for="format in dateFormats" :key="format" :value="format">
@@ -98,26 +95,40 @@
                 <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Format </label>
               </div>
               <li v-if="field.type != 'phone'" @click.stop>
-                <label class="cursor-pointer py-1.5">
+                <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.required" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Required</span>
                 </label>
               </li>
               <li v-if="field.type === 'text' && !defaultField" @click.stop>
-                <label class="cursor-pointer py-1.5">
+                <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.readonly" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Read only</span>
                 </label>
               </li>
-              <hr class="mt-0.5 pb-0.5" />
+              <hr v-if="field.type != 'phone'" class="mt-0.5 pb-0.5" />
               <li v-for="(area, index) in field.areas || []" :key="index">
-                <a href="#" class="px-2 py-1 text-sm" @click.prevent="emit('scroll-to', area)">
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="
+                    emit('scroll-to', area);
+                    closeDropdown();
+                  "
+                >
                   <SvgIcon name="shape" width="18" height="18" />
                   Page {{ area.page + 1 }}
                 </a>
               </li>
               <li v-if="!field.areas?.length || !['radio', 'multiple'].includes(field.type)">
-                <a href="#" class="px-2 py-1 text-sm" @click.prevent="emit('set-draw', { field })">
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="
+                    emit('set-draw', { field });
+                    closeDropdown();
+                  "
+                >
                   <SvgIcon name="section" width="18" height="18" />
                   Draw new area
                 </a>
@@ -127,7 +138,14 @@
                   field.areas?.length === 1 && ['date', 'signature', 'initials', 'text', 'cells'].includes(field.type)
                 "
               >
-                <a href="#" class="px-2 py-1 text-sm" @click.prevent="copyToAllPages(field)">
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="
+                    copyToAllPages(field);
+                    closeDropdown();
+                  "
+                >
                   <SvgIcon name="copy" width="18" height="18" />
                   Copy to All Pages
                 </a>
@@ -163,7 +181,7 @@
           >
             <input
               v-model="option.value"
-              class="input input-primary input-xs -mr-6 w-full bg-transparent !pr-7 text-sm"
+              class="input input-xs input-primary -mr-6 w-full bg-transparent !pr-7 text-sm"
               type="text"
               dir="auto"
               required
@@ -177,7 +195,7 @@
           <input
             v-else
             v-model="option.value"
-            class="input input-primary input-xs w-full bg-transparent text-sm"
+            class="input input-xs input-primary w-full bg-transparent text-sm"
             :placeholder="`Option ${index + 1}`"
             type="text"
             required
@@ -197,7 +215,8 @@
 import { computed, inject, nextTick, ref, watch } from "vue";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import FieldType from "@/components/field/Type.vue";
-import { fieldNames as fieldNamesConst } from "@/components/field/constants.ts";
+import { borderColors, fieldNames as fieldNamesConst, subNames } from "@/components/field/constants.ts";
+import { useDropdown } from "@/composables/useDropdown";
 import { v4 } from "uuid";
 
 const props = defineProps({
@@ -214,6 +233,11 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: true
+  },
+  isSelected: {
+    type: Boolean,
+    required: false,
+    default: false
   }
 });
 
@@ -225,11 +249,15 @@ const selectedAreaRef: any = inject("selectedAreaRef");
 
 const nameRef: any = ref(null);
 const optionsRef: any = ref(null);
+const dropdownRef = ref<HTMLElement | null>(null);
 const isNameFocus = ref(false);
-const renderDropdown = ref(false);
+
+const { isOpen: renderDropdown, close: closeDropdown } = useDropdown(dropdownRef);
 
 const fieldNames: any = computed(() => fieldNamesConst);
-const areas = computed(() => props.field.areas || []);
+const submitterIndex = computed(() => {
+  return template.value.submitters.findIndex((s: any) => s.id === props.field.submitter_id);
+});
 const dateFormats = computed(() => [
   "MM/DD/YYYY",
   "DD/MM/YYYY",
@@ -242,6 +270,7 @@ const dateFormats = computed(() => [
   "D MMMM YYYY"
 ]);
 
+// Generate default field name based on party, type, and number
 const defaultName = computed(() => {
   if (props.field.type === "payment" && props.field.preferences?.price) {
     const { price, currency } = props.field.preferences || {};
@@ -249,13 +278,52 @@ const defaultName = computed(() => {
       style: "currency",
       currency
     }).format(price);
-    return `${fieldNames[props.field.type]} ${formattedPrice}`;
-  } else {
-    const typeIndex = template.value.fields.filter((f: any) => f.type === props.field.type).indexOf(props.field);
-    const suffix: any = { multiple: "Select", radio: "Group" }[props.field.type] || "Field";
-    return `${fieldNames[props.field.type]} ${suffix} ${typeIndex + 1}`;
+    return `${fieldNames.value[props.field.type]} ${formattedPrice}`;
   }
+
+  // Get party name (First, Second, Third, etc.)
+  const partyName = subNames[submitterIndex.value]?.replace(" Party", "") || "First";
+
+  // Get type name
+  const typeName = fieldNames.value[props.field.type] || "Field";
+
+  // Count how many fields of this type and party already exist
+  const sameTypeAndPartyFields = template.value.fields.filter(
+    (f: any) => f.type === props.field.type && f.submitter_id === props.field.submitter_id && f.id !== props.field.id
+  );
+
+  const fieldNumber = sameTypeAndPartyFields.length + 1;
+
+  return `${partyName} ${typeName} ${fieldNumber}`;
 });
+
+// Check if current field name matches the default pattern
+function isDefaultName(name: string): boolean {
+  if (!name) {
+    return true;
+  }
+
+  // Check if name matches pattern: {Party} {Type} {Number}
+  const pattern = /^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+\w+\s+\d+$/;
+  return pattern.test(name);
+}
+
+// Store previous submitter_id to detect changes
+const previousSubmitterId = ref(props.field.submitter_id);
+
+// Watch for submitter changes and update name if it's default
+watch(
+  () => props.field.submitter_id,
+  (newSubmitterId, oldSubmitterId) => {
+    if (newSubmitterId !== oldSubmitterId && isDefaultName(props.field.name)) {
+      // Update the field name to reflect new party
+      props.field.name = "";
+      // Name will be shown as defaultName in the template
+      save();
+    }
+    previousSubmitterId.value = newSubmitterId;
+  }
+);
 
 watch(
   () => props.field.type,
@@ -307,12 +375,14 @@ function copyToAllPages(field: any): any {
   template.value.documents.forEach((attachment: any) => {
     attachment.preview_images.forEach((page: any) => {
       if (
-        !field.areas.find((area: any) => area.attachment_id === attachment.id && area.page === parseInt(page.filename))
+        !field.areas.find(
+          (area: any) => area.attachment_id === attachment.id && area.page === parseInt(page.filename, 10)
+        )
       ) {
         field.areas.push({
           ...JSON.parse(areaString),
           attachment_id: attachment.id,
-          page: parseInt(page.filename)
+          page: parseInt(page.filename, 10)
         });
       }
     });
@@ -321,7 +391,7 @@ function copyToAllPages(field: any): any {
   nextTick(() => {
     emit("scroll-to", field.areas[field.areas.length - 1]);
   });
-  save;
+  save();
 }
 
 function onNameFocus(): void {
@@ -344,21 +414,13 @@ function scrollToFirstArea(): void {
   return props.field.areas?.[0] && emit("scroll-to", props.field.areas[0]);
 }
 
-function closeDropdown(): void {
-  renderDropdown.value = false;
-  const activeElement = document.activeElement as HTMLElement;
-  if (activeElement !== null) {
-    activeElement.blur();
-  }
-}
-
 function addOption(): void {
   props.field.options.push({ value: "", id: v4() });
   nextTick(() => {
     const inputs = optionsRef.value.querySelectorAll("input");
     inputs[inputs.length - 1]?.focus();
   });
-  save;
+  save();
 }
 
 function removeOption(option: any): void {
@@ -367,7 +429,7 @@ function removeOption(option: any): void {
     props.field.areas.findIndex((a: any) => a.option_id === option.id),
     1
   );
-  save;
+  save();
 }
 
 function maybeUpdateOptions(): void {
@@ -387,7 +449,7 @@ function maybeUpdateOptions(): void {
   });
 }
 
-function onNameBlur(e: any): void {
+function onNameBlur(): void {
   const text = nameRef.value.$refs.contenteditable.innerText.trim();
   if (text) {
     props.field.name = text;
@@ -396,11 +458,16 @@ function onNameBlur(e: any): void {
     nameRef.value.$refs.contenteditable.innerText = defaultName;
   }
   isNameFocus.value = false;
-  save;
+  save();
 }
 
-function removeArea(area: any): void {
-  props.field.areas.splice(props.field.areas.indexOf(area), 1);
-  save;
+function onFocusOut(event: FocusEvent): void {
+  // Check if focus moved outside the container
+  const currentTarget = event.currentTarget as HTMLElement;
+  const relatedTarget = event.relatedTarget as HTMLElement;
+
+  if (!currentTarget.contains(relatedTarget)) {
+    isNameFocus.value = false;
+  }
 }
 </script>

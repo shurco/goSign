@@ -1,55 +1,38 @@
 import { done, start } from "nprogress";
 
-export async function apiGet(url: string): Promise<any> {
-  return handleRequest(url, {
-    credentials: "include",
-    method: "GET"
-  });
+type RequestMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
+interface RequestOptions extends RequestInit {
+  method: RequestMethod;
+  credentials: RequestCredentials;
 }
 
-export async function apiPost(url: string, body: any): Promise<any> {
-  const options = createOptions("POST", body);
-  return handleRequest(url, options);
-}
+async function request<T = unknown>(url: string, method: RequestMethod, body?: unknown): Promise<T> {
+  const options: RequestOptions = {
+    method,
+    credentials: "include"
+  };
 
-export async function apiUpdate(url: string, body: any): Promise<any> {
-  const options = createOptions("PATCH", body);
-  return handleRequest(url, options);
-}
+  if (body !== undefined) {
+    options.body = typeof body === "object" ? JSON.stringify(body) : (body as BodyInit);
+    if (typeof body === "object") {
+      options.headers = { "Content-Type": "application/json" };
+    }
+  }
 
-export async function apiDelete(url: string): Promise<any> {
-  return handleRequest(url, {
-    credentials: "include",
-    method: "DELETE"
-  });
-}
-
-async function handleRequest(url: string, options: any): Promise<any> {
   try {
     start();
     const response = await fetch(url, options);
-    return response.json();
-  } catch (error) {
-    console.error(error);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
   } finally {
     done();
   }
 }
 
-function createOptions(method: string, body: any): any {
-  const options: any = {
-    credentials: "include",
-    method
-  };
-  if (body) {
-    if (Object.keys(body).length > 0) {
-      options.body = JSON.stringify(body);
-      options.headers = {
-        "Content-Type": "application/json"
-      };
-    } else {
-      options.body = body;
-    }
-  }
-  return options;
-}
+export const apiGet = <T = unknown>(url: string): Promise<T> => request<T>(url, "GET");
+export const apiPost = <T = unknown>(url: string, body: unknown): Promise<T> => request<T>(url, "POST", body);
+export const apiUpdate = <T = unknown>(url: string, body: unknown): Promise<T> => request<T>(url, "PATCH", body);
+export const apiDelete = <T = unknown>(url: string): Promise<T> => request<T>(url, "DELETE");

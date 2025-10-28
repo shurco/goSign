@@ -1,7 +1,7 @@
 <template>
   <div v-if="template" class="-my-5 flex h-screen pt-5">
     <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
-      <div ref="documents" class="pl-0.5 pr-3.5">
+      <div ref="documents" class="pr-3.5 pl-0.5">
         <template v-for="document in sortedDocuments" :key="document.id">
           <Document
             :ref="setDocumentRefs"
@@ -16,14 +16,15 @@
             @draw="onDraw"
             @drop-field="onDropfield"
             @remove-area="removeArea"
+            @select-submitter="handleSelectSubmitter"
           />
         </template>
       </div>
     </div>
 
-    <div class="relative hidden w-80 flex-none overflow-y-auto overflow-x-hidden pl-0.5 md:block">
+    <div class="relative hidden w-80 flex-none overflow-x-hidden overflow-y-auto pl-0.5 md:block">
       <div v-if="drawField" class="sticky inset-0 z-20 h-full">
-        <div class="bg-base-300 space-y-4 rounded-lg p-5 text-center">
+        <div class="space-y-4 rounded-lg bg-[--color-base-300] p-5 text-center">
           <p>Draw {{ drawField.name }} field on the document</p>
           <div>
             <button class="base-button" @click="clearDrawField">Cancel</button>
@@ -148,7 +149,7 @@ function undo(): void {
     if (stringData && stringData !== currentStringData) {
       redoStack.value.push(currentStringData);
       Object.assign(template.value, JSON.parse(stringData));
-      save;
+      save();
     }
   }
 }
@@ -163,20 +164,13 @@ function redo(): void {
       undoStack.value.push(currentStringData);
     }
     Object.assign(template.value, JSON.parse(stringData));
-    save;
+    save();
   }
 }
 
 function setDocumentRefs(el: any): void {
   if (el) {
     documentRefs.value.push(el);
-  }
-}
-
-function scrollIntoDocument(item: any): void {
-  const refElement: any = documentRefs.value.find((e: any) => e.document.id === item.attachment_id);
-  if (refElement && refElement.$el) {
-    refElement.$el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
@@ -227,7 +221,14 @@ function removeArea(area: any): void {
   if (!field.areas.length) {
     template.value.fields.splice(template.value.fields.indexOf(field), 1);
   }
-  save;
+  save();
+}
+
+function handleSelectSubmitter(submitterId: string): void {
+  const submitter = template.value.submitters.find((s: any) => s.id === submitterId);
+  if (submitter) {
+    selectedSubmitter.value = submitter;
+  }
 }
 
 function pushUndo(): void {
@@ -263,7 +264,10 @@ function onDraw(area: any): void {
         area.w = previousArea.w;
         area.h = previousArea.h;
       } else {
-        const documentRef = documentRefs.value.find((e: any) => e.document.id === area.attachment_id);
+        const documentRef = documentRefs.value.find(
+          (e: any) => e && e.document && e.document.id === area.attachment_id
+        );
+        if (!documentRef) return;
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
         if (drawField.value.type === "checkbox" || drawOption.value) {
@@ -308,7 +312,7 @@ function onDraw(area: any): void {
     drawField.value = null;
     drawOption.value = null;
     selectedAreaRef.value = area;
-    save;
+    save();
   } else {
     const documentRef = documentRefs.value.find((e: any) => e.document.id === area.attachment_id);
     const pageMask = documentRef.pageRefs[area.page].$refs.mask;
@@ -344,7 +348,7 @@ function onDraw(area: any): void {
 
       template.value.fields.push(field);
       selectedAreaRef.value = area;
-      save;
+      save();
     }
   }
 }
@@ -425,14 +429,16 @@ function onDropfield(area: any): void {
   field.areas = [fieldArea];
   selectedAreaRef.value = fieldArea;
   template.value.fields.push(field);
-  save;
+  save();
 }
 
 function scrollToArea(area: any): void {
   //console.log(documentRefs.value)
-  const documentRef = documentRefs.value.find((a: any) => a.document.id === area.attachment_id);
-  documentRef.scrollToArea(area);
-  selectedAreaRef.value = area;
+  const documentRef = documentRefs.value.find((a: any) => a && a.document && a.document.id === area.attachment_id);
+  if (documentRef) {
+    documentRef.scrollToArea(area);
+    selectedAreaRef.value = area;
+  }
 }
 
 function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
@@ -442,7 +448,7 @@ function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
   });
 }
 
-async function save({ force } = { force: false }): Promise<{}> {
+async function save({ force } = { force: false }): Promise<object> {
   console.log("save");
 
   if (!autosave.value && !force) {

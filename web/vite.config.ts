@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import tailwindcss from "@tailwindcss/vite";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 import VueDevTools from 'vite-plugin-vue-devtools'
 import path from "path";
@@ -17,15 +18,27 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8088/",
       },
+      "/verify": {
+        target: "http://localhost:8088/",
+      },
+      "/auth": {
+        target: "http://localhost:8088/",
+      },
+      "/sign": {
+        target: "http://localhost:8088/",
+      },
+      "/upload": {
+        target: "http://localhost:8088/",
+      },
       "/drive": {
         target: "http://localhost:8088/",
       },
     },
-
   },
   plugins: [
     VueDevTools(),
     vue(),
+    tailwindcss(),
     createSvgIconsPlugin({
       iconDirs: [path.resolve(process.cwd(), "./src/assets/svg")],
       symbolId: "icon-[dir]-[name]",

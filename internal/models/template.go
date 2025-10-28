@@ -2,21 +2,33 @@ package models
 
 import "time"
 
+// TemplateSettings contains template settings
+type TemplateSettings struct {
+	EmbeddingEnabled bool   `json:"embedding_enabled"`
+	WebhookEnabled   bool   `json:"webhook_enabled"`
+	ExpirationDays   int    `json:"expiration_days,omitempty"`
+	CompanyLogoID    string `json:"company_logo_id,omitempty"`
+	ReminderEnabled  bool   `json:"reminder_enabled"`
+	ReminderDays     []int  `json:"reminder_days,omitempty"` // [1, 3, 7] - reminders after N days
+}
+
 // Template is ...
 type Template struct {
-	ID         string      `json:"id"`
-	FolderID   string      `json:"folder_id"`
-	Slug       string      `json:"slug"`
-	Name       string      `json:"name"`
-	Source     string      `json:"source,omitempty"`
-	Author     *Author     `json:"author,omitempty"`
-	Submitters []Submitter `json:"submitters"`
-	Fields     []Field     `json:"fields"`
-	Schema     []Schema    `json:"schema"`
-	Documents  []Document  `json:"documents"`
-	CreatedAt  time.Time   `json:"created_at"`
-	UpdatedAt  time.Time   `json:"updated_at"`
-	ArchivedAt *time.Time  `json:"archived_at,omitempty"`
+	ID          string            `json:"id"`
+	FolderID    string            `json:"folder_id"`
+	Slug        string            `json:"slug"`
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	Source      string            `json:"source,omitempty"`
+	Author      *Author           `json:"author,omitempty"`
+	Submitters  []Submitter       `json:"submitters"`
+	Fields      []Field           `json:"fields"`
+	Schema      []Schema          `json:"schema"`
+	Documents   []Document        `json:"documents"`
+	Settings    *TemplateSettings `json:"settings,omitempty"`
+	CreatedAt   time.Time         `json:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+	ArchivedAt  *time.Time        `json:"archived_at,omitempty"`
 }
 
 // Author is ...
@@ -27,20 +39,66 @@ type Author struct {
 	Email     string `json:"email"`
 }
 
-// Submitter is ...
+// SubmitterStatus represents signer status
+type SubmitterStatus string
+
+const (
+	SubmitterStatusPending   SubmitterStatus = "pending"
+	SubmitterStatusOpened    SubmitterStatus = "opened"
+	SubmitterStatusCompleted SubmitterStatus = "completed"
+	SubmitterStatusDeclined  SubmitterStatus = "declined"
+)
+
+// Submitter represents document signer
 type Submitter struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string           `json:"id"`
+	Name          string           `json:"name"`
+	Email         string           `json:"email"`
+	Phone         string           `json:"phone,omitempty"`
+	Slug          string           `json:"slug"` // unique signing link
+	Status        SubmitterStatus  `json:"status"`
+	SubmissionID  string           `json:"submission_id"`
+	CompletedAt   *time.Time       `json:"completed_at,omitempty"`
+	DeclinedAt    *time.Time       `json:"declined_at,omitempty"`
+	SentAt        *time.Time       `json:"sent_at,omitempty"`
+	OpenedAt      *time.Time       `json:"opened_at,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+	CreatedAt     time.Time        `json:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at"`
 }
+
+// FieldType represents field type in template
+type FieldType string
+
+// 14 field types for document templates
+const (
+	FieldTypeSignature   FieldType = "signature"
+	FieldTypeInitials    FieldType = "initials"
+	FieldTypeDate        FieldType = "date"
+	FieldTypeText        FieldType = "text"
+	FieldTypeNumber      FieldType = "number"
+	FieldTypeCheckbox    FieldType = "checkbox"
+	FieldTypeRadio       FieldType = "radio"
+	FieldTypeSelect      FieldType = "select"
+	FieldTypeMultiSelect FieldType = "multi_select"
+	FieldTypeFile        FieldType = "file"
+	FieldTypeImage       FieldType = "image"
+	FieldTypeCells       FieldType = "cells"
+	FieldTypeStamp       FieldType = "stamp"
+	FieldTypePayment     FieldType = "payment"
+)
 
 // Field is ...
 type Field struct {
-	ID          string   `json:"id"`
-	SubmitterID string   `json:"submitter_id"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	Required    bool     `json:"required"`
-	Areas       []*Areas `json:"areas,omitempty"`
+	ID           string    `json:"id"`
+	SubmitterID  string    `json:"submitter_id"`
+	Name         string    `json:"name"`
+	Type         FieldType `json:"type"`
+	Required     bool      `json:"required"`
+	DefaultValue string    `json:"default_value,omitempty"`
+	Options      []string  `json:"options,omitempty"` // for select, radio
+	Validation   string    `json:"validation,omitempty"`
+	Areas        []*Areas  `json:"areas,omitempty"`
 }
 
 // Areas is ...

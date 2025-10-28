@@ -40,6 +40,11 @@ func StatusNotFound(c *fiber.Ctx) error {
 	return Response(c, fiber.StatusNotFound, utils.StatusMessage(fiber.StatusNotFound), nil)
 }
 
+// StatusNotFoundWithMessage is ...
+func StatusNotFoundWithMessage(c *fiber.Ctx, message string) error {
+	return Response(c, fiber.StatusNotFound, message, nil)
+}
+
 // StatusBadRequest is ...
 func StatusBadRequest(c *fiber.Ctx, data any) error {
 	return Response(c, fiber.StatusBadRequest, utils.StatusMessage(fiber.StatusBadRequest), data)
@@ -48,4 +53,9 @@ func StatusBadRequest(c *fiber.Ctx, data any) error {
 // StatusInternalServerError is ...
 func StatusInternalServerError(c *fiber.Ctx) error {
 	return Response(c, fiber.StatusInternalServerError, utils.StatusMessage(fiber.StatusInternalServerError), nil)
+}
+
+// StatusInternalServerErrorWithMessage is ...
+func StatusInternalServerErrorWithMessage(c *fiber.Ctx, message string) error {
+	return Response(c, fiber.StatusInternalServerError, message, nil)
 }

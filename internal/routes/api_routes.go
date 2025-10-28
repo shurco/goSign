@@ -3,54 +3,80 @@ package routes
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/shurco/gosign/internal/handlers/api"
 	private "github.com/shurco/gosign/internal/handlers/private"
 	public "github.com/shurco/gosign/internal/handlers/public"
 	"github.com/shurco/gosign/internal/middleware"
 )
 
-// ApiRoutes is ...
-func ApiRoutes(c *fiber.App) {
+// APIHandlers contains all API handlers
+type APIHandlers struct {
+	Submissions *api.SubmissionHandler
+	Submitters  *api.SubmitterHandler
+	Templates   *api.TemplateHandler
+	Webhooks    *api.WebhookHandler
+	Settings    *api.SettingsHandler
+	APIKeys     *api.APIKeyHandler
+}
+
+// ApiRoutes configures all API routes
+func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
+	// Auth group (public routes)
 	auth := c.Group("/auth")
 	auth.Post("/signin", public.SignIn)
-	// sign.Post("/refresh", handlers.RefreshKey)
+	// auth.Post("/refresh", public.RefreshKey) // TODO: implement
 	auth.Post("/signout", middleware.Protected(), public.SignOut)
 
-	// API group
-	api := c.Group("/api")
+	// Public signing/verification (no authentication)
+	verify := c.Group("/verify")
+	verify.Post("/pdf", public.VerifyPDF)
 
-	verify := api.Group("/verify")
-	verify.Post("pdf", public.VerifyPDF)
-
-	sign := api.Group("/sign")
+	sign := c.Group("/sign")
 	sign.Post("/", public.SignPDF)
 
-	// test upload
-	api.Post("/upload", public.Upload)
+	// Public upload (for testing)
+	c.Post("/upload", public.Upload)
 
-	// test template
-	api.Get("/templates", private.Template)
+	// API v1 (protected routes with rate limiting)
+	apiV1 := c.Group("/api/v1", middleware.Protected(), middleware.APIRateLimiter())
 
-	/*
-		submissions := api.Group("/submissions", middleware.Protected())
-		submissions.Get("/", handlers.Health)        // List all submissions
-		submissions.Get("/{id}", handlers.Health)    // Get a submission
-		submissions.Post("/", handlers.Health)       // Create a submission
-		submissions.Post("/emails", handlers.Health) // Create submissions from emails
-		submissions.Delete("/{id}", handlers.Health) // Archive a submission
+	// Submissions API
+	if handlers.Submissions != nil {
+		submissions := apiV1.Group("/submissions")
+		handlers.Submissions.RegisterRoutes(submissions)
+	}
 
-		submitters := api.Group("/submitters", middleware.Protected())
-		submitters.Get("/", handlers.Health)     // List all submitters
-		submitters.Get("/{id}", handlers.Health) // Get a submitter
-		submitters.Put("/{id}", handlers.Health) // Update a submitter
+	// Submitters API
+	if handlers.Submitters != nil {
+		submitters := apiV1.Group("/submitters")
+		handlers.Submitters.RegisterRoutes(submitters)
+	}
 
-		templates := api.Group("/templates", middleware.Protected())
-		templates.Get("/", handlers.Health)            // List all templates
-		templates.Get("/{id}", handlers.Health)        // Get a template
-		templates.Post("/docx", handlers.Health)       // Create a template from Word DOCX
-		templates.Post("/html", handlers.Health)       // Create a template from HTML
-		templates.Post("/pdf", handlers.Health)        // Create a template from existing PDF
-		templates.Post("/{id}/clone", handlers.Health) // Clone a template
-		templates.Put("/{id}", handlers.Health)        // Move a template to a different folder
-		templates.Delete("/{id}", handlers.Health)     // Archive a template
-	*/
+	// Templates API
+	if handlers.Templates != nil {
+		templates := apiV1.Group("/templates")
+		handlers.Templates.RegisterRoutes(templates)
+	}
+
+	// Webhooks API
+	if handlers.Webhooks != nil {
+		webhooks := apiV1.Group("/webhooks")
+		handlers.Webhooks.RegisterRoutes(webhooks)
+	}
+
+	// Settings API (with stricter rate limiting)
+	if handlers.Settings != nil {
+		settings := apiV1.Group("/settings", middleware.StrictRateLimiter())
+		handlers.Settings.RegisterRoutes(settings)
+	}
+
+	// API Keys management
+	if handlers.APIKeys != nil {
+		apikeys := apiV1.Group("/apikeys", middleware.StrictRateLimiter())
+		handlers.APIKeys.RegisterRoutes(apikeys)
+	}
+
+	// Legacy routes (backward compatibility)
+	api := c.Group("/api")
+	api.Get("/templates", private.Template) // TODO: migrate to v1
 }

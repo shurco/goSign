@@ -28,7 +28,7 @@ type Certificate struct {
 	DNSNames         []string
 	IsCA             bool
 	Parent           *x509.Certificate
-	ParentPrivateKey interface{}
+	ParentPrivateKey any
 	KeyUsage         x509.KeyUsage
 	ExtentedKeyUsage []x509.ExtKeyUsage
 	SubjectKeyId     []byte

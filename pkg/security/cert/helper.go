@@ -9,7 +9,7 @@ import (
 )
 
 // GetPublicKey returns string of pem encoded structure from given public key
-func GetPublicKey(pub interface{}) (string, error) {
+func GetPublicKey(pub any) (string, error) {
 	b, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return "", err

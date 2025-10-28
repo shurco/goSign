@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { createRouter, createWebHistory, type RouteLocationNormalized } from "vue-router";
 import * as NProgress from "nprogress";
 
@@ -12,6 +11,24 @@ const router = createRouter({
       component: () => import("@/pages/Home.vue")
     },
     {
+      path: "/dashboard",
+      name: "dashboard",
+      meta: { layout: "Sidebar" },
+      component: () => import("@/pages/Dashboard.vue")
+    },
+    {
+      path: "/submissions",
+      name: "submissions",
+      meta: { layout: "Sidebar" },
+      component: () => import("@/pages/Submissions.vue")
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      meta: { layout: "Sidebar" },
+      component: () => import("@/pages/Settings.vue")
+    },
+    {
       path: "/view",
       name: "view",
       meta: { layout: "Main" },
@@ -20,13 +37,13 @@ const router = createRouter({
     {
       path: "/edit",
       name: "edit",
-      meta: { layout: "Profile" },
+      meta: { layout: "Sidebar" },
       component: () => import("@/pages/Edit.vue")
     },
     {
       path: "/uploads",
       name: "uploads",
-      meta: { layout: "Main" },
+      meta: { layout: "Sidebar" },
       component: () => import("@/pages/Uploads.vue")
     },
     {
@@ -34,6 +51,12 @@ const router = createRouter({
       name: "sign",
       meta: { layout: "Main" },
       component: () => import("@/pages/Sign.vue")
+    },
+    {
+      path: "/s/:slug",
+      name: "submitter-sign",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/SubmitterSign.vue")
     },
     {
       path: "/verify",
@@ -60,16 +83,14 @@ router.afterEach(() => {
   NProgress.done();
 });
 
-async function loadLayoutMiddleware(route: RouteLocationNormalized) {
-  let layoutComponent;
+async function loadLayoutMiddleware(route: RouteLocationNormalized): Promise<void> {
   try {
-    layoutComponent = await import(`@/layouts/${route.meta.layout}.vue`);
-  } catch (e) {
-    console.error("Error occurred in processing of layout: ", e);
-    console.log("Mounted default layout `Blank`");
-    layoutComponent = await import(`@/layouts/Blank.vue`);
+    const layoutComponent = await import(`@/layouts/${route.meta.layout}.vue`);
+    route.meta.layoutComponent = layoutComponent.default;
+  } catch {
+    const layoutComponent = await import(`@/layouts/Blank.vue`);
+    route.meta.layoutComponent = layoutComponent.default;
   }
-  route.meta.layoutComponent = layoutComponent.default;
 }
 
 export default router;

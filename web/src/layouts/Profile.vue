@@ -1,6 +1,6 @@
 <template>
   <div class="relative flex h-screen overflow-hidden">
-    <div class="flex h-screen w-16 flex-col justify-between border-e bg-white">
+    <div class="flex h-screen w-16 flex-col justify-between border-e border-[#e7e2df] bg-white">
       <div>
         <div class="inline-flex h-16 w-16 items-center justify-center">
           <SvgIcon name="logo" stroke="currentColor" class="h-8 w-8" />
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div class="relative block overflow-y-auto overflow-x-hidden px-5">
+    <div class="relative block overflow-x-hidden overflow-y-auto px-5">
       <slot />
     </div>
   </div>

@@ -1,6 +1,7 @@
+// @ts-nocheck
 <template>
-  <div v-if="template && template.schema.length > 0" class="flex h-full pt-4">
-    <div ref="previewsRef" class="hidden w-28 flex-none overflow-y-auto overflow-x-hidden pr-3 lg:block">
+  <div v-if="template && template.schema.length > 0" class="flex h-full">
+    <div ref="previewsRef" class="hidden w-28 flex-none overflow-x-hidden overflow-y-auto pr-3 lg:block">
       <DocumentPreview
         v-for="(item, index) in template.schema"
         :key="index"
@@ -19,7 +20,7 @@
     </div>
 
     <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
-      <div ref="documents" class="pl-0.5 pr-3.5">
+      <div ref="documents" class="pr-3.5 pl-0.5">
         <template v-for="document in sortedDocuments" :key="document.id">
           <Document
             :ref="setDocumentRefs"
@@ -34,14 +35,15 @@
             @draw="onDraw"
             @drop-field="onDropfield"
             @remove-area="removeArea"
+            @select-submitter="handleSelectSubmitter"
           />
         </template>
       </div>
     </div>
 
-    <div class="relative hidden w-80 flex-none overflow-y-auto overflow-x-hidden pl-0.5 md:block">
+    <div class="relative hidden w-80 flex-none overflow-x-hidden overflow-y-auto pl-0.5 md:block">
       <div v-if="drawField" class="sticky inset-0 z-20 h-full">
-        <div class="bg-base-300 space-y-4 rounded-lg p-5 text-center">
+        <div class="space-y-4 rounded-lg bg-[--color-base-300] p-5 text-center">
           <p>Draw {{ drawField.name }} field on the document</p>
           <div>
             <button class="base-button" @click="clearDrawField()">Cancel</button>
@@ -64,6 +66,7 @@
         :fields="template.fields"
         :submitters="template.submitters"
         :selected-submitter="selectedSubmitter"
+        :selected-field="selectedField"
         :default-submitters="defaultSubmitters"
         :default-fields="defaultFields"
         :only-defined-fields="onlyDefinedFields"
@@ -77,7 +80,7 @@
     </div>
   </div>
 
-  <div v-else class="flex h-full pt-4">add new files</div>
+  <div v-else class="flex h-full">add new files</div>
 </template>
 
 <script setup lang="ts">
@@ -104,8 +107,6 @@ const selectedSubmitter: any = ref();
 const selectedAreaRef: any = ref();
 const editable = ref(true); // or whatever the initial value should be
 const dragField = ref();
-
-const isSaving = ref(false); // использовать для отображения статуса сохранения
 
 const onSave = ref();
 
@@ -172,7 +173,7 @@ function undo(): void {
     if (stringData && stringData !== currentStringData) {
       redoStack.value.push(currentStringData);
       Object.assign(template.value, JSON.parse(stringData));
-      save;
+      save();
     }
   }
 }
@@ -187,7 +188,7 @@ function redo(): void {
       undoStack.value.push(currentStringData);
     }
     Object.assign(template.value, JSON.parse(stringData));
-    save;
+    save();
   }
 }
 
@@ -198,8 +199,10 @@ function setDocumentRefs(el: any): void {
 }
 
 function scrollIntoDocument(item: any): void {
-  const refElement: any = documentRefs.value.find((e: any) => e.document.id === item.attachment_id);
-  if (refElement && refElement.$el) {
+  const refElement: any = documentRefs.value.find((e: any) => {
+    return e && e.document && e.document.id === item.attachment_id;
+  });
+  if (refElement?.$el) {
     refElement.$el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
@@ -251,7 +254,14 @@ function removeArea(area: any): void {
   if (!field.areas.length) {
     template.value.fields.splice(template.value.fields.indexOf(field), 1);
   }
-  save;
+  save();
+}
+
+function handleSelectSubmitter(submitterId: string): void {
+  const submitter = template.value.submitters.find((s: any) => s.id === submitterId);
+  if (submitter) {
+    selectedSubmitter.value = submitter;
+  }
 }
 
 function pushUndo(): void {
@@ -287,7 +297,10 @@ function onDraw(area: any): void {
         area.w = previousArea.w;
         area.h = previousArea.h;
       } else {
-        const documentRef = documentRefs.value.find((e: any) => e.document.id === area.attachment_id);
+        const documentRef = documentRefs.value.find(
+          (e: any) => e && e.document && e.document.id === area.attachment_id
+        );
+        if (!documentRef) return;
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
         if (drawField.value.type === "checkbox" || drawOption.value) {
@@ -332,7 +345,7 @@ function onDraw(area: any): void {
     drawField.value = null;
     drawOption.value = null;
     selectedAreaRef.value = area;
-    save;
+    save();
   } else {
     const documentRef = documentRefs.value.find((e: any) => e.document.id === area.attachment_id);
     const pageMask = documentRef.pageRefs[area.page].$refs.mask;
@@ -368,7 +381,7 @@ function onDraw(area: any): void {
 
       template.value.fields.push(field);
       selectedAreaRef.value = area;
-      save;
+      save();
     }
   }
 }
@@ -440,7 +453,24 @@ function onDropfield(area: any): void {
 
   fieldArea.w = baseArea.w;
   fieldArea.h = baseArea.h;
-  fieldArea.y = fieldArea.y - baseArea.h / 2;
+
+  // Fix: if baseArea.h is undefined, calculate default height based on field type
+  if (!fieldArea.h) {
+    if (["checkbox"].includes(field.type)) {
+      fieldArea.h = (area.maskW / 30 / area.maskW) * (area.maskW / area.maskH);
+    } else if (field.type === "image") {
+      fieldArea.h = (area.maskW / 5 / area.maskW) * (area.maskW / area.maskH);
+    } else if (field.type === "signature" || field.type === "stamp") {
+      fieldArea.h = ((area.maskW / 5 / area.maskW) * (area.maskW / area.maskH)) / 2;
+    } else if (field.type === "initials") {
+      fieldArea.h = area.maskW / 35 / area.maskW;
+    } else {
+      // Default for text and other fields
+      fieldArea.h = area.maskW / 35 / area.maskW;
+    }
+  }
+
+  fieldArea.y = fieldArea.y - fieldArea.h / 2;
 
   if (field.type === "cells") {
     fieldArea.cell_w = baseArea.cell_w || baseArea.w / 5;
@@ -449,27 +479,7 @@ function onDropfield(area: any): void {
   field.areas = [fieldArea];
   selectedAreaRef.value = fieldArea;
   template.value.fields.push(field);
-  save;
-}
-
-function updateFromUpload({ schema, documents }): void {
-  template.value.schema.push(...schema);
-  template.value.documents.push(...documents);
-  nextTick(() => {
-    if (previewsRef.value) {
-      previewsRef.value.scrollTop = previewsRef.value.scrollHeight;
-      scrollIntoDocument(schema[0]);
-    }
-  });
-  if (template.value.name === "New Document") {
-    template.value.name = template.value.schema[0].name;
-  }
-  save;
-}
-
-function updateName(value: string): void {
-  template.value.name = value;
-  save;
+  save();
 }
 
 function onDocumentRemove(item: any): void {
@@ -484,7 +494,7 @@ function onDocumentRemove(item: any): void {
       }
     });
   });
-  save;
+  save();
 }
 
 function onDocumentReplace({ replaceSchemaItem, schema, documents }): void {
@@ -497,7 +507,7 @@ function onDocumentReplace({ replaceSchemaItem, schema, documents }): void {
       }
     });
   });
-  save;
+  save();
 }
 
 function moveDocument(item: any, direction: any): void {
@@ -511,35 +521,15 @@ function moveDocument(item: any, direction: any): void {
   } else {
     template.value.schema.splice(currentIndex + direction, 0, item);
   }
-  save;
-}
-
-function maybeShowEmptyTemplateAlert(e: Event): void {
-  if (!template.value.fields.length) {
-    e.preventDefault();
-    alert("Please draw fields to prepare the document.");
-  }
-}
-
-function onSaveClick(): void {
-  if (template.value.fields.length) {
-    isSaving.value = true;
-    try {
-      save;
-      console.log("onSaveClick");
-      //window.Turbo.visit(`/templates/${template.value.id}`)
-    } finally {
-      isSaving.value = false;
-    }
-  } else {
-    alert("Please draw fields to prepare the document.");
-  }
+  save();
 }
 
 function scrollToArea(area: any): void {
-  const documentRef = documentRefs.value.find((a: any) => a.document.id === area.attachment_id);
-  documentRef.scrollToArea(area);
-  selectedAreaRef.value = area;
+  const documentRef = documentRefs.value.find((a: any) => a && a.document && a.document.id === area.attachment_id);
+  if (documentRef) {
+    documentRef.scrollToArea(area);
+    selectedAreaRef.value = area;
+  }
 }
 
 function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
@@ -549,7 +539,7 @@ function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
   });
 }
 
-async function save({ force } = { force: false }): Promise<{}> {
+async function save({ force } = { force: false }): Promise<object> {
   console.log("save");
 
   if (!force) {
