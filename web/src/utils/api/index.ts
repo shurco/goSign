@@ -1,6 +1,7 @@
 import { done, start } from "nprogress";
+import { getAuthHeaders, handleUnauthorized } from "./auth";
 
-type RequestMethod = "GET" | "POST" | "PATCH" | "DELETE";
+type RequestMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 interface RequestOptions extends RequestInit {
   method: RequestMethod;
@@ -13,16 +14,34 @@ async function request<T = unknown>(url: string, method: RequestMethod, body?: u
     credentials: "include"
   };
 
+  const isAPIv1 = url.startsWith("/api/v1");
+  if (isAPIv1) {
+    options.headers = { ...getAuthHeaders() };
+  }
+
   if (body !== undefined) {
     options.body = typeof body === "object" ? JSON.stringify(body) : (body as BodyInit);
     if (typeof body === "object") {
-      options.headers = { "Content-Type": "application/json" };
+      options.headers = {
+        ...options.headers,
+        "Content-Type": "application/json"
+      };
     }
   }
 
   try {
     start();
-    const response = await fetch(url, options);
+    let response = await fetch(url, options);
+    
+    if (response.status === 401 && isAPIv1) {
+      const retryResponse = await handleUnauthorized({ ...options, url });
+      if (retryResponse) {
+        response = retryResponse;
+      } else {
+        throw new Error("Authentication failed");
+      }
+    }
+    
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }

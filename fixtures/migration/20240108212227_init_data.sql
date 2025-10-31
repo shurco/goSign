@@ -4,7 +4,7 @@ INSERT INTO "public"."account" ("id", "name", "timezone", "locale", "created_at"
 ('12a57fea-3870-4ea5-bfe6-76f0741da2b3', 'CompanyName', 'London', 'en-GB', NOW(), NOW());
 
 INSERT INTO "public"."user" ("id", "first_name", "last_name", "email", "role", "password", "account_id", "current_sign_in_at", "last_sign_in_at", "current_sign_in_ip", "last_sign_in_ip", "created_at", "updated_at") VALUES 
-('3a3a7b08-61de-4448-8440-35dc589c51db', 'Firsname', 'Lastname', 'user@mail.com', 2, 'password', '12a57fea-3870-4ea5-bfe6-76f0741da2b3', NOW(), NOW(), '127.0.0.1', '127.0.0.1', NOW(), NOW());
+('3a3a7b08-61de-4448-8440-35dc589c51db', 'Firsname', 'Lastname', 'user@mail.com', 3, 'password', '12a57fea-3870-4ea5-bfe6-76f0741da2b3', NOW(), NOW(), '127.0.0.1', '127.0.0.1', NOW(), NOW());
 
 INSERT INTO "public"."template_folder" ("id", "name", "account_id", "created_at", "updated_at") VALUES 
 ('2ab2d0fd-f331-4e12-a837-0c4cb3376fe7', 'Default', '12a57fea-3870-4ea5-bfe6-76f0741da2b3', NOW(), NOW());

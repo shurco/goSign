@@ -105,6 +105,75 @@ Reason: {{decline_reason}}
 Best regards,
 {{company_name}}
 `,
+		"email_verification": `
+Hello!
+
+Thank you for registering with goSign.
+
+Please verify your email address by clicking the link below:
+{{verification_url}}
+
+This link will expire in 24 hours.
+
+If you didn't register for a goSign account, please ignore this email.
+
+Best regards,
+goSign Team
+`,
+		"password_reset": `
+Hello!
+
+You have requested to reset your password for your goSign account.
+
+Click the link below to reset your password:
+{{reset_url}}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, please ignore this email.
+
+Best regards,
+goSign Team
+`,
+		"2fa_enabled": `
+Hello!
+
+Two-factor authentication (2FA) has been enabled for your goSign account.
+
+Your account is now more secure with an additional layer of protection.
+
+If you didn't enable 2FA, please contact support immediately.
+
+Best regards,
+goSign Team
+`,
+		"2fa_disabled": `
+Hello!
+
+Two-factor authentication (2FA) has been disabled for your goSign account.
+
+If you didn't disable 2FA, please contact support immediately and change your password.
+
+Best regards,
+goSign Team
+`,
+		"welcome": `
+Hello {{user_name}}!
+
+Welcome to goSign! We're excited to have you on board.
+
+You can now start creating and signing documents with ease.
+
+Get started by exploring our features:
+- Create document templates
+- Send documents for signing
+- Track signature progress
+
+If you have any questions, feel free to reach out to our support team.
+
+Best regards,
+goSign Team
+`,
 	}
 }
 

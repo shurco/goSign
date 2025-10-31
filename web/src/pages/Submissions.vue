@@ -139,6 +139,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import FormModal from "@/components/common/FormModal.vue";
+import { fetchWithAuth } from "@/utils/api/auth";
 
 interface Submission {
   id: string;
@@ -189,7 +190,7 @@ onMounted(async () => {
 async function loadSubmissions(): Promise<void> {
   isLoading.value = true;
   try {
-    const response = await fetch("/api/v1/submissions");
+    const response = await fetchWithAuth("/api/v1/submissions");
     if (response.ok) {
       const data = await response.json();
       submissions.value = data.data || [];
@@ -203,7 +204,7 @@ async function loadSubmissions(): Promise<void> {
 
 async function loadTemplates(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/templates");
+    const response = await fetchWithAuth("/api/v1/templates");
     if (response.ok) {
       const data = await response.json();
       templates.value = data.data || [];
@@ -233,7 +234,7 @@ async function handleDelete(submission: Submission): Promise<void> {
   }
 
   try {
-    const response = await fetch(`/api/v1/submissions/${submission.id}`, {
+    const response = await fetchWithAuth(`/api/v1/submissions/${submission.id}`, {
       method: "DELETE"
     });
 
@@ -254,7 +255,7 @@ async function handleSubmit(formData: any): Promise<void> {
 
     const method = editingSubmission.value ? "PUT" : "POST";
 
-    const response = await fetch(url, {
+    const response = await fetchWithAuth(url, {
       method,
       headers: {
         "Content-Type": "application/json"
@@ -295,7 +296,7 @@ function handlePageChange(page: number): void {
 
 async function sendSubmission(submission: Submission): Promise<void> {
   try {
-    const response = await fetch(`/api/v1/submissions/${submission.id}/send`, {
+    const response = await fetchWithAuth(`/api/v1/submissions/${submission.id}/send`, {
       method: "POST"
     });
 
@@ -312,7 +313,7 @@ async function sendSubmission(submission: Submission): Promise<void> {
 
 async function sendReminder(submission: Submission): Promise<void> {
   try {
-    const response = await fetch(`/api/v1/submissions/${submission.id}/remind`, {
+    const response = await fetchWithAuth(`/api/v1/submissions/${submission.id}/remind`, {
       method: "POST"
     });
 

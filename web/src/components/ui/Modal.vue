@@ -6,7 +6,7 @@
         <div
           ref="modalRef"
           :class="modalClasses"
-          class="relative z-10 w-full rounded-lg bg-white shadow-xl"
+          class="relative z-10 w-full rounded-lg border border-[var(--color-base-300)] bg-white"
           @click.stop
         >
           <div v-if="$slots.header || title" class="border-b border-gray-200 px-6 py-4">

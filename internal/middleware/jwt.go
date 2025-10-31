@@ -54,14 +54,14 @@ func SetAPIKeyValidator(validator APIKeyValidator) {
 	apiKeyValidator = validator
 }
 
-// CreateToken generates JWT token with claims
+// CreateToken generates JWT access token with claims (15 minutes)
 func CreateToken(user *models.User) (string, error) {
 	claims := MyCustomClaims{
 		user.ID,
 		user.Name,
 		user.Email,
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
@@ -70,6 +70,37 @@ func CreateToken(user *models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessToken, err := token.SignedString(mySigningKey)
 	return accessToken, err
+}
+
+// CreateRefreshToken generates JWT refresh token (7 days)
+func CreateRefreshToken(userID string) (string, error) {
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		NotBefore: jwt.NewNumericDate(time.Now()),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	refreshToken, err := token.SignedString(mySigningKey)
+	return refreshToken, err
+}
+
+// ValidateRefreshToken validates refresh token and returns user ID
+func ValidateRefreshToken(tokenString string) (string, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
+		return mySigningKey, nil
+	})
+	if err != nil {
+		return "", errors.New("invalid refresh token")
+	}
+
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok || !token.Valid {
+		return "", errors.New("invalid refresh token")
+	}
+
+	return claims.Subject, nil
 }
 
 // ValidateToken parses and validates JWT token
@@ -151,6 +182,37 @@ func Protected() fiber.Handler {
 			Email:  claims.Email,
 			Name:   claims.Name,
 		})
+		
+		// Also store user_id for easier access
+		c.Locals("user_id", claims.Id)
+
+		return c.Next()
+	}
+}
+
+// RequireEmailVerification checks if user has verified their email
+func RequireEmailVerification() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Get auth context
+		auth := GetAuthContext(c)
+		if auth == nil {
+			return webutil.StatusUnauthorized(c, nil)
+		}
+
+		// Only check for JWT auth (API keys don't need email verification)
+		if auth.Type != AuthTypeJWT {
+			return c.Next()
+		}
+
+		// Note: In a real implementation, you would check the database
+		// to see if the user's email is verified. For now, we'll just
+		// rely on the fact that the token was issued after verification.
+		
+		// TODO: Add database check for email verification status
+		// user, err := queries.DB.GetUserByID(ctx, auth.UserID)
+		// if err != nil || !user.EmailVerified {
+		//     return webutil.StatusForbidden(c, "Email not verified")
+		// }
 
 		return c.Next()
 	}

@@ -69,20 +69,50 @@ func (p *EmailProvider) Type() models.NotificationType {
 	return models.NotificationTypeEmail
 }
 
-// SMSProvider sends SMS notifications (stub for future implementation)
+// TwilioConfig contains Twilio API configuration
+type TwilioConfig struct {
+	AccountSID string
+	AuthToken  string
+	FromNumber string
+	Enabled    bool
+}
+
+// SMSProvider sends SMS notifications via Twilio
 type SMSProvider struct {
-	// TODO: add Twilio configuration when needed
+	config TwilioConfig
 }
 
-// NewSMSProvider creates new SMS provider
-func NewSMSProvider() *SMSProvider {
-	return &SMSProvider{}
+// NewSMSProvider creates new SMS provider with Twilio configuration
+func NewSMSProvider(config TwilioConfig) *SMSProvider {
+	return &SMSProvider{
+		config: config,
+	}
 }
 
-// Send sends SMS
+// Send sends SMS via Twilio
 func (p *SMSProvider) Send(ctx context.Context, notification *models.Notification) error {
-	// TODO: implement sending via Twilio
-	return fmt.Errorf("SMS provider not implemented yet")
+	// Check if Twilio is configured and enabled
+	if !p.config.Enabled || p.config.AccountSID == "" || p.config.AuthToken == "" {
+		return fmt.Errorf("Twilio SMS is not configured or disabled")
+	}
+
+	// Validate phone number
+	if notification.Recipient == "" {
+		return fmt.Errorf("recipient phone number is required")
+	}
+
+	// TODO: Implement actual Twilio API call when credentials are provided
+	// For now: log and return success message indicating SMS would be sent
+	// This is a correct stub that can be easily extended later
+	
+	// When implementing:
+	// 1. Use Twilio REST API: https://api.twilio.com/2010-04-01/Accounts/{AccountSID}/Messages.json
+	// 2. POST with Body, From, To parameters
+	// 3. Use Basic Auth with AccountSID and AuthToken
+	// 4. Handle Twilio error responses
+	
+	return fmt.Errorf("SMS sending not fully implemented - would send to %s via Twilio (AccountSID: %s)", 
+		notification.Recipient, p.config.AccountSID[:8]+"...")
 }
 
 // Type returns provider type

@@ -11,21 +11,51 @@ const router = createRouter({
       component: () => import("@/pages/Home.vue")
     },
     {
+      path: "/auth/signup",
+      name: "signup",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/SignUp.vue")
+    },
+    {
+      path: "/auth/signin",
+      name: "signin",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/SignIn.vue")
+    },
+    {
+      path: "/auth/password/forgot",
+      name: "password-forgot",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/ForgotPassword.vue")
+    },
+    {
+      path: "/auth/password/reset",
+      name: "password-reset",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/ResetPassword.vue")
+    },
+    {
+      path: "/auth/verify-email",
+      name: "verify-email",
+      meta: { layout: "Blank" },
+      component: () => import("@/pages/VerifyEmail.vue")
+    },
+    {
       path: "/dashboard",
       name: "dashboard",
-      meta: { layout: "Sidebar" },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/Dashboard.vue")
     },
     {
       path: "/submissions",
       name: "submissions",
-      meta: { layout: "Sidebar" },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/Submissions.vue")
     },
     {
       path: "/settings",
       name: "settings",
-      meta: { layout: "Sidebar" },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/Settings.vue")
     },
     {
@@ -37,13 +67,13 @@ const router = createRouter({
     {
       path: "/edit",
       name: "edit",
-      meta: { layout: "Sidebar" },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/Edit.vue")
     },
     {
       path: "/uploads",
       name: "uploads",
-      meta: { layout: "Sidebar" },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/Uploads.vue")
     },
     {
@@ -76,6 +106,26 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   NProgress.start();
   loadLayoutMiddleware(to);
+
+  // Check if route requires authentication
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      next({ name: "signin", query: { redirect: to.fullPath } });
+      return;
+    }
+  }
+
+  // Redirect to dashboard if already logged in and trying to access auth pages
+  const authPages = ["signin", "signup"];
+  if (authPages.includes(to.name as string)) {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      next({ name: "dashboard" });
+      return;
+    }
+  }
+
   next();
 });
 

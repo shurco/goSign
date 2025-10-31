@@ -11,6 +11,7 @@
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,vue,css,scss}\"",
+    "generate-types": "cd .. && go run github.com/gzuidhof/tygo@latest generate",
     "update": "bun update --latest"
   },
   "dependencies": {

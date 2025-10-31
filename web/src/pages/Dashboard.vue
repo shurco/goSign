@@ -158,6 +158,7 @@ import Stat from "@/components/ui/Stat.vue";
 import Card from "@/components/ui/Card.vue";
 import Badge from "@/components/ui/Badge.vue";
 import Button from "@/components/ui/Button.vue";
+import { fetchWithAuth } from "@/utils/api/auth";
 
 interface Submission {
   id: string;
@@ -211,7 +212,7 @@ onMounted(async () => {
 
 async function loadStats(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/stats");
+    const response = await fetchWithAuth("/api/v1/stats");
     if (response.ok) {
       stats.value = await response.json();
     }
@@ -222,7 +223,7 @@ async function loadStats(): Promise<void> {
 
 async function loadRecentSubmissions(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/submissions?limit=5&sort=created_at:desc");
+    const response = await fetchWithAuth("/api/v1/submissions?limit=5&sort=created_at:desc");
     if (response.ok) {
       const data = await response.json();
       recentSubmissions.value = data.data || [];
@@ -234,7 +235,7 @@ async function loadRecentSubmissions(): Promise<void> {
 
 async function loadRecentEvents(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/events?limit=10&sort=created_at:desc");
+    const response = await fetchWithAuth("/api/v1/events?limit=10&sort=created_at:desc");
     if (response.ok) {
       const data = await response.json();
       recentEvents.value = data.data || [];

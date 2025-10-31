@@ -5,9 +5,9 @@ import "time"
 type UserRole int
 
 const (
-	UserRoleViewer UserRole = iota
-	UserRoleSigner
-	UserRoleAdmin
+	UserRoleUser      UserRole = 1 // Regular user with basic permissions
+	UserRoleModerator UserRole = 2 // Moderator with extended permissions
+	UserRoleAdmin     UserRole = 3 // Administrator with full access
 )
 
 // User is ...

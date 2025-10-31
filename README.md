@@ -164,6 +164,18 @@ go run cmd/goSign/main.go gen --config
 ./scripts/migration up
 ```
 
+6. (Optional) Load test data for development:
+```bash
+./scripts/migration dev up
+```
+
+This will create test users:
+- **Admin**: `admin@gosign.local` / `admin123`
+- **User 1**: `user1@gosign.local` / `user123`
+- **User 2**: `user2@gosign.local` / `user234`
+
+See `fixtures/migration/README.md` for more details about test data.
+
 ### Frontend Setup
 
 1. Navigate to the web directory:
@@ -221,8 +233,18 @@ go run cmd/cert/main.go [options]
 - `GET /health` - Health check
 
 #### Authentication
-- `POST /auth/signin` - User login (returns JWT)
+- `POST /auth/signup` - User registration
+- `POST /auth/signin` - User login (returns JWT + refresh token)
+- `POST /auth/refresh` - Refresh access token
 - `POST /auth/signout` - User logout
+- `POST /auth/password/forgot` - Request password reset
+- `POST /auth/password/reset` - Reset password with token
+- `GET /auth/verify-email` - Verify email address
+- `POST /auth/2fa/enable` - Enable two-factor authentication
+- `POST /auth/2fa/verify` - Verify 2FA code
+- `POST /auth/2fa/disable` - Disable 2FA
+- `GET /auth/oauth/google` - Google OAuth login
+- `GET /auth/oauth/github` - GitHub OAuth login
 
 #### API v1 (Protected)
 
@@ -277,14 +299,30 @@ go run cmd/cert/main.go [options]
 
 ## Configuration
 
-Configuration is managed through a TOML file. Key settings include:
+Configuration is managed through a TOML file (`cmd/goSign/gosign.toml`).
 
-- **HTTPAddr**: Server address (default: `0.0.0.0:8080`)
+### Quick Setup
+
+1. **Copy example configuration:**
+   ```bash
+   cp cmd/goSign/gosign.example.toml cmd/goSign/gosign.toml
+   ```
+
+2. **Update required values in `gosign.toml`:**
+   - Database connection (PostgreSQL)
+   - Redis connection (for authentication features)
+   - SMTP settings (for email notifications)
+
+### Key Configuration Sections
+
+- **HTTPAddr**: Server address (default: `0.0.0.0:8088`)
 - **DevMode**: Development mode flag
 - **Postgres**: Database connection settings
-- **Redis**: Cache configuration
-- **Trust**: Trust certificate sources and update settings
-- **JWT**: Authentication settings
+- **Redis**: Session storage and caching
+- **Settings**: Email, Storage, Webhook, Features
+- **Trust**: Certificate trust sources and updates
+
+See `cmd/goSign/gosign.example.toml` for all configuration options.
 
 ## Development
 
@@ -339,8 +377,12 @@ docker-compose -f docker/docker-compose.yaml up -d
 - Automatic trust certificate updates
 
 ### Security
-- JWT-based authentication
+- JWT-based authentication with refresh tokens (7 days)
 - Password hashing with bcrypt
+- Two-factor authentication (2FA) support
+- OAuth integration (Google, GitHub)
+- Email verification system
+- Password reset with secure tokens
 - Secure certificate storage
 - Input validation with ozzo-validation
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-2xl border border-[var(--color-base-300)] bg-[var(--color-base-100)] shadow-xl">
+  <div class="rounded-lg border border-[var(--color-base-300)] bg-[var(--color-base-100)]">
     <div v-if="$slots.header" class="border-b border-[var(--color-base-300)] px-6 py-5">
       <slot name="header" />
     </div>

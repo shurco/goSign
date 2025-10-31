@@ -17,6 +17,7 @@ type Base struct {
 	SystemQueries
 	TrustQueries
 	TemplateQueries
+	UserQueries
 }
 
 // New is ...
@@ -25,6 +26,7 @@ func New(pool *pgxpool.Pool) error {
 		SystemQueries:   SystemQueries{pool},
 		TrustQueries:    TrustQueries{pool},
 		TemplateQueries: TemplateQueries{pool},
+		UserQueries:     UserQueries{pool},
 	}
 
 	return nil

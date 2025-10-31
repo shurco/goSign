@@ -311,6 +311,7 @@ import Badge from "@/components/ui/Badge.vue";
 import FileInput from "@/components/ui/FileInput.vue";
 import Switch from "@/components/ui/Switch.vue";
 import Alert from "@/components/ui/Alert.vue";
+import { fetchWithAuth } from "@/utils/api/auth";
 
 const activeTab = ref("smtp");
 const tabs = [
@@ -395,7 +396,7 @@ onMounted(async () => {
 
 async function loadSettings(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/settings");
+    const response = await fetchWithAuth("/api/v1/settings");
     if (response.ok) {
       const data = await response.json();
       if (data.smtp) {
@@ -415,7 +416,7 @@ async function loadSettings(): Promise<void> {
 
 async function saveSmtp(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/settings/email", {
+    const response = await fetchWithAuth("/api/v1/settings/email", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(smtpSettings.value)
@@ -439,7 +440,7 @@ async function testSmtp(): Promise<void> {
 
 async function saveStorage(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/settings/storage", {
+    const response = await fetchWithAuth("/api/v1/settings/storage", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(storageSettings.value)
@@ -458,7 +459,7 @@ async function saveStorage(): Promise<void> {
 
 async function saveBranding(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/settings/branding", {
+    const response = await fetchWithAuth("/api/v1/settings/branding", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(brandingSettings.value)
@@ -477,7 +478,7 @@ async function saveBranding(): Promise<void> {
 
 async function loadWebhooks(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/webhooks");
+    const response = await fetchWithAuth("/api/v1/webhooks");
     if (response.ok) {
       const data = await response.json();
       webhooks.value = data.data || [];
@@ -489,7 +490,7 @@ async function loadWebhooks(): Promise<void> {
 
 async function loadAPIKeys(): Promise<void> {
   try {
-    const response = await fetch("/api/v1/apikeys");
+    const response = await fetchWithAuth("/api/v1/apikeys");
     if (response.ok) {
       const data = await response.json();
       apiKeys.value = data.data || [];
@@ -510,7 +511,7 @@ function openAPIKeyModal(): void {
 
 async function saveWebhook(formData: any): Promise<void> {
   try {
-    const response = await fetch("/api/v1/webhooks", {
+    const response = await fetchWithAuth("/api/v1/webhooks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData)
@@ -530,7 +531,7 @@ async function saveWebhook(formData: any): Promise<void> {
 
 async function saveAPIKey(formData: any): Promise<void> {
   try {
-    const response = await fetch("/api/v1/apikeys", {
+    const response = await fetchWithAuth("/api/v1/apikeys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData)
@@ -567,7 +568,7 @@ async function deleteWebhook(webhook: any): Promise<void> {
   }
 
   try {
-    const response = await fetch(`/api/v1/webhooks/${webhook.id}`, {
+    const response = await fetchWithAuth(`/api/v1/webhooks/${webhook.id}`, {
       method: "DELETE"
     });
 
@@ -588,7 +589,7 @@ async function deleteAPIKey(apiKey: any): Promise<void> {
   }
 
   try {
-    const response = await fetch(`/api/v1/apikeys/${apiKey.id}`, {
+    const response = await fetchWithAuth(`/api/v1/apikeys/${apiKey.id}`, {
       method: "DELETE"
     });
 
@@ -607,7 +608,7 @@ async function toggleAPIKey(apiKey: APIKey): Promise<void> {
   const action = apiKey.enabled ? "disable" : "enable";
 
   try {
-    const response = await fetch(`/api/v1/apikeys/${apiKey.id}/${action}`, {
+    const response = await fetchWithAuth(`/api/v1/apikeys/${apiKey.id}/${action}`, {
       method: "PUT"
     });
 
@@ -651,6 +652,6 @@ function handleLogoUpload(event: Event): void {
 
 <style scoped>
 .settings-page {
-  @apply min-h-full bg-[var(--color-base-200)];
+  @apply min-h-full;
 }
 </style>

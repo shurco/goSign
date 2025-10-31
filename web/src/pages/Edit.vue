@@ -1,6 +1,9 @@
 // @ts-nocheck
 <template>
-  <div v-if="template && template.schema.length > 0" class="flex h-full">
+  <div class="edit-page">
+    <h1 class="mb-6 text-3xl font-bold">Editor</h1>
+    
+    <div v-if="template && template.schema.length > 0" class="flex h-full">
     <div ref="previewsRef" class="hidden w-28 flex-none overflow-x-hidden overflow-y-auto pr-3 lg:block">
       <DocumentPreview
         v-for="(item, index) in template.schema"
@@ -78,9 +81,10 @@
         @scroll-to-area="scrollToArea"
       />
     </div>
-  </div>
+    </div>
 
-  <div v-else class="flex h-full">add new files</div>
+    <div v-else class="flex h-full">add new files</div>
+  </div>
 </template>
 
 <script setup lang="ts">

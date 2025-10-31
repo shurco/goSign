@@ -10,6 +10,31 @@ Both methods are protected by rate limiting to prevent abuse.
 
 ## JWT Authentication
 
+### User Registration
+
+```bash
+POST /auth/signup
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "SecureP@ssw0rd123",
+  "first_name": "John",
+  "last_name": "Doe"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Registration successful. Please check your email to verify your account.",
+  "data": {
+    "user_id": "uuid"
+  }
+}
+```
+
 ### Getting a Token
 
 ```bash
@@ -18,7 +43,43 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "password"
+  "password": "password",
+  "code": "123456"  // Optional: 2FA code if enabled
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGc...",
+    "refresh_token": "eyJhbGc...",
+    "token_type": "Bearer"
+  }
+}
+```
+
+### Refreshing a Token
+
+```bash
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "eyJhbGc..."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGc...",
+    "refresh_token": "eyJhbGc...",
+    "token_type": "Bearer"
+  }
 }
 ```
 
@@ -29,9 +90,10 @@ Authorization: Bearer <jwt_token>
 ```
 
 ### Characteristics
-- Lifetime: 10 minutes
-- Automatic refresh via refresh token (TODO)
-- Contains: user_id, email, name
+- **Access Token Lifetime**: 10 minutes
+- **Refresh Token Lifetime**: 7 days
+- **Token Refresh**: Automatic refresh via `/auth/refresh` endpoint
+- **Contains**: user_id, email, name
 
 ## API Key Authentication
 
@@ -200,12 +262,137 @@ type AuthContext struct {
 - Check `auth.Type` to differentiate between JWT and API keys
 - Rate limiting is applied automatically to protected routes
 
+## Password Management
+
+### Forgot Password
+
+```bash
+POST /auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:** Always returns success (to prevent email enumeration)
+
+### Reset Password
+
+```bash
+POST /auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "new_password": "NewSecureP@ssw0rd123"
+}
+```
+
+## Email Verification
+
+### Verify Email
+
+```bash
+GET /auth/verify-email?token=<verification-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Email verified successfully"
+}
+```
+
+## Two-Factor Authentication (2FA)
+
+### Enable 2FA
+
+```bash
+POST /auth/2fa/enable
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "qr_code": "data:image/png;base64,...",
+    "secret": "JBSWY3DPEHPK3PXP",
+    "backup_codes": ["123456", "234567", ...]
+  }
+}
+```
+
+### Verify 2FA
+
+```bash
+POST /auth/2fa/verify
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+```
+
+### Disable 2FA
+
+```bash
+POST /auth/2fa/disable
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "password": "current-password"
+}
+```
+
+## OAuth Authentication
+
+### Google OAuth
+
+1. **Initiate OAuth:**
+```bash
+GET /auth/oauth/google
+```
+
+2. **OAuth Callback:**
+```bash
+GET /auth/oauth/google/callback?code=<auth-code>&state=<state>
+```
+
+### GitHub OAuth
+
+1. **Initiate OAuth:**
+```bash
+GET /auth/oauth/github
+```
+
+2. **OAuth Callback:**
+```bash
+GET /auth/oauth/github/callback?code=<auth-code>&state=<state>
+```
+
+**Note:** OAuth providers must be configured in the application settings with client ID and secret.
+
+## Sign Out
+
+```bash
+POST /auth/signout
+Authorization: Bearer <jwt_token>
+```
+
+Invalidates the refresh token and clears session.
+
 ## Roadmap
 
-- [ ] Refresh tokens for JWT
-- [ ] Redis backend for rate limiting
+- [ ] Redis backend for rate limiting (currently in-memory)
 - [ ] IP whitelist for API keys
 - [ ] Webhook signatures with API keys
 - [ ] Audit log for API key usage
 - [ ] Dashboard with usage statistics
+- [ ] Additional OAuth providers (Microsoft, Apple)
 

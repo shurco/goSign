@@ -1,12 +1,15 @@
 <template>
-  <label
-    for="assetsFieldHandle"
-    class="relative block h-52 w-64 cursor-pointer rounded-xl border-2 border-dashed border-[#e7e2df] hover:bg-[#efeae6]/30"
-    :class="{ 'bg-[#efeae6]/30': status }"
-    @dragover="dragover"
-    @drop="drop"
-    @change="onChange"
-  >
+  <div class="uploads-page">
+    <h1 class="mb-6 text-3xl font-bold">Uploads</h1>
+    
+    <label
+      for="assetsFieldHandle"
+      class="relative block h-52 w-64 cursor-pointer rounded-xl border-2 border-dashed border-[#e7e2df] hover:bg-[#efeae6]/30"
+      :class="{ 'bg-[#efeae6]/30': status }"
+      @dragover="dragover"
+      @drop="drop"
+      @change="onChange"
+    >
     <div class="absolute top-0 right-0 bottom-0 left-0 flex items-center justify-center">
       <div class="flex flex-col items-center">
         <span v-if="!status" data-target="file-dropzone.icon" class="flex flex-col items-center">
@@ -33,10 +36,12 @@
       />
     </div>
   </label>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { getCurrentInstance, ref } from "vue";
+import { fetchWithAuth } from "@/utils/api/auth";
 
 const status = ref(false);
 const instance: any = getCurrentInstance();
@@ -55,19 +60,25 @@ const onChange = async () => {
 
   try {
     status.value = true;
-    await fetch("/api/upload", {
+    const response = await fetchWithAuth("/api/v1/upload", {
       method: "POST",
       body: formData
     });
 
-    //if (response.ok) {
-    //  const data = await response.json();
-    //  console.log('Server response:', data);
-    //} else {
-    //  throw new Error('File upload failed');
-    //}
+    if (response.ok) {
+      const data = await response.json();
+      console.log("File uploaded successfully:", data);
+      // Reset file input
+      if (instance?.refs.file) {
+        instance.refs.file.value = "";
+      }
+    } else {
+      const errorData = await response.json().catch(() => ({ message: "Failed to upload file" }));
+      throw new Error(errorData.message || "Failed to upload file");
+    }
   } catch (error) {
     console.error("Error uploading file:", error);
+    alert(`Error: ${error instanceof Error ? error.message : "Failed to upload file"}`);
   } finally {
     status.value = false;
   }

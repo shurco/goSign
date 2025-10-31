@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/base64"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
@@ -13,6 +15,7 @@ import (
 type SubmitterHandler struct {
 	*ResourceHandler[models.Submitter] // embed generic CRUD
 	submissionService                  *submission.Service
+	submitterRepo                      ResourceRepository[models.Submitter]
 }
 
 // NewSubmitterHandler creates new handler
@@ -20,6 +23,7 @@ func NewSubmitterHandler(repo ResourceRepository[models.Submitter], submissionSe
 	return &SubmitterHandler{
 		ResourceHandler:   NewResourceHandler("submitter", repo),
 		submissionService: submissionService,
+		submitterRepo:     repo,
 	}
 }
 
@@ -48,10 +52,28 @@ func (h *SubmitterHandler) Resend(c *fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "submitter_id is required")
 	}
 
-	// TODO: Implement resend logic via submission service
-	// Get submitter → get submission → send notification
+	// Get submitter
+	submitter, err := h.submitterRepo.Get(req.SubmitterID)
+	if err != nil {
+		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to get submitter")
+		return webutil.Response(c, fiber.StatusNotFound, "Submitter not found", nil)
+	}
 
-	log.Info().Str("submitter_id", req.SubmitterID).Msg("Resending invitation")
+	// Check if already completed or declined
+	if submitter.Status == models.SubmitterStatusCompleted {
+		return webutil.Response(c, fiber.StatusBadRequest, "Cannot resend to completed submitter", nil)
+	}
+	if submitter.Status == models.SubmitterStatusDeclined {
+		return webutil.Response(c, fiber.StatusBadRequest, "Cannot resend to declined submitter", nil)
+	}
+
+	// Resend invitation via submission service
+	if err := h.submissionService.ResendInvitation(c.Context(), req.SubmitterID); err != nil {
+		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to resend invitation")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to resend invitation", nil)
+	}
+
+	log.Info().Str("submitter_id", req.SubmitterID).Msg("Invitation resent")
 
 	return webutil.Response(c, fiber.StatusOK, "invitation_resent", map[string]any{
 		"submitter_id": req.SubmitterID,
@@ -85,10 +107,21 @@ func (h *SubmitterHandler) Decline(c *fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "submitter_id is required")
 	}
 
+	// Get submitter to get submission ID
+	submitter, err := h.submitterRepo.Get(req.SubmitterID)
+	if err != nil {
+		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to get submitter")
+		return webutil.Response(c, fiber.StatusNotFound, "Submitter not found", nil)
+	}
+
+	// Decline submitter
 	if err := h.submissionService.Decline(c.Context(), req.SubmitterID, req.Reason); err != nil {
 		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to decline submitter")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to decline submitter", nil)
 	}
+
+	// Handle decline at submission level
+	_ = h.submissionService.HandleDecline(c.Context(), submitter.SubmissionID, req.Reason)
 
 	return webutil.Response(c, fiber.StatusOK, "submitter_declined", map[string]any{
 		"submitter_id": req.SubmitterID,
@@ -134,14 +167,55 @@ func (h *SubmitterHandler) Complete(c *fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "submitter_id is required")
 	}
 
-	// TODO: Save submitter data and signature
-	// TODO: Update PDF with signature via pkg/pdf/fill
-	// TODO: Call submission.Complete
+	// Get submitter
+	submitter, err := h.submitterRepo.Get(req.SubmitterID)
+	if err != nil {
+		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to get submitter")
+		return webutil.Response(c, fiber.StatusNotFound, "Submitter not found", nil)
+	}
 
+	// Save submitter data (fields + signature)
+	// Merge existing metadata with new fields
+	if submitter.Metadata == nil {
+		submitter.Metadata = make(map[string]any)
+	}
+	
+	// Store fields
+	if req.Fields != nil {
+		submitter.Metadata["fields"] = req.Fields
+	}
+
+	// Store signature data
+	if req.Signature.ImageBase64 != "" {
+		// Decode base64 signature
+		sigData, err := base64.StdEncoding.DecodeString(req.Signature.ImageBase64)
+		if err == nil {
+			submitter.Metadata["signature"] = map[string]any{
+				"image_base64": req.Signature.ImageBase64,
+				"image_size":   len(sigData),
+				"x":            req.Signature.X,
+				"y":            req.Signature.Y,
+				"width":        req.Signature.Width,
+				"height":       req.Signature.Height,
+				"page":         req.Signature.Page,
+			}
+		}
+	}
+
+	// Update in database
+	if err := h.submitterRepo.Update(req.SubmitterID, submitter); err != nil {
+		log.Error().Err(err).Msg("Failed to update submitter")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save data", nil)
+	}
+
+	// Complete submitter status
 	if err := h.submissionService.Complete(c.Context(), req.SubmitterID); err != nil {
 		log.Error().Err(err).Str("submitter_id", req.SubmitterID).Msg("Failed to complete submitter")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to complete submitter", nil)
 	}
+
+	// Check if all submitters completed
+	_ = h.submissionService.CheckCompletion(c.Context(), submitter.SubmissionID)
 
 	return webutil.Response(c, fiber.StatusOK, "submitter_completed", map[string]any{
 		"submitter_id": req.SubmitterID,

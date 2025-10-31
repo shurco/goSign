@@ -1,11 +1,18 @@
 package api
 
 import (
+	"encoding/base64"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/pkg/pdf"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -111,25 +118,169 @@ func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "file_base64 or file_url is required")
 	}
 
-	// TODO: Process file based on type
-	// - PDF: extract fields and images
-	// - HTML: convert to PDF
-	// - DOCX: convert to PDF
-
-	// Create template
-	template := &models.Template{
-		ID:          uuid.New().String(),
-		Name:        req.Name,
-		Description: req.Description,
-		// TODO: set remaining fields after file processing
+	// Decode file if base64
+	var fileData []byte
+	var err error
+	if req.FileBase64 != "" {
+		fileData, err = base64.StdEncoding.DecodeString(req.FileBase64)
+		if err != nil {
+			return webutil.StatusBadRequest(c, "Invalid base64 data")
+		}
+	} else {
+		// TODO: Implement download from URL
+		return webutil.StatusBadRequest(c, "file_url not yet supported")
 	}
 
+	// Process based on type
+	var template *models.Template
+	switch req.Type {
+	case "pdf":
+		template, err = h.processPDF(req.Name, req.Description, fileData, req.Settings)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to process PDF")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to process PDF", map[string]any{
+				"error": err.Error(),
+			})
+		}
+	case "html", "docx":
+		return webutil.Response(c, fiber.StatusNotImplemented, fmt.Sprintf("%s conversion not yet supported", req.Type), nil)
+	default:
+		return webutil.StatusBadRequest(c, "Unsupported file type")
+	}
+
+	// Save template
 	if err := h.repository.Create(template); err != nil {
 		log.Error().Err(err).Msg("Failed to create template from file")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create template", nil)
 	}
 
+	log.Info().Str("template_id", template.ID).Str("name", template.Name).Msg("Template created from file")
 	return webutil.Response(c, fiber.StatusCreated, "template", template)
+}
+
+// processPDF processes PDF file and creates template
+func (h *TemplateHandler) processPDF(name, description string, fileData []byte, settings map[string]any) (*models.Template, error) {
+	// Save PDF to temporary location
+	tmpDir := os.TempDir()
+	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("template_%d.pdf", time.Now().UnixNano()))
+	defer os.Remove(tmpFile)
+
+	if err := os.WriteFile(tmpFile, fileData, 0644); err != nil {
+		return nil, fmt.Errorf("failed to write temp file: %w", err)
+	}
+
+	// 1. Extract pages
+	pagesResult, err := pdf.ExtractPages(pdf.ExtractPagesInput{
+		PDFPath: tmpFile,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract pages: %w", err)
+	}
+
+	// 2. Generate preview images
+	previewDir := filepath.Join(tmpDir, fmt.Sprintf("previews_%d", time.Now().UnixNano()))
+	if err := os.MkdirAll(previewDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create preview dir: %w", err)
+	}
+	defer os.RemoveAll(previewDir)
+
+	previewResult, err := pdf.GeneratePreview(pdf.GeneratePreviewInput{
+		PDFPath:   tmpFile,
+		OutputDir: previewDir,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to generate previews, continuing without them")
+	}
+
+	// 3. Extract form fields (if any)
+	formFieldsResult, err := pdf.ExtractFormFields(pdf.ExtractFormFieldsInput{
+		PDFPath: tmpFile,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to extract form fields, continuing without them")
+	}
+
+	// 4. Build documents array
+	documents := make([]models.Document, pagesResult.PageCount)
+	for i := 0; i < pagesResult.PageCount; i++ {
+		doc := models.Document{
+			ID:        fmt.Sprintf("doc_%d", i),
+			FileName:  fmt.Sprintf("page_%d.pdf", i+1),
+			CreatedAt: time.Now(),
+		}
+
+		// Add preview images if available
+		if previewResult != nil && i < len(previewResult.Images) {
+			doc.PreviewImages = []models.PreviewImages{
+				{
+					ID:       fmt.Sprintf("preview_%d", i),
+					FileName: fmt.Sprintf("%s_%d.jpg", uuid.New().String(), i),
+				},
+			}
+		}
+
+		documents[i] = doc
+	}
+
+	// 5. Build fields array from extracted form fields
+	var fields []models.Field
+	if formFieldsResult != nil && len(formFieldsResult.Fields) > 0 {
+		for _, ff := range formFieldsResult.Fields {
+			// Convert string type to FieldType
+			fieldType := models.FieldTypeText
+			switch ff.Type {
+			case "checkbox":
+				fieldType = models.FieldTypeCheckbox
+			case "radio":
+				fieldType = models.FieldTypeRadio
+			case "select":
+				fieldType = models.FieldTypeSelect
+			default:
+				fieldType = models.FieldTypeText
+			}
+
+			field := models.Field{
+				ID:       uuid.New().String(),
+				Name:     ff.Name,
+				Type:     fieldType,
+				Required: ff.Required,
+			}
+			fields = append(fields, field)
+		}
+	}
+
+	// 6. Create template
+	template := &models.Template{
+		ID:          uuid.New().String(),
+		Slug:        uuid.New().String(), // Generate unique slug
+		Name:        name,
+		Description: description,
+		Documents:   documents,
+		Fields:      fields,
+		Submitters:  []models.Submitter{}, // Empty, will be added by user
+		Schema:      []models.Schema{},    // Empty, will be added by user
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	// Set settings if provided
+	if settings != nil {
+		expirationDays := 30 // default
+		if days, ok := settings["expiration_days"].(float64); ok {
+			expirationDays = int(days)
+		} else if days, ok := settings["expiration_days"].(int); ok {
+			expirationDays = days
+		}
+
+		template.Settings = &models.TemplateSettings{
+			EmbeddingEnabled: settings["embedding_enabled"] == true,
+			WebhookEnabled:   settings["webhook_enabled"] == true,
+			ReminderEnabled:  settings["reminder_enabled"] == true,
+			ExpirationDays:   expirationDays,
+		}
+	}
+
+	return template, nil
 }
 
 // RegisterRoutes registers all routes for templates

@@ -10,6 +10,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/shurco/gosign/internal/config"
+	"github.com/shurco/gosign/internal/handlers/api"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
 	"github.com/shurco/gosign/internal/trust"
@@ -89,14 +90,16 @@ func New() error {
 	app.Static("/drive/signed", "./lc_signed")
 	app.Static("/drive/uploads", "./lc_uploads")
 
-	// Initialize API handlers (nil for now, will be implemented later)
+	// Initialize API handlers
 	apiHandlers := &routes.APIHandlers{
-		Submissions: nil,
-		Submitters:  nil,
-		Templates:   nil,
-		Webhooks:    nil,
-		Settings:    nil,
-		APIKeys:     nil,
+		Submissions: nil, // TODO: initialize with repository and service
+		Submitters:  nil, // TODO: initialize with repository and service
+		Templates:   nil, // TODO: initialize with repository
+		Webhooks:    nil, // TODO: initialize with repository
+		Settings:    nil, // TODO: initialize with notification service
+		APIKeys:     nil, // TODO: initialize with API key service
+		Stats:       api.NewStatsHandler(),
+		Events:      api.NewEventHandler(),
 	}
 
 	routes.ApiRoutes(app, apiHandlers)

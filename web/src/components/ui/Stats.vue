@@ -1,5 +1,5 @@
 <template>
-  <div class="stats-wrapper rounded-lg bg-white shadow">
+  <div class="stats-wrapper rounded-lg border border-[var(--color-base-300)] bg-white">
     <slot />
   </div>
 </template>

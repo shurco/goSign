@@ -22,8 +22,8 @@
 
     <!-- Completed State -->
     <div v-else-if="submitter?.status === 'completed'" class="container mx-auto px-4 py-8">
-      <div class="card mx-auto max-w-2xl bg-white shadow-xl">
-        <div class="card-body text-center">
+      <div class="mx-auto max-w-2xl rounded-lg border border-[var(--color-base-300)] bg-white">
+        <div class="px-6 py-5 text-center">
           <div class="text-success mb-4 text-6xl">✓</div>
           <h2 class="card-title justify-center text-2xl">Document Completed!</h2>
           <p>Thank you for completing this document.</p>
@@ -34,8 +34,8 @@
 
     <!-- Declined State -->
     <div v-else-if="submitter?.status === 'declined'" class="container mx-auto px-4 py-8">
-      <div class="card mx-auto max-w-2xl bg-white shadow-xl">
-        <div class="card-body text-center">
+      <div class="mx-auto max-w-2xl rounded-lg border border-[var(--color-base-300)] bg-white">
+        <div class="px-6 py-5 text-center">
           <div class="text-error mb-4 text-6xl">✕</div>
           <h2 class="card-title justify-center text-2xl">Document Declined</h2>
           <p>This document was declined.</p>
@@ -47,8 +47,8 @@
     <!-- Signing Form -->
     <div v-else class="container mx-auto px-4 py-8">
       <!-- Header -->
-      <div class="card mb-6 bg-white shadow-xl">
-        <div class="">
+      <div class="mb-6 rounded-lg border border-[var(--color-base-300)] bg-white">
+        <div class="px-6 py-5">
           <h1 class="card-title text-2xl">{{ template?.name }}</h1>
           <p v-if="template?.description" class="text-[--color-base-content]/60">{{ template.description }}</p>
           <div class="mt-2 flex gap-2">
@@ -61,8 +61,8 @@
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <!-- Document Preview -->
         <div class="lg:col-span-2">
-          <div class="card bg-white shadow-xl">
-            <div class="">
+          <div class="rounded-lg border border-[var(--color-base-300)] bg-white">
+            <div class="px-6 py-5">
               <h2 class="text-xl font-bold">Document</h2>
               <div class="overflow-hidden rounded-lg border bg-white">
                 <div v-for="(doc, docIndex) in template?.documents" :key="doc.id">
@@ -89,8 +89,8 @@
 
         <!-- Form Fields -->
         <div class="lg:col-span-1">
-          <div class="card sticky top-4 bg-white shadow-xl">
-            <div class="">
+          <div class="sticky top-4 rounded-lg border border-[var(--color-base-300)] bg-white">
+            <div class="px-6 py-5">
               <h2 class="card-title mb-4">Complete Fields</h2>
 
               <div class="space-y-4">
@@ -150,6 +150,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import FieldInput from "@/components/common/FieldInput.vue";
+import { fetchWithAuth } from "@/utils/api/auth";
 
 interface Field {
   id: string;
@@ -245,7 +246,7 @@ onMounted(async () => {
 async function loadSubmission(): Promise<void> {
   try {
     isLoading.value = true;
-    const response = await fetch(`/api/v1/submitters/slug/${slug.value}`);
+    const response = await fetchWithAuth(`/api/v1/submitters/slug/${slug.value}`);
 
     if (!response.ok) {
       throw new Error("Submission not found");
@@ -257,7 +258,7 @@ async function loadSubmission(): Promise<void> {
 
     // Mark as opened
     if (submitter.value?.status === "pending") {
-      await fetch(`/api/v1/submitters/${submitter.value.id}/open`, {
+      await fetchWithAuth(`/api/v1/submitters/${submitter.value.id}/open`, {
         method: "POST"
       });
     }
@@ -349,7 +350,7 @@ async function handleSubmit(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(`/api/v1/submitters/${submitter.value.id}/complete`, {
+    const response = await fetchWithAuth(`/api/v1/submitters/${submitter.value.id}/complete`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -385,7 +386,7 @@ async function handleDecline(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch(`/api/v1/submitters/${submitter.value.id}/decline`, {
+    const response = await fetchWithAuth(`/api/v1/submitters/${submitter.value.id}/decline`, {
       method: "POST"
     });
 

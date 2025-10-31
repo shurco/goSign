@@ -1,0 +1,60 @@
+# goSign Configuration Example
+# Copy this file to gosign.toml and update with your actual values
+
+# HTTP server configuration
+http-addr = "0.0.0.0:8088"
+dev-mode = true
+
+# PostgreSQL database connection
+[postgres]
+url = "postgres://username:password@localhost:5432/dbname?sslmode=disable&pool_max_conns=10"
+
+# Redis configuration for sessions and caching
+[redis]
+address = "localhost:6379"
+password = "your-redis-password"
+
+# Trusted certificate lists
+[trust-certs]
+list = ["eutl12", "tl12"]
+update = 1
+
+# Application settings
+[settings]
+
+# Email provider configuration
+[settings.email]
+provider = "smtp"
+smtp_host = "localhost"
+smtp_port = "1025"
+smtp_user = ""
+smtp_password = ""
+from_email = "noreply@example.com"
+from_name = "goSign"
+
+# File storage configuration
+[settings.storage]
+provider = "local"  # Options: local, s3, gcs, azure
+base_path = "./uploads"
+# For S3:
+# bucket = "your-bucket-name"
+# region = "us-east-1"
+# endpoint = "https://s3.amazonaws.com"
+# For GCS:
+# bucket = "your-bucket-name"
+# For Azure:
+# bucket = "your-container-name"
+# endpoint = "https://youraccount.blob.core.windows.net"
+
+# Webhook configuration
+[settings.webhook]
+enabled = "true"
+max_retries = "3"
+timeout = "30"
+
+# Feature flags
+[settings.features]
+reminders_enabled = true
+sms_verification = false
+embedded_signing = true
+bulk_operations = true

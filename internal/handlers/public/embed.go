@@ -2,15 +2,27 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
+
+	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
+// SubmitterRepository is an interface for submitter database operations
+type SubmitterRepository interface {
+	GetBySlug(slug string) (*models.Submitter, error)
+}
+
 // EmbedHandler handles requests for embedded signing interface
-type EmbedHandler struct{}
+type EmbedHandler struct {
+	submitterRepo SubmitterRepository
+}
 
 // NewEmbedHandler creates new embed handler
-func NewEmbedHandler() *EmbedHandler {
-	return &EmbedHandler{}
+func NewEmbedHandler(submitterRepo SubmitterRepository) *EmbedHandler {
+	return &EmbedHandler{
+		submitterRepo: submitterRepo,
+	}
 }
 
 // GetEmbedPage returns HTML page for embedding in iframe
@@ -26,6 +38,23 @@ func (h *EmbedHandler) GetEmbedPage(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.StatusNotFound(c)
+	}
+
+	// Validate slug in database
+	submitter, err := h.submitterRepo.GetBySlug(slug)
+	if err != nil || submitter == nil {
+		log.Warn().Str("slug", slug).Msg("Invalid slug")
+		return webutil.StatusNotFound(c)
+	}
+
+	// Check if already completed
+	if submitter.Status == models.SubmitterStatusCompleted {
+		return webutil.Response(c, fiber.StatusGone, "Document already completed", nil)
+	}
+
+	// Check if declined
+	if submitter.Status == models.SubmitterStatusDeclined {
+		return webutil.Response(c, fiber.StatusGone, "Document declined", nil)
 	}
 
 	// Render Vue app with required route
@@ -102,12 +131,23 @@ func (h *EmbedHandler) GetEmbedConfig(c *fiber.Ctx) error {
 		return webutil.StatusNotFound(c)
 	}
 
-	// TODO: Validate slug in database
+	// Validate slug in database
+	submitter, err := h.submitterRepo.GetBySlug(slug)
+	if err != nil || submitter == nil {
+		log.Warn().Str("slug", slug).Msg("Invalid slug for config")
+		return webutil.StatusNotFound(c)
+	}
+
+	// Check status
+	if submitter.Status == models.SubmitterStatusCompleted {
+		return webutil.Response(c, fiber.StatusGone, "Document already completed", nil)
+	}
 
 	config := map[string]any{
-		"slug":      slug,
-		"embed_url": "/embed/" + slug,
+		"slug":       slug,
+		"embed_url":  "/embed/" + slug,
 		"direct_url": "/s/" + slug,
+		"status":     string(submitter.Status),
 		"events": []string{
 			"ready",
 			"opened",

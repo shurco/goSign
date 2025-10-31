@@ -14,7 +14,7 @@
     </div>
 
     <!-- Table -->
-    <div class="overflow-x-auto rounded-lg bg-white shadow">
+    <div class="overflow-x-auto rounded-lg border border-[var(--color-base-300)] bg-white">
       <Table :zebra="true">
         <template #header>
           <tr>

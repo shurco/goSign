@@ -1,6 +1,6 @@
 # goSign Documentation
 
-**Last Updated**: 2025-10-28 08:30 UTC
+**Last Updated**: 2025-10-30 12:00 UTC
 
 ## 📚 Available Documentation
 
@@ -10,6 +10,19 @@
   - Architecture overview
   - Technical stack details
   - File structure and key files
+
+### Testing
+- **[TESTING.md](TESTING.md)** - Complete testing guide
+  - Unit and integration testing strategies
+  - Test coverage and benchmarks
+  - Authentication test documentation
+  - Performance testing guidelines
+  
+- **[TEST_QUICKSTART.md](TEST_QUICKSTART.md)** - Quick testing reference
+  - Fast commands for running tests
+  - Test script usage
+  - Coverage and benchmark commands
+
 
 ### API Documentation
 - **[API_AUTHENTICATION.md](API_AUTHENTICATION.md)** - Complete authentication guide
@@ -113,6 +126,14 @@ All documentation follows these standards:
 - **PDF Assembly**: Dynamic field filling and audit trail generation
 - **Reminders**: Scheduled notifications for pending signatures
 
+### Authentication Features
+- **User Registration**: Sign up with email verification
+- **Password Management**: Forgot/reset password with secure tokens
+- **Two-Factor Authentication**: TOTP-based 2FA with QR codes
+- **OAuth Integration**: Google and GitHub OAuth login
+- **Token Management**: JWT access tokens (10min) + refresh tokens (7 days)
+- **Email Verification**: Secure email verification flow
+
 ## 📊 Documentation Coverage
 
 | Category | Coverage | Status |
@@ -123,10 +144,11 @@ All documentation follows these standards:
 | Frontend Architecture | 100% | ✅ Complete |
 | Code Examples | 100% | ✅ Complete |
 | Architecture | 100% | ✅ Complete |
+| Testing | 100% | ✅ Complete |
 
 ---
 
 **Status**: ✅ Complete  
-**Total Documents**: 5  
-**Version**: 2.1.0
+**Total Documents**: 7  
+**Version**: 2.2.0
 
