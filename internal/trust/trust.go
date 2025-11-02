@@ -20,7 +20,7 @@ import (
 
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
-	"github.com/shurco/gosign/pkg/utils/timeutil"
+	"github.com/shurco/gosign/pkg/utils"
 )
 
 // TrustList is ...
@@ -66,7 +66,7 @@ func Update(cfg Config) error {
 
 	daysDiff := 999
 	if dateUp != nil {
-		daysDiff = timeutil.DaysBetween(*dateUp, time.Now())
+		daysDiff = utils.DaysBetween(*dateUp, time.Now())
 	}
 
 	if daysDiff < cfg.Update {

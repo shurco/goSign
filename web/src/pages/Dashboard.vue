@@ -12,19 +12,7 @@
           variant="primary"
         >
           <template #figure>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="inline-block h-8 w-8 stroke-current text-[var(--color-primary)]"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <SvgIcon name="document" class="inline-block h-8 w-8 text-[var(--color-primary)]" />
           </template>
         </Stat>
       </Stats>
@@ -37,14 +25,7 @@
           variant="success"
         >
           <template #figure>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="inline-block h-8 w-8 stroke-current text-[var(--color-success)]"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
+            <SvgIcon name="check-circle" class="inline-block h-8 w-8 text-[var(--color-success)]" />
           </template>
         </Stat>
       </Stats>
@@ -57,19 +38,7 @@
           variant="primary"
         >
           <template #figure>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="inline-block h-8 w-8 stroke-current text-[var(--color-primary)]"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <SvgIcon name="templates" class="inline-block h-8 w-8 text-[var(--color-primary)]" />
           </template>
         </Stat>
       </Stats>
@@ -77,19 +46,7 @@
       <Stats>
         <Stat title="Submitters" :value="stats.total_submitters" description="This month" variant="info">
           <template #figure>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="inline-block h-8 w-8 stroke-current text-[var(--color-info)]"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
+            <SvgIcon name="users" class="inline-block h-8 w-8 text-[var(--color-info)]" />
           </template>
         </Stat>
       </Stats>
@@ -158,7 +115,8 @@ import Stat from "@/components/ui/Stat.vue";
 import Card from "@/components/ui/Card.vue";
 import Badge from "@/components/ui/Badge.vue";
 import Button from "@/components/ui/Button.vue";
-import { fetchWithAuth } from "@/utils/api/auth";
+import SvgIcon from "@/components/SvgIcon.vue";
+import { fetchWithAuth } from "@/utils/auth";
 
 interface Submission {
   id: string;
@@ -212,36 +170,77 @@ onMounted(async () => {
 
 async function loadStats(): Promise<void> {
   try {
+    // Token check is redundant - fetchWithAuth handles authentication
     const response = await fetchWithAuth("/api/v1/stats");
     if (response.ok) {
-      stats.value = await response.json();
+      const data = await response.json();
+      // Stats API returns: { message: "Stats retrieved", data: {...} }
+      if (data.data) {
+        stats.value = data.data;
+      } else {
+        stats.value = data;
+      }
+    } else if (response.status === 401) {
+      // Redirect to login is handled by fetchWithAuth
+      return;
     }
   } catch (error) {
-    console.error("Failed to load stats:", error);
+    // Only log error if we're still on dashboard page (not redirected)
+    if (window.location.pathname.includes("/dashboard")) {
+      console.error("Failed to load stats:", error);
+    }
   }
 }
 
 async function loadRecentSubmissions(): Promise<void> {
   try {
+    // Token check is redundant - fetchWithAuth handles authentication
     const response = await fetchWithAuth("/api/v1/submissions?limit=5&sort=created_at:desc");
     if (response.ok) {
       const data = await response.json();
-      recentSubmissions.value = data.data || [];
+      // API returns: { message: "...", data: { items: [], total: 0, ... } }
+      if (data.data && data.data.items) {
+        recentSubmissions.value = data.data.items || [];
+      } else if (Array.isArray(data.data)) {
+        recentSubmissions.value = data.data;
+      } else {
+        recentSubmissions.value = [];
+      }
+    } else if (response.status === 401) {
+      // Redirect to login is handled by fetchWithAuth
+      return;
     }
   } catch (error) {
-    console.error("Failed to load submissions:", error);
+    // Only log error if we're still on dashboard page (not redirected)
+    if (window.location.pathname.includes("/dashboard")) {
+      console.error("Failed to load submissions:", error);
+    }
   }
 }
 
 async function loadRecentEvents(): Promise<void> {
   try {
+    // Token check is redundant - fetchWithAuth handles authentication
     const response = await fetchWithAuth("/api/v1/events?limit=10&sort=created_at:desc");
     if (response.ok) {
       const data = await response.json();
-      recentEvents.value = data.data || [];
+      // API returns: { message: "...", data: { items: [], total: 0, ... } }
+      if (data.data && data.data.items) {
+        recentEvents.value = data.data.items || [];
+      } else if (Array.isArray(data.data)) {
+        recentEvents.value = data.data;
+      } else {
+        recentEvents.value = [];
+      }
+    } else if (response.status === 401) {
+      // Redirect to login is handled by fetchWithAuth
+      return;
     }
   } catch (error) {
-    console.error("Failed to load events:", error);
+    // Only log error if we're still on dashboard page (not redirected)
+    if (window.location.pathname.includes("/dashboard")) {
+      console.error("Failed to load events:", error);
+    }
   }
 }
 

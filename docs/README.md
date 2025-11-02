@@ -1,6 +1,6 @@
 # goSign Documentation
 
-**Last Updated**: 2025-10-30 12:00 UTC
+**Last Updated**: 2025-11-02 00:00 UTC
 
 ## 📚 Available Documentation
 
@@ -62,6 +62,19 @@
 ```
 Authentication:
   POST /auth/signin             - User login
+
+Organizations:
+  GET    /api/v1/organizations  - List organizations
+  POST   /api/v1/organizations  - Create organization
+  POST   /api/v1/organizations/:id/switch - Switch context
+
+Members:
+  GET    /api/v1/organizations/:id/members - List members
+  POST   /api/v1/organizations/:id/members - Add member
+
+Invitations:
+  POST   /api/v1/organizations/:id/invitations - Send invitation
+  POST   /api/v1/invitations/:token/accept - Accept invitation
 
 Submissions:
   GET    /api/v1/submissions    - List submissions
@@ -126,6 +139,14 @@ All documentation follows these standards:
 - **PDF Assembly**: Dynamic field filling and audit trail generation
 - **Reminders**: Scheduled notifications for pending signatures
 
+### Enterprise Features
+- **Organizations & Teams**: Multi-tenant organization management with role-based access
+- **Organization Roles**: Owner, Admin, Member, Viewer with granular permissions
+- **Team Invitations**: Email-based member invitation system with token expiration
+- **Organization Context**: JWT tokens include organization_id for multi-tenant isolation
+- **Organization Templates**: Templates can be shared within organizations
+- **Team Collaboration**: Members can collaborate on templates and submissions
+
 ### Authentication Features
 - **User Registration**: Sign up with email verification
 - **Password Management**: Forgot/reset password with secure tokens
@@ -149,6 +170,29 @@ All documentation follows these standards:
 ---
 
 **Status**: ✅ Complete  
-**Total Documents**: 7  
-**Version**: 2.2.0
+**Total Documents**: 8  
+**Version**: 2.3.0
+
+## 🆕 Enterprise Features
+
+goSign v2.3 adds comprehensive organization and team management:
+
+### Organizations
+- Create and manage organizations
+- Switch between personal and organization contexts
+- Organization-scoped data isolation
+
+### Team Management
+- Invite members via email
+- Manage member roles and permissions
+- View organization members and their roles
+
+### Role-Based Access Control
+- **Owner**: Full control, can delete organization
+- **Admin**: Manage members and organization settings
+- **Member**: Create and manage templates/submissions
+- **Viewer**: Read-only access to organization data
+
+### API Integration
+All organization endpoints are documented in Swagger UI and follow RESTful conventions. See [API_AUTHENTICATION.md](API_AUTHENTICATION.md) for details on organization context in JWT tokens.
 

@@ -1,86 +1,101 @@
-// @ts-nocheck
 <template>
   <div class="edit-page">
-    <h1 class="mb-6 text-3xl font-bold">Editor</h1>
-    
-    <div v-if="template && template.schema.length > 0" class="flex h-full">
-    <div ref="previewsRef" class="hidden w-28 flex-none overflow-x-hidden overflow-y-auto pr-3 lg:block">
-      <DocumentPreview
-        v-for="(item, index) in template.schema"
-        :key="index"
-        :with-arrows="template.schema.length > 1"
-        :item="item"
-        :document="sortedDocuments[index]"
-        :editable="editable"
-        :template="template"
-        @scroll-to="scrollIntoDocument(item)"
-        @remove="onDocumentRemove"
-        @replace="onDocumentReplace"
-        @up="moveDocument(item, -1)"
-        @down="moveDocument(item, 1)"
-        @change="save"
-      />
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-3xl font-bold">
+        <span v-if="template">
+          Templates
+          <span class="mx-2 text-gray-500">→</span>
+          <span class="text-gray-900">{{ template.name }}</span>
+        </span>
+        <span v-else>
+          Templates
+          <span class="mx-2 text-gray-500">→</span>
+          <span class="text-gray-900">Editor</span>
+        </span>
+      </h1>
     </div>
 
-    <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
-      <div ref="documents" class="pr-3.5 pl-0.5">
-        <template v-for="document in sortedDocuments" :key="document.id">
-          <Document
-            :ref="setDocumentRefs"
-            :areas-index="fieldAreasIndex[document.id]"
-            :selected-submitter="selectedSubmitter"
-            :document="document"
-            :is-drag="!!dragField"
-            :default-fields="defaultFields"
-            :allow-draw="!onlyDefinedFields"
-            :draw-field="drawField"
-            :editable="editable"
-            @draw="onDraw"
-            @drop-field="onDropfield"
-            @remove-area="removeArea"
-            @select-submitter="handleSelectSubmitter"
-          />
-        </template>
+    <div v-if="template && template.schema && template.schema.length > 0" class="flex h-full">
+      <div ref="previewsRef" class="hidden w-28 flex-none overflow-x-hidden overflow-y-auto pr-3 lg:block">
+        <DocumentPreview
+          v-for="(item, index) in template && template.schema ? template.schema : []"
+          :key="index"
+          :with-arrows="(template && template.schema && template.schema.length) > 1"
+          :item="item"
+          :document="sortedDocuments[index]"
+          :editable="editable"
+          :template="template"
+          @scroll-to="scrollIntoDocument(item)"
+          @remove="onDocumentRemove"
+          @replace="onDocumentReplace"
+          @up="moveDocument(item, -1)"
+          @down="moveDocument(item, 1)"
+          @change="save"
+        />
       </div>
-    </div>
 
-    <div class="relative hidden w-80 flex-none overflow-x-hidden overflow-y-auto pl-0.5 md:block">
-      <div v-if="drawField" class="sticky inset-0 z-20 h-full">
-        <div class="space-y-4 rounded-lg bg-[--color-base-300] p-5 text-center">
-          <p>Draw {{ drawField.name }} field on the document</p>
-          <div>
-            <button class="base-button" @click="clearDrawField()">Cancel</button>
-            <a
-              v-if="
-                !drawOption && !drawField.areas.length && !['stamp', 'signature', 'initials'].includes(drawField.type)
-              "
-              href="#"
-              class="link mt-3 block text-sm"
-              @click.prevent="[(drawField = null), (drawOption = null)]"
-            >
-              Or add field without drawing
-            </a>
-          </div>
+      <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
+        <div ref="documents" class="pr-3.5 pl-0.5">
+          <template v-for="document in sortedDocuments" :key="document.id">
+            <Document
+              :ref="setDocumentRefs"
+              :areas-index="fieldAreasIndex[document.id]"
+              :selected-submitter="selectedSubmitter"
+              :document="document"
+              :is-drag="!!dragField"
+              :default-fields="[]"
+              :allow-draw="!onlyDefinedFields"
+              :draw-field="drawField"
+              :editable="editable"
+              @draw="onDraw"
+              @drop-field="onDropfield"
+              @remove-area="removeArea"
+              @select-submitter="handleSelectSubmitter"
+            />
+          </template>
         </div>
       </div>
 
-      <Fields
-        ref="fields"
-        :fields="template.fields"
-        :submitters="template.submitters"
-        :selected-submitter="selectedSubmitter"
-        :selected-field="selectedField"
-        :default-submitters="defaultSubmitters"
-        :default-fields="defaultFields"
-        :only-defined-fields="onlyDefinedFields"
-        :editable="editable"
-        @set-draw="[(drawField = $event.field), (drawOption = $event.option)]"
-        @set-drag="dragField = $event"
-        @change-submitter="selectedSubmitter = $event"
-        @drag-end="dragField = null"
-        @scroll-to-area="scrollToArea"
-      />
-    </div>
+      <div class="relative hidden w-80 flex-none overflow-x-hidden overflow-y-auto pl-0.5 md:block">
+        <div v-if="drawField" class="sticky inset-0 z-20 h-full">
+          <div class="space-y-4 rounded-lg bg-[--color-base-300] p-5 text-center">
+            <p>Draw {{ drawField.name }} field on the document</p>
+            <div>
+              <button class="base-button" @click="clearDrawField()">Cancel</button>
+              <a
+                v-if="
+                  !drawOption && !drawField.areas.length && !['stamp', 'signature', 'initials'].includes(drawField.type)
+                "
+                href="#"
+                class="link mt-3 block text-sm"
+                @click.prevent="[(drawField = null), (drawOption = null)]"
+              >
+                Or add field without drawing
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <Fields
+          ref="fields"
+          :fields="template.fields"
+          :submitters="template.submitters"
+          :selected-submitter="selectedSubmitter"
+          :selected-field="selectedField"
+          :default-submitters="defaultSubmitters"
+          :default-fields="defaultFields"
+          :only-defined-fields="onlyDefinedFields"
+          :signing-mode="signingMode"
+          :editable="editable"
+          @set-draw="[(drawField = $event.field), (drawOption = $event.option)]"
+          @set-drag="dragField = $event"
+          @change-submitter="selectedSubmitter = $event"
+          @update-signing-mode="signingMode = $event"
+          @update-submitter-order="template.submitters = $event"
+          @drag-end="dragField = null"
+          @scroll-to-area="scrollToArea"
+        />
+      </div>
     </div>
 
     <div v-else class="flex h-full">add new files</div>
@@ -89,14 +104,17 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, provide, ref } from "vue";
+import { useRoute } from "vue-router";
 import Document from "@/components/template/Document.vue";
 import DocumentPreview from "@/components/template/Preview.vue";
 import Fields from "@/components/field/List.vue";
 import type { Template } from "@/models";
-import { apiGet } from "@/utils/api";
+import { apiGet, apiPut } from "@/services/api";
+import { fetchWithAuth } from "@/utils/auth";
 import { v4 } from "uuid";
 
-const template: any = ref();
+const template: any = ref(null);
+const signingMode: any = ref("sequential");
 const undoStack: any = ref([]);
 const redoStack: any = ref([]);
 const lastRedoData: any = ref();
@@ -114,11 +132,12 @@ const dragField = ref();
 
 const onSave = ref();
 
-const defaultSubmitters = ref([]);
-const defaultFields = ref(["text", "signature"]);
+const defaultSubmitters = ref<any[]>([]);
+const defaultFields = ref<string[]>(["text", "signature"]);
 const onlyDefinedFields = ref(false);
 
 const fetchOptions = { headers: {} };
+const route = useRoute();
 
 provide("template", template);
 provide("save", save);
@@ -126,14 +145,40 @@ provide("baseFetch", baseFetch);
 provide("selectedAreaRef", selectedAreaRef); // computed(() => selectedAreaRef.value),
 
 onMounted(async () => {
-  apiGet(`/api/templates`).then((res) => {
-    if (res.success) {
-      template.value = res.data as Template;
-      selectedSubmitter.value = template.value.submitters[0];
-    }
-  });
+  try {
+    // Get template ID from route params
+    const templateId = route.params.id as string;
 
-  undoStack.value = [JSON.stringify(template.value)];
+    if (!templateId) {
+      console.error("Template ID is required");
+      return;
+    }
+
+    // Load specific template by ID
+    const res = await apiGet<Template>(`/api/v1/templates/${templateId}`);
+    // API v1 returns: { message: "template", data: Template }
+    if (res && res.data) {
+      template.value = res.data;
+
+      if (template.value.submitters && template.value.submitters.length > 0) {
+        selectedSubmitter.value = template.value.submitters[0];
+      }
+      signingMode.value = template.value.signing_mode || "sequential";
+    } else {
+      console.error("Template not found");
+    }
+  } catch (error) {
+    console.error("Failed to load template:", error);
+    // If auth failed, redirect will happen automatically
+    if (route.name === "template-edit") {
+      // Only show error if still on edit page (not redirected)
+      console.error("Could not load template data");
+    }
+  }
+
+  if (template.value) {
+    undoStack.value = [JSON.stringify(template.value)];
+  }
   redoStack.value = [];
 
   await nextTick();
@@ -147,16 +192,25 @@ onUnmounted(() => {
 });
 
 const selectedField = computed(() => {
+  if (!template.value || !template.value.fields) {
+    return null;
+  }
   return template.value.fields.find((f: any) => f.areas?.includes(selectedAreaRef.value));
 });
 
 const sortedDocuments = computed(() => {
+  if (!template.value || !template.value.schema || !template.value.documents) {
+    return [];
+  }
   return template.value.schema.map((item: any) => {
     return template.value.documents.find((doc: any) => doc.id === item.attachment_id);
   });
 });
 
 const fieldAreasIndex = computed(() => {
+  if (!template.value || !template.value.fields) {
+    return {};
+  }
   const areas: any = {};
   template.value.fields.forEach((f: any) => {
     (f.areas || []).forEach((a: any) => {
@@ -304,7 +358,9 @@ function onDraw(area: any): void {
         const documentRef = documentRefs.value.find(
           (e: any) => e && e.document && e.document.id === area.attachment_id
         );
-        if (!documentRef) return;
+        if (!documentRef) {
+          return;
+        }
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
         if (drawField.value.type === "checkbox" || drawOption.value) {
@@ -395,7 +451,7 @@ function onDropfield(area: any): void {
     name: "",
     id: v4(),
     submitter_id: selectedSubmitter.value.id,
-    required: dragField.value.type !== "checkbox",
+    required: true,
     ...dragField.value
   };
 
@@ -487,35 +543,57 @@ function onDropfield(area: any): void {
 }
 
 function onDocumentRemove(item: any): void {
+  if (!template.value) return;
   if (window.confirm("Are you sure?")) {
-    template.value.schema.splice(template.value.schema.indexOf(item), 1);
+    if (template.value.schema) {
+      template.value.schema.splice(template.value.schema.indexOf(item), 1);
+    }
   }
 
-  template.value.fields.forEach((field: any) => {
-    [...(field.areas || [])].forEach((area) => {
-      if (area.attachment_id === item.attachment_id) {
-        field.areas.splice(field.areas.indexOf(area), 1);
-      }
+  if (template.value.fields) {
+    template.value.fields.forEach((field: any) => {
+      [...(field.areas || [])].forEach((area) => {
+        if (area.attachment_id === item.attachment_id) {
+          field.areas.splice(field.areas.indexOf(area), 1);
+        }
+      });
     });
-  });
+  }
   save();
 }
 
-function onDocumentReplace({ replaceSchemaItem, schema, documents }): void {
-  template.value.schema.splice(template.value.schema.indexOf(replaceSchemaItem), 1, schema[0]);
-  template.value.documents.push(...documents);
-  template.value.fields.forEach((field: any) => {
-    (field.areas || []).forEach((area: any) => {
-      if (area.attachment_id === replaceSchemaItem.attachment_id) {
-        area.attachment_id = schema[0].attachment_id;
-      }
+function onDocumentReplace({
+  replaceSchemaItem,
+  schema,
+  documents
+}: {
+  replaceSchemaItem: any;
+  schema: any[];
+  documents: any[];
+}): void {
+  if (!template.value) return;
+  if (template.value.schema) {
+    template.value.schema.splice(template.value.schema.indexOf(replaceSchemaItem), 1, schema[0]);
+  }
+  if (template.value.documents) {
+    template.value.documents.push(...documents);
+  }
+  if (template.value.fields) {
+    template.value.fields.forEach((field: any) => {
+      (field.areas || []).forEach((area: any) => {
+        if (area.attachment_id === replaceSchemaItem.attachment_id) {
+          area.attachment_id = schema[0].attachment_id;
+        }
+      });
     });
-  });
+  }
   save();
 }
 
 function moveDocument(item: any, direction: any): void {
+  if (!template.value || !template.value.schema) return;
   const currentIndex = template.value.schema.indexOf(item);
+  if (currentIndex === -1) return;
   template.value.schema.splice(currentIndex, 1);
 
   if (currentIndex + direction > template.value.schema.length) {
@@ -537,7 +615,13 @@ function scrollToArea(area: any): void {
 }
 
 function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  return fetch(path, {
+  // Normalize path: replace /api/ with /api/v1/ if needed
+  let normalizedPath = path;
+  if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
+    normalizedPath = path.replace("/api/", "/api/v1/");
+  }
+  // Use fetchWithAuth to ensure token is included in headers
+  return fetchWithAuth(normalizedPath, {
     ...options,
     headers: { ...fetchOptions.headers, ...options.headers }
   });
@@ -559,20 +643,19 @@ async function save({ force } = { force: false }): Promise<object> {
 
   pushUndo();
 
-  await baseFetch(`/api/templates/${template.value.id}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      template: {
-        name: template.value.name,
-        schema: template.value.schema,
-        submitters: template.value.submitters,
-        fields: template.value.fields
-      }
-    }),
-    headers: { "Content-Type": "application/json" }
+  await apiPut(`/api/templates/${template.value.id}`, {
+    template: {
+      name: template.value.name,
+      schema: template.value.schema,
+      submitters: template.value.submitters,
+      fields: template.value.fields,
+      signing_mode: signingMode.value
+    }
   });
   if (onSave.value) {
     onSave.value(template.value);
   }
+
+  return {};
 }
 </script>

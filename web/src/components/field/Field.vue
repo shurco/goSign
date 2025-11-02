@@ -212,11 +212,14 @@
 </template>
 
 <script setup lang="ts">
+// This component intentionally mutates props.field because field is part of a reactive template object
+// managed by the parent component. Direct mutation is used for performance optimization.
+// Rule vue/no-mutating-props is disabled for this file in eslint.config.mjs
 import { computed, inject, nextTick, ref, watch } from "vue";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import FieldType from "@/components/field/Type.vue";
 import { borderColors, fieldNames as fieldNamesConst, subNames } from "@/components/field/constants.ts";
-import { useDropdown } from "@/composables/useDropdown";
+import { useDropdown } from "@/composables/ui";
 import { v4 } from "uuid";
 
 const props = defineProps({
@@ -340,34 +343,42 @@ watch(
 );
 
 // Methods should be converted into standalone functions or use `use` functions if they are composable.
-function formatDate(date: any, format: any): any {
-  const monthFormats = {
+function formatDate(date: Date, format: string): string {
+  const monthFormats: Record<string, "numeric" | "2-digit" | "short" | "long"> = {
     M: "numeric",
     MM: "2-digit",
     MMM: "short",
     MMMM: "long"
   };
 
-  const dayFormats = {
+  const dayFormats: Record<string, "numeric" | "2-digit"> = {
     D: "numeric",
     DD: "2-digit"
   };
 
-  const yearFormats = {
+  const yearFormats: Record<string, "numeric" | "2-digit"> = {
     YYYY: "numeric",
     YY: "2-digit"
   };
 
+  const dayMatch = format.match(/D+/);
+  const monthMatch = format.match(/M+/);
+  const yearMatch = format.match(/Y+/);
+
   const parts = new Intl.DateTimeFormat([], {
-    day: dayFormats[format.match(/D+/)],
-    month: monthFormats[format.match(/M+/)],
-    year: yearFormats[format.match(/Y+/)]
+    day: dayMatch ? dayFormats[dayMatch[0]] || "numeric" : "numeric",
+    month: monthMatch ? monthFormats[monthMatch[0]] || "numeric" : "numeric",
+    year: yearMatch ? yearFormats[yearMatch[0]] || "numeric" : "numeric"
   }).formatToParts(date);
 
+  const dayPart = parts.find((p) => p.type === "day");
+  const monthPart = parts.find((p) => p.type === "month");
+  const yearPart = parts.find((p) => p.type === "year");
+
   return format
-    .replace(/D+/, parts.find((p) => p.type === "day").value)
-    .replace(/M+/, parts.find((p) => p.type === "month").value)
-    .replace(/Y+/, parts.find((p) => p.type === "year").value);
+    .replace(/D+/, dayPart?.value || "")
+    .replace(/M+/, monthPart?.value || "")
+    .replace(/Y+/, yearPart?.value || "");
 }
 
 function copyToAllPages(field: any): any {

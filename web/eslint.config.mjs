@@ -73,12 +73,20 @@ export default [
       'no-relative-import-paths/no-relative-import-paths': ['warn', { allowSameFolder: true, rootDir: 'src', prefix: '@' }], // No relative imports
 
       "@typescript-eslint/no-explicit-any": "off", // Disallow 'any' type
+      "@typescript-eslint/unified-signatures": "off", // Disable due to incompatibility with Vue SFC files
       "sort-imports": ["error", { "ignoreCase": true, "ignoreDeclarationSort": true}], // Enforce sorted import declarations within modules
 
       // Find and remove unused ES6 module imports.
       'no-unused-vars': 'off', // Disable ESLint's 'no-unused-vars'
       'unused-imports/no-unused-imports': 'error', // Disallow unused imports
       'unused-imports/no-unused-vars': ['error', { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' }] // Disallow unused variables and arguments
+    }
+  },
+  {
+    // Disable vue/no-mutating-props for Field.vue - intentional mutation for performance
+    files: ['src/components/field/Field.vue'],
+    rules: {
+      'vue/no-mutating-props': 'off'
     }
   }
 ];

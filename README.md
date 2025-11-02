@@ -38,6 +38,14 @@ goSign is a complete document signing solution that combines powerful backend se
 - 🔍 **Event Logging**: Comprehensive audit trail
 - 🎯 **Generic CRUD API**: Consistent REST API design
 
+### Enterprise Features
+- 🏢 **Organizations & Teams**: Multi-tenant organization management
+- 👥 **Role-Based Access Control**: Owner, Admin, Member, Viewer roles
+- 🔐 **Organization Context**: JWT tokens with organization scope
+- 📋 **Team Collaboration**: Invite members, manage permissions
+- 🗂️ **Organization Templates**: Templates scoped to organizations
+- 📊 **Team Analytics**: Organization-level statistics and insights
+
 ## 🛠️ Tech Stack
 
 ### Backend
@@ -273,6 +281,26 @@ go run cmd/cert/main.go [options]
 - `POST /api/v1/templates/clone` - Clone template
 - `POST /api/v1/templates/from-file` - Create from PDF
 
+**Organizations** (6 endpoints)
+- `GET /api/v1/organizations` - List user's organizations
+- `GET /api/v1/organizations/:id` - Get organization details
+- `POST /api/v1/organizations` - Create organization
+- `PUT /api/v1/organizations/:id` - Update organization
+- `DELETE /api/v1/organizations/:id` - Delete organization
+- `POST /api/v1/organizations/:id/switch` - Switch organization context
+
+**Organization Members** (7 endpoints)
+- `GET /api/v1/organizations/:id/members` - List members
+- `POST /api/v1/organizations/:id/members` - Add member
+- `PUT /api/v1/organizations/:id/members/:user_id` - Update member role
+- `DELETE /api/v1/organizations/:id/members/:user_id` - Remove member
+
+**Organization Invitations** (5 endpoints)
+- `GET /api/v1/organizations/:id/invitations` - List invitations
+- `POST /api/v1/organizations/:id/invitations` - Send invitation
+- `POST /api/v1/invitations/:token/accept` - Accept invitation
+- `DELETE /api/v1/invitations/:id` - Revoke invitation
+
 **API Keys** (6 endpoints)
 - `GET /api/v1/apikeys` - List API keys
 - `POST /api/v1/apikeys` - Create API key
@@ -397,7 +425,17 @@ Utility scripts are located in the `scripts/` directory:
 
 ## License
 
-[Add license information]
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0).
+
+See the [LICENSE](LICENSE) file for the full license text.
+
+**Summary:**
+- ✅ You are free to use, modify, and distribute this software
+- ✅ You must keep the same license when distributing
+- ✅ You must include the full license text and source code
+- ❌ You cannot use this software in proprietary (closed-source) applications
+
+For more information about GPL-3.0, visit: https://www.gnu.org/licenses/gpl-3.0.html
 
 ## Contributing
 
@@ -423,6 +461,17 @@ goSign v2.0 introduces enterprise document signing capabilities:
 - ✅ **Webhooks**: Real-time event notifications
 - ✅ **Storage Options**: S3, GCS, Azure, or local
 - ✅ **Swagger Docs**: Interactive API documentation
+
+## 🏢 What's New in v2.1
+
+goSign v2.1 adds enterprise team collaboration features:
+
+- ✅ **Organizations**: Multi-tenant organization management
+- ✅ **Role-Based Access**: Four roles (Owner, Admin, Member, Viewer)
+- ✅ **Team Invitations**: Email-based member invitations
+- ✅ **Organization Context**: JWT tokens with organization scope
+- ✅ **Team Templates**: Templates shared within organizations
+- ✅ **Organization Isolation**: Data separation between organizations
 
 See [IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md) for full details.
 
@@ -458,6 +507,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - [ ] Mobile application
 - [ ] E-signature standards (eIDAS)
 - [ ] Advanced PDF form automation
+- [ ] Split monolith into microservices
 
 ---
 

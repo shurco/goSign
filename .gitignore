@@ -51,4 +51,4 @@ EXPERIMENT_*
 web/public/fixtures
 gosign.toml
 .cursor/*
-bin/*
+bin/*goSign

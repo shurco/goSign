@@ -110,7 +110,9 @@ function setAreaRefs(el: any): void {
 
 function onDrop(e: DragEvent): void {
   e.preventDefault();
-  if (!mask.value) return;
+  if (!mask.value) {
+    return;
+  }
 
   const rect = mask.value.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -131,7 +133,9 @@ function onStartDraw(e: PointerEvent): void {
   }
 
   nextTick(() => {
-    if (!mask.value) return;
+    if (!mask.value) {
+      return;
+    }
 
     const initialX = e.layerX / mask.value.clientWidth;
     const initialY = e.layerY / mask.value.clientHeight;
@@ -150,7 +154,9 @@ function onStartDraw(e: PointerEvent): void {
 }
 
 function onPointermove(e: PointerEvent): void {
-  if (!newArea.value || !mask.value) return;
+  if (!newArea.value || !mask.value) {
+    return;
+  }
 
   const dx = e.layerX / mask.value.clientWidth - (newArea.value.initialX || 0);
   const dy = e.layerY / mask.value.clientHeight - (newArea.value.initialY || 0);

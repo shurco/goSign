@@ -6,7 +6,7 @@
         <div
           ref="modalRef"
           :class="modalClasses"
-          class="relative z-10 w-full rounded-lg border border-[var(--color-base-300)] bg-white"
+          class="relative z-10 w-full rounded-lg border border-gray-200 bg-white transition-colors"
           @click.stop
         >
           <div v-if="$slots.header || title" class="border-b border-gray-200 px-6 py-4">
@@ -15,9 +15,7 @@
                 <slot name="header">{{ title }}</slot>
               </h3>
               <button v-if="showClose" class="text-gray-400 transition-colors hover:text-gray-600" @click="handleClose">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <SvgIcon name="x" class="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -35,8 +33,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useEscapeKey } from "@/composables/useEscapeKey";
-import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeKey, useFocusTrap } from "@/composables/ui";
+import SvgIcon from "@/components/SvgIcon.vue";
 
 interface Props {
   modelValue: boolean;

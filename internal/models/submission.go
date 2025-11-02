@@ -2,6 +2,14 @@ package models
 
 import "time"
 
+// SigningMode represents signing mode
+type SigningMode string
+
+const (
+	SigningModeSequential SigningMode = "sequential"
+	SigningModeParallel   SigningMode = "parallel"
+)
+
 // SubmissionStatus represents submission status
 type SubmissionStatus string
 
@@ -21,6 +29,7 @@ type Submission struct {
 	AccountID   string           `json:"account_id,omitempty"`
 	CreatedByID string           `json:"created_by_id,omitempty"`
 	Status      SubmissionStatus `json:"status"`
+	SigningMode SigningMode      `json:"signing_mode"`
 	ExpiredAt   *time.Time       `json:"expired_at,omitempty"`
 	CompletedAt *time.Time       `json:"completed_at,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`

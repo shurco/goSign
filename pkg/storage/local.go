@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shurco/gosign/pkg/utils/fsutil"
+	"github.com/shurco/gosign/pkg/utils"
 )
 
 // LocalStorage implements storage on local file system
@@ -93,7 +93,7 @@ func (s *LocalStorage) GetURL(ctx context.Context, key string, expiration time.D
 	fullPath := s.getFullPath(key)
 
 	// Check file exists
-	if !fsutil.IsFile(fullPath) {
+	if !utils.IsFile(fullPath) {
 		return "", fmt.Errorf("file not found: %s", key)
 	}
 
@@ -133,7 +133,7 @@ func (s *LocalStorage) List(ctx context.Context, prefix string) ([]string, error
 // Exists checks if file exists
 func (s *LocalStorage) Exists(ctx context.Context, key string) (bool, error) {
 	fullPath := s.getFullPath(key)
-	return fsutil.IsFile(fullPath), nil
+	return utils.IsFile(fullPath), nil
 }
 
 // GetMetadata returns file metadata

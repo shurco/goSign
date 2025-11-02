@@ -23,7 +23,7 @@ func VerifyPDF(c *fiber.Ctx) error {
 
 	fileHeader, err := c.FormFile("document")
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	if fileHeader.Header["Content-Type"][0] != "application/pdf" {
@@ -33,13 +33,13 @@ func VerifyPDF(c *fiber.Ctx) error {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	defer file.Close()
 
 	tempFile, err := os.CreateTemp("./lc_tmp", "tempfile-*.tmp")
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	defer func() {
 		tempFile.Close()
@@ -47,13 +47,13 @@ func VerifyPDF(c *fiber.Ctx) error {
 	}()
 
 	if _, err := io.Copy(tempFile, file); err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	verifyInfo, err := verify.File(tempFile)
 	if err != nil {
 		response.Error = err.Error()
-		return webutil.StatusOK(c, "Verify", response)
+		return webutil.Response(c, fiber.StatusOK, "Verify", response)
 	}
 
 	if verifyInfo.Signers == nil {
@@ -87,7 +87,7 @@ func VerifyPDF(c *fiber.Ctx) error {
 				aki := cert.Certificate.AuthorityKeyId
 				trustCert, err := queries.DB.CheckAKI(context.Background(), strings.ToUpper(hex.EncodeToString(aki[:])))
 				if err != nil && err != pgx.ErrNoRows {
-					return webutil.StatusInternalServerError(c)
+					return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 				}
 				fmt.Print(trustCert)
 				if trustCert != nil && trustCert.List != "" {

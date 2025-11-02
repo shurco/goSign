@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+#set -e
+
+ROOT_PATH="$(git rev-parse --show-toplevel)"
+source ${ROOT_PATH}/scripts/_helper
+
+kill_backend() {
+  # First, try to find processes by name patterns
+  arr_backend=("goSign" "__debug_bin" "cmd/goSign/main.go serve")
+  for process_name in "${arr_backend[@]}"; do
+    pids=$(pgrep -f "$process_name" 2>/dev/null)
+    for pid in $pids; do
+      if [ -z "$pid" ]; then
+        continue
+      fi
+      # Get current working directory of the process
+      cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
+      if [[ -n $cwd && $cwd == "$ROOT_PATH"* ]]; then
+        print_header "Killed backend process ${pid}"
+        kill -9 $pid 2>/dev/null
+        print_answer "SUCCESS" green
+      fi
+    done
+  done
+
+  # Also check processes listening on backend port (8088)
+  backend_port_pids=$(lsof -ti :8088 2>/dev/null)
+  for pid in $backend_port_pids; do
+    if [ -z "$pid" ]; then
+      continue
+    fi
+    # Get process info
+    exe_path=$(ps -p $pid -o args= 2>/dev/null)
+    exe_file=$(readlink -f /proc/$pid/exe 2>/dev/null || echo "")
+    cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
+    ppid=$(ps -p $pid -o ppid= 2>/dev/null | tr -d ' ')
+    parent_cmd=$(ps -p $ppid -o args= 2>/dev/null || echo "")
+    parent_cwd=$(readlink -f /proc/$ppid/cwd 2>/dev/null || ps -p $ppid -o cwd= 2>/dev/null | tr -d ' ' || echo "")
+    
+    # Check if process is related to this project
+    # Check by command arguments
+    if [[ -n $exe_path && ($exe_path == *"$ROOT_PATH"* || $exe_path == *"cmd/goSign"* || $exe_path == *"goSign"*) ]]; then
+      print_header "Killed backend process ${pid} (port 8088)"
+      kill -9 $pid 2>/dev/null
+      print_answer "SUCCESS" green
+    # Check by executable file location
+    elif [[ -n $exe_file && ($exe_file == *"$ROOT_PATH"* || $exe_file == *"/bin/goSign"*) ]]; then
+      print_header "Killed backend process ${pid} (port 8088)"
+      kill -9 $pid 2>/dev/null
+      print_answer "SUCCESS" green
+    # Check by working directory
+    elif [[ -n $cwd && $cwd == "$ROOT_PATH"* ]]; then
+      print_header "Killed backend process ${pid} (port 8088)"
+      kill -9 $pid 2>/dev/null
+      print_answer "SUCCESS" green
+    # Check by parent process (go run) - if parent was started from project directory
+    elif [[ -n $parent_cmd && $parent_cmd == *"go run"* && ($parent_cmd == *"main.go serve"* || $parent_cmd == *"cmd/goSign"*) ]]; then
+      if [[ -n $parent_cwd && ($parent_cwd == "$ROOT_PATH"* || $parent_cwd == "$ROOT_PATH/cmd/goSign"*) ]]; then
+        print_header "Killed backend process ${pid} (port 8088)"
+        kill -9 $pid 2>/dev/null
+        print_answer "SUCCESS" green
+      fi
+    fi
+  done
+}
+
+kill_frontend() {
+  arr_frontend=("vite")
+  for process_name in "${arr_frontend[@]}"; do
+    pids=$(pgrep -f "$process_name" 2>/dev/null)
+    for pid in $pids; do
+      if [ -z "$pid" ]; then
+        continue
+      fi
+      # Get current working directory of the process
+      cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
+      if [[ -n $cwd && $cwd == "$ROOT_PATH/web"* ]]; then
+        print_header "Killed frontend process ${pid}"
+        kill -9 $pid 2>/dev/null
+        print_answer "SUCCESS" green
+      fi
+    done
+  done
+}
+
+TARGET=${1:-all}
+
+case "$TARGET" in
+backend)
+  print_header "Killing backend processes"
+  kill_backend
+  ;;
+frontend)
+  print_header "Killing frontend processes"
+  kill_frontend
+  ;;
+all)
+  kill_backend
+  kill_frontend
+  ;;
+*)
+  print_answer "ERROR" red
+  echo "Invalid parameter: $TARGET"
+  echo
+  echo "$0 [command]"
+  echo
+  echo "command:"
+  print_help all "Kill all processes (default)"
+  print_help backend "Kill backend processes only"
+  print_help frontend "Kill frontend processes only"
+  exit 1
+  ;;
+esac
+

@@ -3,13 +3,54 @@ package submission
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/pkg/notification"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Mock notification provider for testing
+type mockNotificationProvider struct{}
+
+func (m *mockNotificationProvider) Send(ctx context.Context, notification *models.Notification) error {
+	return nil // Always succeed
+}
+
+func (m *mockNotificationProvider) Type() models.NotificationType {
+	return models.NotificationTypeEmail
+}
+
+// Mock notification repository for testing
+type mockNotificationRepository struct{}
+
+func (m *mockNotificationRepository) Create(notification *models.Notification) error {
+	return nil
+}
+
+func (m *mockNotificationRepository) GetScheduledReady() ([]*models.Notification, error) {
+	return nil, nil
+}
+
+func (m *mockNotificationRepository) UpdateStatus(id string, status models.NotificationStatus) error {
+	return nil
+}
+
+func (m *mockNotificationRepository) CancelByRelatedID(relatedID string) error {
+	return nil
+}
+
+// Create a mock notification service
+func createMockNotificationService() *notification.Service {
+	repo := &mockNotificationRepository{}
+	service := notification.NewService(repo)
+	provider := &mockNotificationProvider{}
+	service.RegisterProvider(provider)
+	return service
+}
 
 // Mock repository for testing
 type mockRepository struct {
@@ -46,6 +87,21 @@ func (m *mockRepository) GetSubmitter(ctx context.Context, id string) (*models.S
 		return sub, nil
 	}
 	return nil, errors.New("submitter not found")
+}
+
+func (m *mockRepository) CreateSubmitter(ctx context.Context, submitter *models.Submitter) error {
+	m.submitters[submitter.ID] = submitter
+	return nil
+}
+
+func (m *mockRepository) GetSubmittersByOrder(ctx context.Context, submissionID string, order int) ([]*models.Submitter, error) {
+	var result []*models.Submitter
+	for _, sub := range m.submitters {
+		if sub.SubmissionID == submissionID && sub.Order == order {
+			result = append(result, sub)
+		}
+	}
+	return result, nil
 }
 
 func (m *mockRepository) UpdateSubmissionState(ctx context.Context, id string, state SubmissionState) error {
@@ -381,6 +437,80 @@ func TestDecline(t *testing.T) {
 			sub, err := repo.GetSubmitter(context.Background(), tt.submitterID)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, sub.Status)
+		})
+	}
+}
+
+func TestService_Send_SequentialValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		signingMode models.SigningMode
+		numSubmitters int
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "sequential mode with 1 submitter fails",
+			signingMode: models.SigningModeSequential,
+			numSubmitters: 1,
+			wantErr:     true,
+			errContains: "sequential signing mode requires at least 2 submitters",
+		},
+		{
+			name:        "sequential mode with 2 submitters succeeds",
+			signingMode: models.SigningModeSequential,
+			numSubmitters: 2,
+			wantErr:     false,
+		},
+		{
+			name:        "parallel mode with 1 submitter succeeds",
+			signingMode: models.SigningModeParallel,
+			numSubmitters: 1,
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := newMockRepository()
+
+			// Create submission
+			submission := &models.Submission{
+				ID:          "test-submission",
+				TemplateID:  "test-template",
+				SigningMode: tt.signingMode,
+				Status:      models.SubmissionStatusDraft,
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+			}
+			repo.submissions[submission.ID] = submission
+
+			// Create submitters
+			for i := 0; i < tt.numSubmitters; i++ {
+				submitter := &models.Submitter{
+					ID:           fmt.Sprintf("submitter-%d", i),
+					Name:         fmt.Sprintf("Submitter %d", i),
+					Email:        fmt.Sprintf("submitter%d@example.com", i),
+					SubmissionID: submission.ID,
+					Order:        i,
+					Status:       models.SubmitterStatusPending,
+					CreatedAt:    time.Now(),
+					UpdatedAt:    time.Now(),
+				}
+				repo.submitters[submitter.ID] = submitter
+			}
+
+			service := NewService(repo, createMockNotificationService(), nil)
+			err := service.Send(context.Background(), submission.ID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

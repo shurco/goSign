@@ -57,7 +57,7 @@ func (h *BulkHandler) BulkCreateSubmissions(c *fiber.Ctx) error {
 	// Get template_id
 	templateID := c.FormValue("template_id")
 	if templateID == "" {
-		return webutil.StatusBadRequest(c, "template_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
 	}
 
 	sendImmediately := c.FormValue("send_immediately") == "true"
@@ -65,7 +65,7 @@ func (h *BulkHandler) BulkCreateSubmissions(c *fiber.Ctx) error {
 	// Get file
 	file, err := c.FormFile("file")
 	if err != nil {
-		return webutil.StatusBadRequest(c, "file is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "file is required", nil)
 	}
 
 	// Open file

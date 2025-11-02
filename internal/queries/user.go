@@ -16,6 +16,11 @@ type UserQueries struct {
 	pool *pgxpool.Pool
 }
 
+// NewUserQueries creates a new UserQueries instance
+func NewUserQueries(pool *pgxpool.Pool) *UserQueries {
+	return &UserQueries{pool: pool}
+}
+
 // UserRecord represents a user record from database
 type UserRecord struct {
 	ID              string

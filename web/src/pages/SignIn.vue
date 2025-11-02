@@ -16,7 +16,7 @@
           <span class="block sm:inline">{{ error }}</span>
         </div>
 
-        <div class="space-y-4 rounded-md shadow-sm">
+        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
           <div>
             <label for="email-address" class="sr-only">Email address</label>
             <input
@@ -93,15 +93,15 @@
         <div v-if="!requires2FA" class="grid grid-cols-2 gap-3">
           <button
             type="button"
+            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
             @click="handleGoogleSignIn"
-            class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
           >
             Google
           </button>
           <button
             type="button"
+            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
             @click="handleGitHubSignIn"
-            class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
           >
             GitHub
           </button>
@@ -113,9 +113,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
+const route = useRoute();
 
 const formData = ref({
   email: "",
@@ -164,8 +165,9 @@ const handleSubmit = async () => {
       localStorage.setItem("refresh_token", data.data.refresh_token);
     }
 
-    // Redirect to dashboard
-    router.push("/dashboard");
+    // Redirect to dashboard or to redirect query parameter if present
+    const redirectPath = (route.query.redirect as string) || "/dashboard";
+    router.push(redirectPath);
   } catch (err) {
     error.value = err instanceof Error ? err.message : "An error occurred";
   } finally {

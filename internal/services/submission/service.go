@@ -30,7 +30,9 @@ type Repository interface {
 	CreateSubmission(ctx context.Context, submission *models.Submission) error
 	GetSubmission(ctx context.Context, id string) (*models.Submission, error)
 	UpdateSubmissionState(ctx context.Context, id string, state SubmissionState) error
+	CreateSubmitter(ctx context.Context, submitter *models.Submitter) error
 	GetSubmitters(ctx context.Context, submissionID string) ([]*models.Submitter, error)
+	GetSubmittersByOrder(ctx context.Context, submissionID string, order int) ([]*models.Submitter, error)
 	GetSubmitter(ctx context.Context, id string) (*models.Submitter, error)
 	UpdateSubmitterStatus(ctx context.Context, id string, status models.SubmitterStatus) error
 	CreateEvent(ctx context.Context, event *models.Event) error
@@ -54,9 +56,10 @@ func NewService(repo Repository, notificationSvc *notification.Service, webhookD
 
 // CreateSubmissionInput is input data for creating a submission
 type CreateSubmissionInput struct {
-	TemplateID  string
-	CreatedByID string
-	Submitters  []SubmitterInput
+	TemplateID   string
+	CreatedByID  string
+	SigningMode  models.SigningMode
+	Submitters   []SubmitterInput
 }
 
 // SubmitterInput is submitter data
@@ -68,20 +71,47 @@ type SubmitterInput struct {
 
 // Create creates a new submission in draft status
 func (s *Service) Create(ctx context.Context, input CreateSubmissionInput) (*models.Submission, error) {
+	// Set default signing mode if not provided
+	signingMode := input.SigningMode
+	if signingMode == "" {
+		signingMode = models.SigningModeSequential
+	}
+
 	submission := &models.Submission{
-		ID:         uuid.New().String(),
-		TemplateID: input.TemplateID,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ID:          uuid.New().String(),
+		TemplateID:  input.TemplateID,
+		SigningMode: signingMode,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := s.repo.CreateSubmission(ctx, submission); err != nil {
 		return nil, fmt.Errorf("failed to create submission: %w", err)
 	}
 
+	// Create submitters with assigned order
+	for i, submitterInput := range input.Submitters {
+		submitter := &models.Submitter{
+			ID:           uuid.New().String(),
+			Name:         submitterInput.Name,
+			Email:        submitterInput.Email,
+			Phone:        submitterInput.Phone,
+			Slug:         uuid.New().String(), // Generate unique signing link
+			Status:       models.SubmitterStatusPending,
+			SubmissionID: submission.ID,
+			Order:        i, // Assign sequential order
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+
+		if err := s.repo.CreateSubmitter(ctx, submitter); err != nil {
+			return nil, fmt.Errorf("failed to create submitter %d: %w", i, err)
+		}
+	}
+
 	_ = s.logEvent(ctx, models.EventSubmissionCreated, input.CreatedByID, "submission", submission.ID, nil)
 
-	log.Info().Str("submission_id", submission.ID).Msg("Submission created")
+	log.Info().Str("submission_id", submission.ID).Str("signing_mode", string(signingMode)).Msg("Submission created")
 	return submission, nil
 }
 
@@ -102,10 +132,32 @@ func (s *Service) Send(ctx context.Context, submissionID string) error {
 		return fmt.Errorf("no submitters found for submission")
 	}
 
-	// Send invitation to first submitter (or all, if parallel workflow)
-	firstSubmitter := submitters[0]
-	if err := s.sendInvitation(ctx, submission, firstSubmitter); err != nil {
-		return fmt.Errorf("failed to send invitation: %w", err)
+	// Validate signing mode requirements
+	if submission.SigningMode == models.SigningModeSequential && len(submitters) < 2 {
+		return fmt.Errorf("sequential signing mode requires at least 2 submitters")
+	}
+
+	// Send invitations based on signing mode
+	switch submission.SigningMode {
+	case models.SigningModeParallel:
+		// Send invitations to all submitters simultaneously
+		for _, submitter := range submitters {
+			if err := s.sendInvitation(ctx, submission, submitter); err != nil {
+				log.Error().Err(err).Str("submitter_id", submitter.ID).Msg("Failed to send invitation")
+				// Continue with other submitters even if one fails
+			}
+		}
+	case models.SigningModeSequential:
+		// Send invitation only to the first submitter (order 0)
+		firstSubmitter, err := s.getNextSequentialSubmitter(submitters)
+		if err != nil {
+			return fmt.Errorf("failed to get first sequential submitter: %w", err)
+		}
+		if err := s.sendInvitation(ctx, submission, firstSubmitter); err != nil {
+			return fmt.Errorf("failed to send invitation: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported signing mode: %s", submission.SigningMode)
 	}
 
 	// Update submission status
@@ -116,7 +168,7 @@ func (s *Service) Send(ctx context.Context, submissionID string) error {
 	// Send webhook
 	s.sendWebhook(ctx, models.EventSubmissionCreated, submission)
 
-	log.Info().Str("submission_id", submissionID).Msg("Submission sent")
+	log.Info().Str("submission_id", submissionID).Str("signing_mode", string(submission.SigningMode)).Msg("Submission sent")
 	return nil
 }
 
@@ -127,6 +179,12 @@ func (s *Service) Complete(ctx context.Context, submitterID string) error {
 	}
 
 	_ = s.logEvent(ctx, models.EventSubmitterCompleted, "", "submitter", submitterID, nil)
+
+	// Handle sequential signing - send invitation to next submitter
+	if err := s.handleSequentialCompletion(ctx, submitterID); err != nil {
+		log.Error().Err(err).Str("submitter_id", submitterID).Msg("Failed to handle sequential completion")
+		// Don't fail the completion, just log the error
+	}
 
 	log.Info().Str("submitter_id", submitterID).Msg("Submitter completed")
 	return nil
@@ -311,6 +369,64 @@ func (s *Service) createNotification(template, subject string, context map[strin
 		RelatedID:   &relatedID,
 		CreatedAt:   time.Now(),
 	}
+}
+
+// getNextSequentialSubmitter returns the next submitter in sequential order
+func (s *Service) getNextSequentialSubmitter(submitters []*models.Submitter) (*models.Submitter, error) {
+	// Sort submitters by order
+	for _, submitter := range submitters {
+		if submitter.Order == 0 {
+			return submitter, nil
+		}
+	}
+	return nil, fmt.Errorf("no submitter with order 0 found")
+}
+
+// handleSequentialCompletion sends invitation to the next submitter in sequential mode
+func (s *Service) handleSequentialCompletion(ctx context.Context, submitterID string) error {
+	// Get the completed submitter
+	completedSubmitter, err := s.repo.GetSubmitter(ctx, submitterID)
+	if err != nil {
+		return fmt.Errorf("failed to get completed submitter: %w", err)
+	}
+
+	// Get submission to check signing mode
+	submission, err := s.repo.GetSubmission(ctx, completedSubmitter.SubmissionID)
+	if err != nil {
+		return fmt.Errorf("failed to get submission: %w", err)
+	}
+
+	// Only handle sequential mode
+	if submission.SigningMode != models.SigningModeSequential {
+		return nil
+	}
+
+	// Find the next submitter in order
+	nextOrder := completedSubmitter.Order + 1
+	nextSubmitters, err := s.repo.GetSubmittersByOrder(ctx, completedSubmitter.SubmissionID, nextOrder)
+	if err != nil {
+		return fmt.Errorf("failed to get next submitters: %w", err)
+	}
+
+	if len(nextSubmitters) == 0 {
+		// No more submitters, check if submission is complete
+		return s.CheckCompletion(ctx, completedSubmitter.SubmissionID)
+	}
+
+	// Send invitation to the next submitter
+	nextSubmitter := nextSubmitters[0]
+	if err := s.sendInvitation(ctx, submission, nextSubmitter); err != nil {
+		return fmt.Errorf("failed to send invitation to next submitter: %w", err)
+	}
+
+	log.Info().
+		Str("submission_id", submission.ID).
+		Str("completed_submitter_id", submitterID).
+		Str("next_submitter_id", nextSubmitter.ID).
+		Int("next_order", nextOrder).
+		Msg("Sequential invitation sent to next submitter")
+
+	return nil
 }
 
 // logEvent logs an event to the database

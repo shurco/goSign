@@ -139,7 +139,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import FormModal from "@/components/common/FormModal.vue";
-import { fetchWithAuth } from "@/utils/api/auth";
+import { fetchWithAuth } from "@/utils/auth";
 
 interface Submission {
   id: string;
@@ -166,6 +166,9 @@ const showModal = ref(false);
 const editingSubmission = ref<Submission | null>(null);
 const selectedSubmissions = ref<Submission[]>([]);
 
+let loadSubmissionsPromise: Promise<void> | null = null;
+let loadTemplatesPromise: Promise<void> | null = null;
+
 const columns = [
   { key: "title", label: "Title", sortable: true },
   { key: "template.name", label: "Template", sortable: true },
@@ -188,30 +191,58 @@ onMounted(async () => {
 });
 
 async function loadSubmissions(): Promise<void> {
-  isLoading.value = true;
-  try {
-    const response = await fetchWithAuth("/api/v1/submissions");
-    if (response.ok) {
-      const data = await response.json();
-      submissions.value = data.data || [];
-    }
-  } catch (error) {
-    console.error("Failed to load submissions:", error);
-  } finally {
-    isLoading.value = false;
+  // Prevent multiple simultaneous loads
+  if (isLoading.value || loadSubmissionsPromise) {
+    return loadSubmissionsPromise || Promise.resolve();
   }
+
+  isLoading.value = true;
+  loadSubmissionsPromise = (async () => {
+    try {
+      const response = await fetchWithAuth("/api/v1/submissions");
+      if (response.ok) {
+        const data = await response.json();
+        // API returns: { message: "...", data: { items: [], total: 0, ... } }
+        if (data.data && data.data.items) {
+          submissions.value = data.data.items || [];
+        } else if (Array.isArray(data.data)) {
+          submissions.value = data.data;
+        } else {
+          submissions.value = [];
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load submissions:", error);
+    } finally {
+      isLoading.value = false;
+      loadSubmissionsPromise = null;
+    }
+  })();
+
+  return loadSubmissionsPromise;
 }
 
 async function loadTemplates(): Promise<void> {
-  try {
-    const response = await fetchWithAuth("/api/v1/templates");
-    if (response.ok) {
-      const data = await response.json();
-      templates.value = data.data || [];
-    }
-  } catch (error) {
-    console.error("Failed to load templates:", error);
+  // Prevent multiple simultaneous loads
+  if (loadTemplatesPromise) {
+    return loadTemplatesPromise;
   }
+
+  loadTemplatesPromise = (async () => {
+    try {
+      const response = await fetchWithAuth("/api/v1/templates");
+      if (response.ok) {
+        const data = await response.json();
+        templates.value = data.data || [];
+      }
+    } catch (error) {
+      console.error("Failed to load templates:", error);
+    } finally {
+      loadTemplatesPromise = null;
+    }
+  })();
+
+  return loadTemplatesPromise;
 }
 
 function openCreateModal(): void {

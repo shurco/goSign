@@ -6,17 +6,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/shurco/gosign/internal/middleware"
-	"github.com/shurco/gosign/internal/services/apikey"
+	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
 // APIKeyHandler handles API key operations
 type APIKeyHandler struct {
-	service *apikey.Service
+	service *services.APIKeyService
 }
 
 // NewAPIKeyHandler creates new API key handler
-func NewAPIKeyHandler(service *apikey.Service) *APIKeyHandler {
+func NewAPIKeyHandler(service *services.APIKeyService) *APIKeyHandler {
 	return &APIKeyHandler{service: service}
 }
 
@@ -50,7 +50,7 @@ type CreateRequest struct {
 func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
-		return webutil.StatusUnauthorized(c, nil)
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	keys, err := h.service.ListAccountKeys(auth.AccountID)
@@ -58,7 +58,7 @@ func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to list API keys", nil)
 	}
 
-	return webutil.StatusOK(c, "API keys retrieved successfully", keys)
+	return webutil.Response(c, fiber.StatusOK, "API keys retrieved successfully", keys)
 }
 
 // Create creates new API key
@@ -78,12 +78,12 @@ func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
-		return webutil.StatusUnauthorized(c, nil)
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	var req CreateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, nil)
+		return webutil.Response(c, fiber.StatusBadRequest, "", nil)
 	}
 
 	var expiresAt *time.Time
@@ -125,7 +125,7 @@ func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 func (h *APIKeyHandler) Enable(c *fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
-		return webutil.StatusUnauthorized(c, nil)
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	keyID := c.Params("id")
@@ -133,7 +133,7 @@ func (h *APIKeyHandler) Enable(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to enable API key", nil)
 	}
 
-	return webutil.StatusOK(c, "API key enabled successfully", nil)
+	return webutil.Response(c, fiber.StatusOK, "API key enabled successfully", nil)
 }
 
 // Disable disables API key
@@ -152,7 +152,7 @@ func (h *APIKeyHandler) Enable(c *fiber.Ctx) error {
 func (h *APIKeyHandler) Disable(c *fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
-		return webutil.StatusUnauthorized(c, nil)
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	keyID := c.Params("id")
@@ -160,7 +160,7 @@ func (h *APIKeyHandler) Disable(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to disable API key", nil)
 	}
 
-	return webutil.StatusOK(c, "API key disabled successfully", nil)
+	return webutil.Response(c, fiber.StatusOK, "API key disabled successfully", nil)
 }
 
 // Delete deletes API key
@@ -179,7 +179,7 @@ func (h *APIKeyHandler) Disable(c *fiber.Ctx) error {
 func (h *APIKeyHandler) Delete(c *fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
-		return webutil.StatusUnauthorized(c, nil)
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	keyID := c.Params("id")
@@ -187,6 +187,6 @@ func (h *APIKeyHandler) Delete(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to delete API key", nil)
 	}
 
-	return webutil.StatusOK(c, "API key deleted successfully", nil)
+	return webutil.Response(c, fiber.StatusOK, "API key deleted successfully", nil)
 }
 

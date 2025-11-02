@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"github.com/shurco/gosign/pkg/utils/fsutil"
+	"github.com/shurco/gosign/pkg/utils"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -17,7 +17,7 @@ func Health(c *fiber.Ctx) error {
 func Upload(c *fiber.Ctx) error {
 	form, err := c.MultipartForm()
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	validMIMETypes := map[string]bool{
@@ -34,16 +34,16 @@ func Upload(c *fiber.Ctx) error {
 	for _, fileHeaders := range form.File {
 		for _, fileHeader := range fileHeaders {
 			if !validMIMETypes[fileHeader.Header.Get("Content-Type")] {
-				return webutil.StatusBadRequest(c, "File format not supported")
+				return webutil.Response(c, fiber.StatusBadRequest, "File format not supported", nil)
 			}
 
 			fileUUID := uuid.New().String()
-			fileExt := fsutil.ExtName(fileHeader.Filename)
+			fileExt := utils.ExtName(fileHeader.Filename)
 			fileName := fmt.Sprintf("%s.%s", fileUUID, fileExt)
 			filePath := fmt.Sprintf("./lc_uploads/%s", fileName)
 
 			if err := c.SaveFile(fileHeader, filePath); err != nil {
-				return webutil.StatusInternalServerError(c)
+				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
 		}
 	}

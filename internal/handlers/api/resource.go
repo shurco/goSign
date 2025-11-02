@@ -2,8 +2,10 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -66,7 +68,7 @@ func (h *ResourceHandler[T]) List(c *fiber.Ctx) error {
 	items, total, err := h.repository.List(page, pageSize, filters)
 	if err != nil {
 		log.Error().Err(err).Str("resource", h.resourceName).Msg("Failed to list resources")
-		return webutil.StatusInternalServerErrorWithMessage(c, "Failed to retrieve "+h.resourceName)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to retrieve "+h.resourceName, nil)
 	}
 
 	return webutil.Response(c, fiber.StatusOK, h.resourceName, map[string]any{
@@ -88,16 +90,16 @@ func (h *ResourceHandler[T]) List(c *fiber.Ctx) error {
 func (h *ResourceHandler[T]) Get(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return webutil.StatusBadRequest(c, "ID is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
 	}
 
 	item, err := h.repository.Get(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return webutil.StatusNotFoundWithMessage(c, h.resourceName+" not found")
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows) {
+			return webutil.Response(c, fiber.StatusNotFound, h.resourceName+" not found", nil)
 		}
 		log.Error().Err(err).Str("resource", h.resourceName).Str("id", id).Msg("Failed to get resource")
-		return webutil.StatusInternalServerErrorWithMessage(c, "Failed to retrieve "+h.resourceName)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to retrieve "+h.resourceName, nil)
 	}
 
 	return webutil.Response(c, fiber.StatusOK, h.resourceName, item)
@@ -114,12 +116,12 @@ func (h *ResourceHandler[T]) Get(c *fiber.Ctx) error {
 func (h *ResourceHandler[T]) Create(c *fiber.Ctx) error {
 	var item T
 	if err := c.BodyParser(&item); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if err := h.repository.Create(&item); err != nil {
 		log.Error().Err(err).Str("resource", h.resourceName).Msg("Failed to create resource")
-		return webutil.StatusInternalServerErrorWithMessage(c, "Failed to create "+h.resourceName)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create "+h.resourceName, nil)
 	}
 
 	return webutil.Response(c, fiber.StatusCreated, h.resourceName, item)
@@ -138,20 +140,20 @@ func (h *ResourceHandler[T]) Create(c *fiber.Ctx) error {
 func (h *ResourceHandler[T]) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return webutil.StatusBadRequest(c, "ID is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
 	}
 
 	var item T
 	if err := c.BodyParser(&item); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if err := h.repository.Update(id, &item); err != nil {
-		if err == sql.ErrNoRows {
-			return webutil.StatusNotFoundWithMessage(c, h.resourceName+" not found")
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows) {
+			return webutil.Response(c, fiber.StatusNotFound, h.resourceName+" not found", nil)
 		}
 		log.Error().Err(err).Str("resource", h.resourceName).Str("id", id).Msg("Failed to update resource")
-		return webutil.StatusInternalServerErrorWithMessage(c, "Failed to update "+h.resourceName)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update "+h.resourceName, nil)
 	}
 
 	return webutil.Response(c, fiber.StatusOK, h.resourceName, item)
@@ -167,15 +169,15 @@ func (h *ResourceHandler[T]) Update(c *fiber.Ctx) error {
 func (h *ResourceHandler[T]) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return webutil.StatusBadRequest(c, "ID is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
 	}
 
 	if err := h.repository.Delete(id); err != nil {
-		if err == sql.ErrNoRows {
-			return webutil.StatusNotFoundWithMessage(c, h.resourceName+" not found")
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows) {
+			return webutil.Response(c, fiber.StatusNotFound, h.resourceName+" not found", nil)
 		}
 		log.Error().Err(err).Str("resource", h.resourceName).Str("id", id).Msg("Failed to delete resource")
-		return webutil.StatusInternalServerErrorWithMessage(c, "Failed to delete "+h.resourceName)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to delete "+h.resourceName, nil)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

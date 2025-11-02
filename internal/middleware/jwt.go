@@ -35,9 +35,10 @@ type AuthContext struct {
 
 // MyCustomClaims represents JWT token claims
 type MyCustomClaims struct {
-	Id    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	Email         string `json:"email"`
+	OrganizationId string `json:"organization_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -56,11 +57,17 @@ func SetAPIKeyValidator(validator APIKeyValidator) {
 
 // CreateToken generates JWT access token with claims (15 minutes)
 func CreateToken(user *models.User) (string, error) {
+	return CreateTokenWithOrg(user, "")
+}
+
+// CreateTokenWithOrg generates JWT access token with claims and organization ID (15 minutes)
+func CreateTokenWithOrg(user *models.User, organizationID string) (string, error) {
 	claims := MyCustomClaims{
-		user.ID,
-		user.Name,
-		user.Email,
-		jwt.RegisteredClaims{
+		Id:             user.ID,
+		Name:           user.Name,
+		Email:          user.Email,
+		OrganizationId: organizationID,
+		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
@@ -133,13 +140,13 @@ func Protected() fiber.Handler {
 		apiKey := c.Get("X-API-Key")
 		if apiKey != "" {
 			if apiKeyValidator == nil {
-				return webutil.StatusUnauthorized(c, nil)
+				return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 			}
 
 			keyHash := HashAPIKey(apiKey)
 			keyModel, err := apiKeyValidator.ValidateAPIKey(keyHash)
 			if err != nil {
-				return webutil.StatusUnauthorized(c, nil)
+				return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 			}
 
 			// Check if key is enabled and not expired
@@ -166,13 +173,13 @@ func Protected() fiber.Handler {
 		// Try JWT token (Authorization header)
 		accessToken := c.Get("Authorization")
 		if accessToken == "" {
-			return webutil.StatusUnauthorized(c, nil)
+			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
 		accessToken = strings.Replace(accessToken, "Bearer ", "", 1)
 		claims, err := ValidateToken(accessToken)
 		if err != nil {
-			return webutil.StatusUnauthorized(c, nil)
+			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
 		// Store auth context
@@ -183,8 +190,11 @@ func Protected() fiber.Handler {
 			Name:   claims.Name,
 		})
 		
-		// Also store user_id for easier access
+		// Also store user_id and organization_id for easier access
 		c.Locals("user_id", claims.Id)
+		if claims.OrganizationId != "" {
+			c.Locals("organization_id", claims.OrganizationId)
+		}
 
 		return c.Next()
 	}
@@ -196,7 +206,7 @@ func RequireEmailVerification() fiber.Handler {
 		// Get auth context
 		auth := GetAuthContext(c)
 		if auth == nil {
-			return webutil.StatusUnauthorized(c, nil)
+			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
 		// Only check for JWT auth (API keys don't need email verification)

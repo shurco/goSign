@@ -41,11 +41,11 @@ type SendRequest struct {
 func (h *SubmissionHandler) Send(c *fiber.Ctx) error {
 	var req SendRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.SubmissionID == "" {
-		return webutil.StatusBadRequest(c, "submission_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "submission_id is required", nil)
 	}
 
 	if err := h.submissionService.Send(c.Context(), req.SubmissionID); err != nil {
@@ -61,8 +61,9 @@ func (h *SubmissionHandler) Send(c *fiber.Ctx) error {
 
 // BulkCreateRequest request body for bulk creation
 type BulkCreateRequest struct {
-	TemplateID string              `json:"template_id" validate:"required"`
-	Submitters []SubmitterBulkData `json:"submitters" validate:"required,min=1"`
+	TemplateID   string              `json:"template_id" validate:"required"`
+	SigningMode  models.SigningMode  `json:"signing_mode,omitempty"`
+	Submitters   []SubmitterBulkData `json:"submitters" validate:"required,min=1"`
 }
 
 // SubmitterBulkData submitter data for bulk operation
@@ -86,19 +87,22 @@ type SubmitterBulkData struct {
 func (h *SubmissionHandler) BulkCreate(c *fiber.Ctx) error {
 	var req BulkCreateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.TemplateID == "" {
-		return webutil.StatusBadRequest(c, "template_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
 	}
 
 	if len(req.Submitters) == 0 {
-		return webutil.StatusBadRequest(c, "at least one submitter is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "at least one submitter is required", nil)
 	}
 
-	// Get user ID from context (from JWT middleware)
-	userID := c.Locals("user_id").(string)
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
 
 	// Create submissions for each submitter
 	createdIDs := make([]string, 0, len(req.Submitters))
@@ -107,6 +111,7 @@ func (h *SubmissionHandler) BulkCreate(c *fiber.Ctx) error {
 		input := submission.CreateSubmissionInput{
 			TemplateID:  req.TemplateID,
 			CreatedByID: userID,
+			SigningMode: req.SigningMode,
 			Submitters: []submission.SubmitterInput{
 				{
 					Name:  submitterData.Name,
@@ -155,11 +160,11 @@ type ExpireRequest struct {
 func (h *SubmissionHandler) Expire(c *fiber.Ctx) error {
 	var req ExpireRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.SubmissionID == "" {
-		return webutil.StatusBadRequest(c, "submission_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "submission_id is required", nil)
 	}
 
 	if err := h.submissionService.Expire(c.Context(), req.SubmissionID); err != nil {

@@ -1,5 +1,10 @@
 <template>
-  <select :class="selectClasses" v-bind="$attrs">
+  <select
+    :class="selectClasses"
+    :value="modelValue"
+    @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+    v-bind="$attrs"
+  >
     <slot />
   </select>
 </template>
@@ -8,14 +13,21 @@
 import { computed } from "vue";
 
 interface Props {
+  modelValue?: string | number;
   error?: boolean;
   size?: "sm" | "md" | "lg";
+}
+
+interface Emits {
+  (e: "update:modelValue", value: string | number): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   error: false,
   size: "md"
 });
+
+const emit = defineEmits<Emits>();
 
 const selectClasses = computed(() => {
   const base = "w-full rounded border bg-white transition-colors focus:outline-none focus:ring-2 cursor-pointer";

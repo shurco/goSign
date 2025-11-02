@@ -37,14 +37,14 @@ func NewEmbedHandler(submitterRepo SubmitterRepository) *EmbedHandler {
 func (h *EmbedHandler) GetEmbedPage(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
-		return webutil.StatusNotFound(c)
+		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
 	}
 
 	// Validate slug in database
 	submitter, err := h.submitterRepo.GetBySlug(slug)
 	if err != nil || submitter == nil {
 		log.Warn().Str("slug", slug).Msg("Invalid slug")
-		return webutil.StatusNotFound(c)
+		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
 	}
 
 	// Check if already completed
@@ -128,14 +128,14 @@ func (h *EmbedHandler) GetEmbedPage(c *fiber.Ctx) error {
 func (h *EmbedHandler) GetEmbedConfig(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
-		return webutil.StatusNotFound(c)
+		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
 	}
 
 	// Validate slug in database
 	submitter, err := h.submitterRepo.GetBySlug(slug)
 	if err != nil || submitter == nil {
 		log.Warn().Str("slug", slug).Msg("Invalid slug for config")
-		return webutil.StatusNotFound(c)
+		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
 	}
 
 	// Check status

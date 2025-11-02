@@ -93,7 +93,28 @@ Authorization: Bearer <jwt_token>
 - **Access Token Lifetime**: 10 minutes
 - **Refresh Token Lifetime**: 7 days
 - **Token Refresh**: Automatic refresh via `/auth/refresh` endpoint
-- **Contains**: user_id, email, name
+- **Contains**: user_id, email, name, organization_id (if in organization context)
+
+### Organization Context
+When a user switches to an organization context, the JWT token includes an `organization_id` field. This enables multi-tenant data isolation:
+
+```json
+{
+  "user_id": "uuid",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "organization_id": "org_uuid",  // Included when in org context
+  "exp": 1234567890
+}
+```
+
+To switch organization context:
+```bash
+POST /api/v1/organizations/{organization_id}/switch
+Authorization: Bearer <jwt_token>
+```
+
+This updates your JWT token to include the organization_id for subsequent requests.
 
 ## API Key Authentication
 

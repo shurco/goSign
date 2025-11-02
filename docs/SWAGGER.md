@@ -1,6 +1,6 @@
 # Swagger API Documentation
 
-**Last Updated**: 2025-10-27 20:00 UTC
+**Last Updated**: 2025-11-01 15:29 UTC
 
 ## 📚 Overview
 
@@ -54,8 +54,8 @@ After starting the application, documentation is available at:
 
 ```go
 // @title           goSign API
-// @version         2.0
-// @description     Document signing platform with multi-signer workflows
+// @version         2.3
+// @description     Enterprise document signing platform with multi-signer workflows and organization management
 // @host            localhost:8088
 // @BasePath        /api/v1
 // @securityDefinitions.apikey BearerAuth
@@ -228,6 +228,26 @@ If types are generated incorrectly:
 - `POST /api/v1/apikeys/:id/enable` - Enable API key
 - `POST /api/v1/apikeys/:id/disable` - Disable API key
 
+### Organizations (Protected)
+- `GET /api/v1/organizations` - List user's organizations
+- `GET /api/v1/organizations/:id` - Get organization details
+- `POST /api/v1/organizations` - Create organization
+- `PUT /api/v1/organizations/:id` - Update organization
+- `DELETE /api/v1/organizations/:id` - Delete organization
+- `POST /api/v1/organizations/:id/switch` - Switch organization context
+
+### Organization Members (Protected)
+- `GET /api/v1/organizations/:id/members` - List organization members
+- `POST /api/v1/organizations/:id/members` - Add member to organization
+- `PUT /api/v1/organizations/:id/members/:user_id` - Update member role
+- `DELETE /api/v1/organizations/:id/members/:user_id` - Remove member
+
+### Organization Invitations (Protected)
+- `GET /api/v1/organizations/:id/invitations` - List invitations
+- `POST /api/v1/organizations/:id/invitations` - Send invitation
+- `POST /api/v1/invitations/:token/accept` - Accept invitation
+- `DELETE /api/v1/invitations/:id` - Revoke invitation
+
 ### Settings (Protected)
 - `GET /api/v1/settings` - Get all settings
 - `PUT /api/v1/settings/email` - Update email settings
@@ -251,5 +271,5 @@ If types are generated incorrectly:
 ---
 
 **Status**: ✅ Complete  
-**Version**: 2.0.0  
-**Last Updated**: 2025-10-27 20:00 UTC
+**Version**: 2.3.0  
+**Last Updated**: 2025-11-01 15:29 UTC

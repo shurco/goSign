@@ -92,7 +92,9 @@ watch(
 function selectContent(): void {
   setTimeout(() => {
     const el = contenteditableRef.value;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     const range = document.createRange();
     range.selectNodeContents(el);

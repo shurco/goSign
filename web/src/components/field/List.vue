@@ -1,5 +1,13 @@
 <template>
   <div class="sticky top-0 z-10">
+    <SigningModeSelector
+      :signing-mode="signingMode"
+      :submitters="submitters"
+      :editable="editable"
+      @update:signing-mode="$emit('update-signing-mode', $event)"
+      @update:submitter-order="$emit('update-submitter-order', $event)"
+    />
+
     <FieldSubmitter
       :model-value="selectedSubmitter.id"
       class="w-full rounded-lg bg-[#faf7f5]"
@@ -67,8 +75,11 @@
 
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from "vue";
+import type { PropType } from "vue";
 import Field from "@/components/field/Field.vue";
 import FieldSubmitter from "@/components/field/Submitter.vue";
+import SigningModeSelector from "@/components/field/SigningModeSelector.vue";
+import type { SigningMode } from "@/models";
 import { fieldIcons as fieldIconsConst, fieldNames as fieldNamesConst } from "@/components/field/constants.ts";
 import { v4 } from "uuid";
 
@@ -109,10 +120,23 @@ const props = defineProps({
     type: Object,
     required: false,
     default: null
+  },
+  signingMode: {
+    type: String as PropType<SigningMode>,
+    required: false,
+    default: "sequential"
   }
 });
 
-const emit = defineEmits(["set-draw", "set-drag", "drag-end", "scroll-to-area", "change-submitter"]);
+const emit = defineEmits([
+  "set-draw",
+  "set-drag",
+  "drag-end",
+  "scroll-to-area",
+  "change-submitter",
+  "update-signing-mode",
+  "update-submitter-order"
+]);
 
 const save = inject("save");
 

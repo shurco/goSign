@@ -3,10 +3,10 @@ package webutil
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	
-	"github.com/shurco/gosign/pkg/utils/strutil"
 )
 
 const defaultLimit int32 = 10 // Use const instead of var for constants.
@@ -33,8 +33,11 @@ func parseOrDefault(queryParam string, defaultValue int32) int32 {
 		return defaultValue
 	}
 
-	value := strutil.ToInt32(queryParam)
-	return value
+	parsed, err := strconv.ParseInt(strings.TrimSpace(queryParam), 10, 32)
+	if err != nil {
+		return defaultValue
+	}
+	return int32(parsed)
 }
 
 // GetQueryString constructs a query string with the pagination parameters.

@@ -24,7 +24,7 @@
           </div>
         </div>
 
-        <div class="space-y-4 rounded-md shadow-sm">
+        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
           <div>
             <label for="password" class="sr-only">New password</label>
             <input
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 
 const route = useRoute();

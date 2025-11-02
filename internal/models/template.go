@@ -14,21 +14,26 @@ type TemplateSettings struct {
 
 // Template is ...
 type Template struct {
-	ID          string            `json:"id"`
-	FolderID    string            `json:"folder_id"`
-	Slug        string            `json:"slug"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	Source      string            `json:"source,omitempty"`
-	Author      *Author           `json:"author,omitempty"`
-	Submitters  []Submitter       `json:"submitters"`
-	Fields      []Field           `json:"fields"`
-	Schema      []Schema          `json:"schema"`
-	Documents   []Document        `json:"documents"`
-	Settings    *TemplateSettings `json:"settings,omitempty"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
-	ArchivedAt  *time.Time        `json:"archived_at,omitempty"`
+	ID             string            `json:"id"`
+	FolderID       string            `json:"folder_id"`
+	OrganizationID string            `json:"organization_id,omitempty"`
+	Slug           string            `json:"slug"`
+	Name           string            `json:"name"`
+	Description     string            `json:"description,omitempty"`
+	Source          string            `json:"source,omitempty"`
+	Author          *Author           `json:"author,omitempty"`
+	Submitters      []Submitter       `json:"submitters"`
+	Fields          []Field           `json:"fields"`
+	Schema          []Schema          `json:"schema"`
+	Documents       []Document        `json:"documents"`
+	Settings        *TemplateSettings `json:"settings,omitempty"`
+	Category        string            `json:"category,omitempty"`
+	Tags            []string          `json:"tags,omitempty"`
+	IsFavorite      bool              `json:"is_favorite"`
+	PreviewImageID  string            `json:"preview_image_id,omitempty"`
+	CreatedAt       time.Time         `json:"created_at"`
+	UpdatedAt       time.Time         `json:"updated_at"`
+	ArchivedAt      *time.Time        `json:"archived_at,omitempty"`
 }
 
 // Author is ...
@@ -58,6 +63,7 @@ type Submitter struct {
 	Slug          string           `json:"slug"` // unique signing link
 	Status        SubmitterStatus  `json:"status"`
 	SubmissionID  string           `json:"submission_id"`
+	Order         int              `json:"order"` // signing order for sequential mode
 	CompletedAt   *time.Time       `json:"completed_at,omitempty"`
 	DeclinedAt    *time.Time       `json:"declined_at,omitempty"`
 	SentAt        *time.Time       `json:"sent_at,omitempty"`
@@ -168,3 +174,22 @@ type ImgMetadata struct {
 	Width      int  `json:"width"`
 	Height     int  `json:"height"`
 }
+
+// TemplateFavorite represents a user's favorite template
+type TemplateFavorite struct {
+	ID         string    `json:"id"`
+	TemplateID string    `json:"template_id"`
+	UserID     string    `json:"user_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// TemplateFolder represents a folder for organizing templates
+type TemplateFolder struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	ParentID  *string   `json:"parent_id,omitempty"` // For nested folders
+	UserID    string    `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+

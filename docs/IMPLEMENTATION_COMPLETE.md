@@ -55,11 +55,23 @@ Successfully implemented all planned features to transform goSign into a full-fe
   - Storage interface tests  
   - Submission state machine tests
 
-### 8. Documentation
+### 8. Enterprise Features (v2.3)
+- ✅ Implemented organizations and teams management
+- ✅ Created organization, member, and invitation models
+- ✅ Added role-based access control (Owner, Admin, Member, Viewer)
+- ✅ Extended JWT to include organization context
+- ✅ Created organization API endpoints (CRUD operations)
+- ✅ Implemented member invitation system with email tokens
+- ✅ Added organization-scoped templates support
+- ✅ Created middleware for organization permissions
+- ✅ Built frontend components for organization management
+
+### 9. Documentation
 - ✅ All code comments translated to English
 - ✅ Created comprehensive API documentation
 - ✅ Added embedded signing integration guide
 - ✅ Documented authentication methods (JWT & API Keys)
+- ✅ Updated documentation with enterprise features
 
 ## 📁 Key Files Created/Modified
 
@@ -346,6 +358,48 @@ github.com/robfig/cron/v3 // Background worker scheduling
 ---
 
 **Status**: ✅ COMPLETE
-**Date**: October 27, 2025
-**Version**: 2.0.0
+**Date**: November 1, 2025
+**Version**: 2.3.0
+
+## 🏢 Enterprise Features (v2.3)
+
+### Organizations & Teams
+- **Organization Management**: Complete CRUD operations for organizations
+- **Multi-tenant Architecture**: Data isolation between organizations
+- **Team Collaboration**: Members can collaborate on templates and submissions
+
+### Role-Based Access Control
+- **Four Roles**: Owner, Admin, Member, Viewer with granular permissions
+- **Permission System**: Middleware-based permission checking
+- **Organization Context**: JWT tokens include organization_id
+
+### Member Management
+- **Invitations**: Email-based invitation system with secure tokens
+- **Member Roles**: Dynamic role assignment and updates
+- **Member Removal**: Safe member removal with proper cleanup
+
+### Database Schema
+- **organization**: Organizations table with owner relationship
+- **organization_member**: Many-to-many relationship between users and organizations
+- **organization_invitation**: Invitation tracking with expiration
+
+### API Endpoints
+- Organizations: 6 endpoints (CRUD + switch context)
+- Members: 7 endpoints (list, add, update, remove)
+- Invitations: 5 endpoints (list, send, accept, revoke)
+
+### Key Files
+```
+internal/
+├── models/
+│   └── account.go (Organization, OrganizationMember, OrganizationInvitation)
+├── queries/
+│   └── organizations.go (Organization queries)
+├── handlers/api/
+│   ├── organizations.go (Organization CRUD)
+│   ├── members.go (Member management)
+│   └── invitations.go (Invitation handling)
+└── middleware/
+    └── org_permissions.go (RBAC middleware)
+```
 

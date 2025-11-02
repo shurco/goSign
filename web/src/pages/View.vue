@@ -66,7 +66,8 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref } from "vue";
 import Document from "@/components/template/Document.vue";
 import Fields from "@/components/field/List.vue";
 import type { Template } from "@/models";
-import { apiGet } from "@/utils/api";
+import { apiGet } from "@/services/api";
+import { fetchWithAuth } from "@/utils/auth";
 import { v4 } from "uuid";
 
 const template: any = ref();
@@ -267,7 +268,9 @@ function onDraw(area: any): void {
         const documentRef = documentRefs.value.find(
           (e: any) => e && e.document && e.document.id === area.attachment_id
         );
-        if (!documentRef) return;
+        if (!documentRef) {
+          return;
+        }
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
         if (drawField.value.type === "checkbox" || drawOption.value) {
@@ -442,7 +445,13 @@ function scrollToArea(area: any): void {
 }
 
 function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  return fetch(path, {
+  // Normalize path: replace /api/ with /api/v1/ if needed
+  let normalizedPath = path;
+  if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
+    normalizedPath = path.replace("/api/", "/api/v1/");
+  }
+  // Use fetchWithAuth to ensure token is included in headers
+  return fetchWithAuth(normalizedPath, {
     ...options,
     headers: { ...fetchOptions.headers, ...options.headers }
   });

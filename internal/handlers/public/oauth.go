@@ -63,13 +63,13 @@ func GoogleLogin(c *fiber.Ctx) error {
 	config := getGoogleOAuthConfig()
 	
 	if config.ClientID == "" {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Generate state token for CSRF protection
 	state, err := generateStateToken()
 	if err != nil {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Store state in Redis with 10 minute expiration
@@ -100,14 +100,14 @@ func GoogleCallback(c *fiber.Ctx) error {
 	state := c.Query("state")
 
 	if code == "" || state == "" {
-		return webutil.StatusBadRequest(c, "Invalid OAuth callback")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid OAuth callback", nil)
 	}
 
 	// Verify state token
 	stateKey := fmt.Sprintf("oauth_state:%s", state)
 	provider, err := redis.Conn.Get(stateKey).Result()
 	if err != nil || provider != "google" {
-		return webutil.StatusBadRequest(c, "Invalid state token")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid state token", nil)
 	}
 
 	// Delete used state token
@@ -119,14 +119,14 @@ func GoogleCallback(c *fiber.Ctx) error {
 	tokenResp, err := exchangeCodeForToken(config, code)
 	if err != nil {
 		log.Err(err).Msg("Failed to exchange code for token")
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Get user info from Google
 	userInfo, err := getUserInfo(config, tokenResp.AccessToken)
 	if err != nil {
 		log.Err(err).Msg("Failed to get user info")
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Extract user data
@@ -152,7 +152,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 			expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 			if err := queries.DB.CreateOrUpdateOAuthAccount(ctx, existingUser.ID, "google", googleID, tokenResp.AccessToken, tokenResp.RefreshToken, &expiresAt); err != nil {
 				log.Err(err).Msg("Failed to link OAuth account")
-				return webutil.StatusInternalServerError(c)
+				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
 			user = existingUser
 		} else {
@@ -160,7 +160,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 			newUser, err := queries.DB.CreateUser(ctx, email, "", firstName, lastName)
 			if err != nil {
 				log.Err(err).Msg("Failed to create user")
-				return webutil.StatusInternalServerError(c)
+				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
 			
 			// Mark email as verified (trusted from OAuth provider)
@@ -181,7 +181,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 	// Create JWT tokens
 	accessToken, refreshToken, err := createAuthTokens(ctx, user)
 	if err != nil {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Update login info
@@ -200,13 +200,13 @@ func GitHubLogin(c *fiber.Ctx) error {
 	config := getGitHubOAuthConfig()
 	
 	if config.ClientID == "" {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Generate state token for CSRF protection
 	state, err := generateStateToken()
 	if err != nil {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Store state in Redis with 10 minute expiration
@@ -236,14 +236,14 @@ func GitHubCallback(c *fiber.Ctx) error {
 	state := c.Query("state")
 
 	if code == "" || state == "" {
-		return webutil.StatusBadRequest(c, "Invalid OAuth callback")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid OAuth callback", nil)
 	}
 
 	// Verify state token
 	stateKey := fmt.Sprintf("oauth_state:%s", state)
 	provider, err := redis.Conn.Get(stateKey).Result()
 	if err != nil || provider != "github" {
-		return webutil.StatusBadRequest(c, "Invalid state token")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid state token", nil)
 	}
 
 	// Delete used state token
@@ -255,14 +255,14 @@ func GitHubCallback(c *fiber.Ctx) error {
 	tokenResp, err := exchangeCodeForToken(config, code)
 	if err != nil {
 		log.Err(err).Msg("Failed to exchange code for token")
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Get user info from GitHub
 	userInfo, err := getUserInfo(config, tokenResp.AccessToken)
 	if err != nil {
 		log.Err(err).Msg("Failed to get user info")
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Extract user data
@@ -279,7 +279,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 	}
 
 	if email == "" {
-		return webutil.StatusBadRequest(c, "Email not provided by GitHub")
+		return webutil.Response(c, fiber.StatusBadRequest, "Email not provided by GitHub", nil)
 	}
 
 	name := userInfo["name"].(string)
@@ -306,7 +306,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 			// Link OAuth to existing account
 			if err := queries.DB.CreateOrUpdateOAuthAccount(ctx, existingUser.ID, "github", githubID, tokenResp.AccessToken, tokenResp.RefreshToken, nil); err != nil {
 				log.Err(err).Msg("Failed to link OAuth account")
-				return webutil.StatusInternalServerError(c)
+				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
 			user = existingUser
 		} else {
@@ -314,7 +314,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 			newUser, err := queries.DB.CreateUser(ctx, email, "", firstName, lastName)
 			if err != nil {
 				log.Err(err).Msg("Failed to create user")
-				return webutil.StatusInternalServerError(c)
+				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
 			
 			// Mark email as verified (trusted from OAuth provider)
@@ -334,7 +334,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 	// Create JWT tokens
 	accessToken, refreshToken, err := createAuthTokens(ctx, user)
 	if err != nil {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Update login info

@@ -8,7 +8,7 @@ import (
 	"github.com/shurco/gosign/internal/trust"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
-	"github.com/shurco/gosign/pkg/utils/fsutil"
+	"github.com/shurco/gosign/pkg/utils"
 )
 
 const (
@@ -82,7 +82,7 @@ func Default() *Config {
 func Load() error {
 	config := Default()
 
-	if fsutil.IsFile(ConfigFile) {
+	if utils.IsFile(ConfigFile) {
 		file, err := os.ReadFile(ConfigFile)
 		if err != nil {
 			return err

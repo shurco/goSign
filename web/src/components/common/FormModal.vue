@@ -83,6 +83,13 @@ watch(isOpen, (newValue) => {
   if (newValue && props.validateOnMount) {
     validateForm();
   }
+  // Initialize formData when modal opens
+  if (newValue) {
+    // Ensure formData has expected structure based on common fields
+    if (!formData.value.name) {
+      formData.value.name = "";
+    }
+  }
 });
 
 function handleClose(): void {

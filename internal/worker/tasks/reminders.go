@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
-	"github.com/shurco/gosign/internal/services/reminder"
+	"github.com/shurco/gosign/internal/services"
 )
 
 // RemindersTask processes scheduled reminders
 type RemindersTask struct {
-	reminderSvc *reminder.Service
+	reminderSvc *services.ReminderService
 }
 
 // NewRemindersTask creates a new task for processing reminders
-func NewRemindersTask(reminderSvc *reminder.Service) *RemindersTask {
+func NewRemindersTask(reminderSvc *services.ReminderService) *RemindersTask {
 	return &RemindersTask{
 		reminderSvc: reminderSvc,
 	}

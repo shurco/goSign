@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,20 +14,23 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/pdf"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
+
 // TemplateHandler handles requests to templates
 type TemplateHandler struct {
 	*ResourceHandler[models.Template] // embed generic CRUD
-	// TODO: add templateRepository for specific operations
+	templateQueries *queries.TemplateQueries
 }
 
 // NewTemplateHandler creates new handler
-func NewTemplateHandler(repo ResourceRepository[models.Template]) *TemplateHandler {
+func NewTemplateHandler(repo ResourceRepository[models.Template], templateQueries *queries.TemplateQueries) *TemplateHandler {
 	return &TemplateHandler{
 		ResourceHandler: NewResourceHandler("template", repo),
+		templateQueries: templateQueries,
 	}
 }
 
@@ -48,11 +53,11 @@ type CloneRequest struct {
 func (h *TemplateHandler) Clone(c *fiber.Ctx) error {
 	var req CloneRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.TemplateID == "" {
-		return webutil.StatusBadRequest(c, "template_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
 	}
 
 	// Get source template
@@ -103,19 +108,19 @@ type CreateFromTypeRequest struct {
 func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 	var req CreateFromTypeRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.Name == "" {
-		return webutil.StatusBadRequest(c, "name is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "name is required", nil)
 	}
 
 	if req.Type == "" {
-		return webutil.StatusBadRequest(c, "type is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "type is required", nil)
 	}
 
 	if req.FileBase64 == "" && req.FileURL == "" {
-		return webutil.StatusBadRequest(c, "file_base64 or file_url is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "file_base64 or file_url is required", nil)
 	}
 
 	// Decode file if base64
@@ -124,18 +129,26 @@ func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 	if req.FileBase64 != "" {
 		fileData, err = base64.StdEncoding.DecodeString(req.FileBase64)
 		if err != nil {
-			return webutil.StatusBadRequest(c, "Invalid base64 data")
+			return webutil.Response(c, fiber.StatusBadRequest, "Invalid base64 data", nil)
 		}
 	} else {
 		// TODO: Implement download from URL
-		return webutil.StatusBadRequest(c, "file_url not yet supported")
+		return webutil.Response(c, fiber.StatusBadRequest, "file_url not yet supported", nil)
+	}
+
+	// Get organization ID from context
+	organizationID := ""
+	if orgID := c.Locals("organization_id"); orgID != nil {
+		if orgIDStr, ok := orgID.(string); ok {
+			organizationID = orgIDStr
+		}
 	}
 
 	// Process based on type
 	var template *models.Template
 	switch req.Type {
 	case "pdf":
-		template, err = h.processPDF(req.Name, req.Description, fileData, req.Settings)
+		template, err = h.processPDF(req.Name, req.Description, fileData, req.Settings, organizationID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to process PDF")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to process PDF", map[string]any{
@@ -145,7 +158,7 @@ func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 	case "html", "docx":
 		return webutil.Response(c, fiber.StatusNotImplemented, fmt.Sprintf("%s conversion not yet supported", req.Type), nil)
 	default:
-		return webutil.StatusBadRequest(c, "Unsupported file type")
+		return webutil.Response(c, fiber.StatusBadRequest, "Unsupported file type", nil)
 	}
 
 	// Save template
@@ -159,7 +172,7 @@ func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 }
 
 // processPDF processes PDF file and creates template
-func (h *TemplateHandler) processPDF(name, description string, fileData []byte, settings map[string]any) (*models.Template, error) {
+func (h *TemplateHandler) processPDF(name, description string, fileData []byte, settings map[string]any, organizationID string) (*models.Template, error) {
 	// Save PDF to temporary location
 	tmpDir := os.TempDir()
 	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("template_%d.pdf", time.Now().UnixNano()))
@@ -251,16 +264,17 @@ func (h *TemplateHandler) processPDF(name, description string, fileData []byte, 
 
 	// 6. Create template
 	template := &models.Template{
-		ID:          uuid.New().String(),
-		Slug:        uuid.New().String(), // Generate unique slug
-		Name:        name,
-		Description: description,
-		Documents:   documents,
-		Fields:      fields,
-		Submitters:  []models.Submitter{}, // Empty, will be added by user
-		Schema:      []models.Schema{},    // Empty, will be added by user
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:             uuid.New().String(),
+		Slug:           uuid.New().String(), // Generate unique slug
+		OrganizationID: organizationID,
+		Name:           name,
+		Description:    description,
+		Documents:      documents,
+		Fields:         fields,
+		Submitters:     []models.Submitter{}, // Empty, will be added by user
+		Schema:         []models.Schema{},    // Empty, will be added by user
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// Set settings if provided
@@ -283,13 +297,435 @@ func (h *TemplateHandler) processPDF(name, description string, fileData []byte, 
 	return template, nil
 }
 
+// SearchTemplates searches templates with filters
+// @Summary Search templates
+// @Description Search templates with filters, pagination and sorting
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param query query string false "Search query"
+// @Param category query string false "Category filter"
+// @Param tags query []string false "Tags filter (comma-separated)"
+// @Param favorites query bool false "Show only favorites"
+// @Param limit query int false "Limit (default 20, max 100)"
+// @Param offset query int false "Offset for pagination"
+// @Param sort_by query string false "Sort by field (name, created_at, updated_at)"
+// @Param sort_order query string false "Sort order (asc, desc)"
+// @Success 200 {object} queries.TemplateSearchResult
+// @Failure 400 {object} map[string]any
+// @Failure 500 {object} map[string]any
+// @Router /api/v1/templates/search [get]
+func (h *TemplateHandler) SearchTemplates(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	// Get organization ID from context (optional)
+	organizationID, _ := GetOrganizationID(c)
+
+	// Parse query parameters
+	req := queries.TemplateSearchRequest{
+		Query:         c.Query("query"),
+		Category:      c.Query("category"),
+		OrganizationID: organizationID,
+		UserID:        userID,
+		SortBy:        c.Query("sort_by"),
+		SortOrder:     c.Query("sort_order"),
+	}
+
+	// Parse tags (comma-separated)
+	if tagsStr := c.Query("tags"); tagsStr != "" {
+		req.Tags = strings.Split(tagsStr, ",")
+		for i, tag := range req.Tags {
+			req.Tags[i] = strings.TrimSpace(tag)
+		}
+	}
+
+	// Parse favorites flag
+	if favoritesStr := c.Query("favorites"); favoritesStr != "" {
+		req.Favorites = favoritesStr == "true"
+	}
+
+	// Parse pagination
+	limit, err := strconv.Atoi(c.Query("limit", "20"))
+	if err != nil || limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	req.Limit = limit
+
+	offset, err := strconv.Atoi(c.Query("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+	req.Offset = offset
+
+	// Search templates
+	result, err := h.templateQueries.SearchTemplates(c.Context(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to search templates")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to search templates", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "templates", result)
+}
+
+// GetUserFavorites returns user's favorite templates
+// @Summary Get user favorites
+// @Description Get user's favorite templates with pagination
+// @Tags templates
+// @Produce json
+// @Param limit query int false "Limit (default 20, max 100)"
+// @Param offset query int false "Offset for pagination"
+// @Success 200 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Failure 500 {object} map[string]any
+// @Router /api/v1/templates/favorites [get]
+func (h *TemplateHandler) GetUserFavorites(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	// Parse pagination
+	limit, err := strconv.Atoi(c.Query("limit", "20"))
+	if err != nil || limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset, err := strconv.Atoi(c.Query("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	// Get favorites
+	templates, err := h.templateQueries.GetUserFavoriteTemplates(c.Context(), userID, limit, offset)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user favorites")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get favorites", nil)
+	}
+
+	result := map[string]interface{}{
+		"templates": templates,
+		"total":     len(templates), // Note: This is approximate since we don't count total
+		"limit":     limit,
+		"offset":    offset,
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "favorites", result)
+}
+
+// AddToFavorites adds template to user's favorites
+// @Summary Add to favorites
+// @Description Add template to user's favorites
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param template_id body string true "Template ID"
+// @Success 201 {object} map[string]any
+// @Failure 400 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Failure 409 {object} map[string]any
+// @Router /api/v1/templates/favorites [post]
+func (h *TemplateHandler) AddToFavorites(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	// Parse request body
+	var req struct {
+		TemplateID string `json:"template_id" validate:"required"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if req.TemplateID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
+	}
+
+	// Add to favorites
+	err = h.templateQueries.AddTemplateFavorite(c.Context(), req.TemplateID, userID)
+	if err != nil {
+		log.Error().Err(err).Str("template_id", req.TemplateID).Str("user_id", userID).Msg("Failed to add to favorites")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to add to favorites", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusCreated, "Added to favorites", map[string]string{
+		"template_id": req.TemplateID,
+		"user_id":     userID,
+	})
+}
+
+// RemoveFromFavorites removes template from user's favorites
+// @Summary Remove from favorites
+// @Description Remove template from user's favorites
+// @Tags templates
+// @Param template_id path string true "Template ID"
+// @Success 200 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Failure 500 {object} map[string]any
+// @Router /api/v1/templates/favorites/{template_id} [delete]
+func (h *TemplateHandler) RemoveFromFavorites(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	templateID := c.Params("template_id")
+	if templateID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
+	}
+
+	// Remove from favorites
+	err = h.templateQueries.RemoveTemplateFavorite(c.Context(), templateID, userID)
+	if err != nil {
+		log.Error().Err(err).Str("template_id", templateID).Str("user_id", userID).Msg("Failed to remove from favorites")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to remove from favorites", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Removed from favorites", map[string]string{
+		"template_id": templateID,
+		"user_id":     userID,
+	})
+}
+
+// CreateFolder creates a new template folder
+// @Summary Create template folder
+// @Description Create a new folder for organizing templates
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param body body map[string]string true "Folder data (name, parent_id)"
+// @Success 201 {object} models.TemplateFolder
+// @Failure 400 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Router /api/v1/templates/folders [post]
+func (h *TemplateHandler) CreateFolder(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	// Parse request body
+	var req struct {
+		Name     string  `json:"name" validate:"required"`
+		ParentID *string `json:"parent_id,omitempty"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if req.Name == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "name is required", nil)
+	}
+
+	// Create folder
+	folder := &models.TemplateFolder{
+		ID:        uuid.New().String(),
+		Name:      req.Name,
+		ParentID:  req.ParentID, // Will be ignored for now (column doesn't exist)
+		UserID:    userID,       // Will be used to get account_id
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err = h.templateQueries.CreateTemplateFolder(c.Context(), userID, folder)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create template folder")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create folder", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusCreated, "folder", folder)
+}
+
+// GetFolders returns user's template folders
+// @Summary Get template folders
+// @Description Get all folders for organizing templates
+// @Tags templates
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Router /api/v1/templates/folders [get]
+func (h *TemplateHandler) GetFolders(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	folders, err := h.templateQueries.GetTemplateFolders(c.Context(), userID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get template folders")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get folders", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "folders", folders)
+}
+
+// UpdateFolder updates a template folder
+// @Summary Update template folder
+// @Description Update folder name or parent folder
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param folder_id path string true "Folder ID"
+// @Param body body map[string]string true "Folder data (name, parent_id)"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Failure 404 {object} map[string]any
+// @Router /api/v1/templates/folders/{folder_id} [put]
+func (h *TemplateHandler) UpdateFolder(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	folderID := c.Params("folder_id")
+	if folderID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "folder_id is required", nil)
+	}
+
+	// Parse request body
+	var req struct {
+		Name     string  `json:"name" validate:"required"`
+		ParentID *string `json:"parent_id,omitempty"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if req.Name == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "name is required", nil)
+	}
+
+	err = h.templateQueries.UpdateTemplateFolder(c.Context(), folderID, userID, req.Name, req.ParentID)
+	if err != nil {
+		log.Error().Err(err).Str("folder_id", folderID).Msg("Failed to update template folder")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update folder", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Folder updated", map[string]string{
+		"folder_id": folderID,
+	})
+}
+
+// DeleteFolder deletes a template folder
+// @Summary Delete template folder
+// @Description Delete folder and move templates to root
+// @Tags templates
+// @Param folder_id path string true "Folder ID"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Router /api/v1/templates/folders/{folder_id} [delete]
+func (h *TemplateHandler) DeleteFolder(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	folderID := c.Params("folder_id")
+	if folderID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "folder_id is required", nil)
+	}
+
+	err = h.templateQueries.DeleteTemplateFolder(c.Context(), folderID, userID)
+	if err != nil {
+		log.Error().Err(err).Str("folder_id", folderID).Msg("Failed to delete template folder")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to delete folder", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Folder deleted", map[string]string{
+		"folder_id": folderID,
+	})
+}
+
+// MoveTemplate moves a template to a different folder
+// @Summary Move template to folder
+// @Description Move template to a different folder or root
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param template_id path string true "Template ID"
+// @Param body body map[string]string true "Move data (folder_id)"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Router /api/v1/templates/{template_id}/move [put]
+func (h *TemplateHandler) MoveTemplate(c *fiber.Ctx) error {
+	// Get user ID from context
+	userID, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	templateID := c.Params("template_id")
+	if templateID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
+	}
+
+	// Parse request body
+	var req struct {
+		FolderID string `json:"folder_id,omitempty"` // Empty string means move to root
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	err = h.templateQueries.MoveTemplateToFolder(c.Context(), templateID, req.FolderID, userID)
+	if err != nil {
+		log.Error().Err(err).Str("template_id", templateID).Msg("Failed to move template")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to move template", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Template moved", map[string]string{
+		"template_id": templateID,
+		"folder_id":   req.FolderID,
+	})
+}
+
+
 // RegisterRoutes registers all routes for templates
 func (h *TemplateHandler) RegisterRoutes(router fiber.Router) {
-	// Generic CRUD routes
-	h.ResourceHandler.RegisterRoutes(router)
+	// IMPORTANT: Register specific routes BEFORE generic CRUD routes
+	// Otherwise, routes like /search will be matched by /:id pattern
+	
+	// Library operations (must be before /:id)
+	router.Get("/search", h.SearchTemplates)
+	router.Get("/favorites", h.GetUserFavorites)
+	router.Post("/favorites", h.AddToFavorites)
+	router.Delete("/favorites/:template_id", h.RemoveFromFavorites)
 
-	// Specific operations
+	// Folder operations (must be before /:id)
+	router.Get("/folders", h.GetFolders)
+	router.Post("/folders", h.CreateFolder)
+	router.Put("/folders/:folder_id", h.UpdateFolder)
+	router.Delete("/folders/:folder_id", h.DeleteFolder)
+
+	// Specific operations (must be before /:id)
 	router.Post("/clone", h.Clone)
 	router.Post("/from-file", h.CreateFromType)
+
+	// Template movement (specific pattern before /:id)
+	router.Put("/:template_id/move", h.MoveTemplate)
+
+	// Generic CRUD routes (register LAST, as they use catch-all /:id pattern)
+	h.ResourceHandler.RegisterRoutes(router)
 }
 

@@ -164,7 +164,7 @@
 import { computed, inject, ref } from "vue";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import { subColors, subNames } from "@/components/field/constants.ts";
-import { useDropdown } from "@/composables/useDropdown";
+import { useDropdown } from "@/composables/ui";
 import { v4 } from "uuid";
 
 const props = defineProps({

@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, nextTick, ref, watch, type Ref } from "vue";
+import { computed, inject, nextTick, type Ref, ref, watch } from "vue";
 import FieldSubmitter from "@/components/field/Submitter.vue";
 import FieldType from "@/components/field/Type.vue";
 import { bgColors, borderColors, fieldIcons, fieldNames, subNames } from "@/components/field/constants.ts";
@@ -151,9 +151,13 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const template = inject<Ref<Template>>("template")!;
-const selectedAreaRef = inject<Ref<Area | null>>("selectedAreaRef")!;
-const save = inject<() => void>("save")!;
+const template = inject<Ref<Template>>("template");
+const selectedAreaRef = inject<Ref<Area | null>>("selectedAreaRef");
+const save = inject<() => void>("save");
+
+if (!template || !selectedAreaRef || !save) {
+  throw new Error("Required injectables are missing in Area component");
+}
 
 const name = ref<HTMLElement | null>(null);
 const textContainer = ref<HTMLElement | null>(null);
@@ -182,8 +186,11 @@ const defaultName = computed(() => {
 
   const partyName = subNames[submitterIndex.value]?.replace(" Party", "") || "First";
   const typeName = fieldNames[props.field.type] || "Field";
+  if (!props.field) {
+    return `${partyName} ${typeName} 1`;
+  }
   const sameTypeAndPartyFields = template.value.fields.filter(
-    (f: any) => f.type === props.field!.type && f.submitter_id === props.field!.submitter_id && f.id !== props.field!.id
+    (f: any) => f.type === props.field?.type && f.submitter_id === props.field?.submitter_id && f.id !== props.field?.id
   );
   const fieldNumber = sameTypeAndPartyFields.length + 1;
 
@@ -200,7 +207,9 @@ const optionIndexText = computed(() => {
 const cells = computed(() => {
   const cellsList: number[] = [];
   const cellWidth = props.area.cell_w;
-  if (!cellWidth) return cellsList;
+  if (!cellWidth) {
+    return cellsList;
+  }
 
   let currentWidth = 0;
   while (currentWidth + (cellWidth + cellWidth / 4) < props.area.w) {
@@ -215,7 +224,9 @@ const submitter = computed(() => {
 });
 
 const submitterIndex = computed(() => {
-  if (!submitter.value) return 0;
+  if (!submitter.value) {
+    return 0;
+  }
   return template.value.submitters.indexOf(submitter.value);
 });
 
@@ -244,8 +255,12 @@ watch(
     ) {
       nextTick(() => {
         const el = document.querySelector(".group.absolute.overflow-visible") as HTMLElement;
-        textOverflowChars.value =
-          el && el.clientHeight < textContainer.value!.clientHeight ? props.field!.default_value!.length : 0;
+        if (el && textContainer.value && props.field?.default_value) {
+          textOverflowChars.value =
+            el.clientHeight < textContainer.value.clientHeight ? props.field.default_value.length : 0;
+        } else {
+          textOverflowChars.value = 0;
+        }
       });
     }
   }
@@ -264,7 +279,9 @@ watch(
 );
 
 function isDefaultName(name: string): boolean {
-  if (!name) return true;
+  if (!name) {
+    return true;
+  }
   const pattern = /^(First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth)\s+\w+\s+\d+$/;
   return pattern.test(name);
 }
@@ -306,7 +323,9 @@ function onNameEnter(): void {
 }
 
 function maybeUpdateOptions(): void {
-  if (!props.field) return;
+  if (!props.field) {
+    return;
+  }
 
   delete props.field.default_value;
 
@@ -319,7 +338,7 @@ function maybeUpdateOptions(): void {
   }
 
   (props.field.areas || []).forEach((area: Area) => {
-    if (props.field!.type === "cells") {
+    if (props.field?.type === "cells") {
       area.cell_w = (area.w * 2) / Math.floor(area.w / area.h);
     } else {
       delete area.cell_w;
@@ -338,7 +357,9 @@ function handleDoubleClick(): void {
 function handleDragStart(e: PointerEvent): void {
   selectedAreaRef.value = props.area;
 
-  if (!props.editable) return;
+  if (!props.editable) {
+    return;
+  }
 
   // Check for double click to prevent drag
   const now = Date.now();
@@ -349,7 +370,9 @@ function handleDragStart(e: PointerEvent): void {
   lastClickTime.value = now;
 
   const target = e.target as HTMLElement;
-  if (target !== touchTarget.value && e.pointerType === "touch") return;
+  if (target !== touchTarget.value && e.pointerType === "touch") {
+    return;
+  }
 
   if (e.pointerType === "touch") {
     name.value?.blur();
@@ -378,7 +401,7 @@ function handleResizeStart(e: PointerEvent): void {
   emit("start-resize", "nwse");
 }
 
-function handleResizeCellStart(e: PointerEvent): void {
+function handleResizeCellStart(): void {
   pointerMode.value = "resize-cell";
   document.addEventListener("pointermove", handlePointerMove);
   document.addEventListener("pointerup", handlePointerUp);
@@ -415,7 +438,9 @@ function handlePointerUp(): void {
 
 function handleDrag(e: PointerEvent): void {
   const mask = document.getElementById("mask");
-  if (!mask) return;
+  if (!mask) {
+    return;
+  }
 
   isDragged.value = true;
 
@@ -434,7 +459,9 @@ function handleDrag(e: PointerEvent): void {
 
 function handleResize(e: PointerEvent): void {
   const mask = document.getElementById("mask");
-  if (!mask) return;
+  if (!mask) {
+    return;
+  }
 
   if (e.pointerType === "touch") {
     const page = mask.previousElementSibling as HTMLElement;
@@ -451,7 +478,9 @@ function handleResize(e: PointerEvent): void {
 
 function handleResizeCell(e: PointerEvent): void {
   const mask = document.getElementById("mask");
-  if (!mask || (e.target as HTMLElement).id !== "mask") return;
+  if (!mask || (e.target as HTMLElement).id !== "mask") {
+    return;
+  }
 
   const positionX = e.layerX / (mask.clientWidth - 1);
   if (positionX > props.area.x) {

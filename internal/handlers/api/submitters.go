@@ -45,11 +45,11 @@ type ResendRequest struct {
 func (h *SubmitterHandler) Resend(c *fiber.Ctx) error {
 	var req ResendRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.SubmitterID == "" {
-		return webutil.StatusBadRequest(c, "submitter_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "submitter_id is required", nil)
 	}
 
 	// Get submitter
@@ -100,11 +100,11 @@ type DeclineRequest struct {
 func (h *SubmitterHandler) Decline(c *fiber.Ctx) error {
 	var req DeclineRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.SubmitterID == "" {
-		return webutil.StatusBadRequest(c, "submitter_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "submitter_id is required", nil)
 	}
 
 	// Get submitter to get submission ID
@@ -160,11 +160,11 @@ type SignatureData struct {
 func (h *SubmitterHandler) Complete(c *fiber.Ctx) error {
 	var req CompleteRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	if req.SubmitterID == "" {
-		return webutil.StatusBadRequest(c, "submitter_id is required")
+		return webutil.Response(c, fiber.StatusBadRequest, "submitter_id is required", nil)
 	}
 
 	// Get submitter

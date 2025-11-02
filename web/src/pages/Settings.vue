@@ -269,19 +269,7 @@
 
           <Alert v-if="newAPIKey" variant="info">
             <template #icon>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                class="h-6 w-6 shrink-0 stroke-current"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <SvgIcon name="info" class="h-6 w-6 shrink-0" />
             </template>
             <div>
               <p class="font-bold">Save this key!</p>
@@ -311,7 +299,8 @@ import Badge from "@/components/ui/Badge.vue";
 import FileInput from "@/components/ui/FileInput.vue";
 import Switch from "@/components/ui/Switch.vue";
 import Alert from "@/components/ui/Alert.vue";
-import { fetchWithAuth } from "@/utils/api/auth";
+import SvgIcon from "@/components/SvgIcon.vue";
+import { fetchWithAuth } from "@/utils/auth";
 
 const activeTab = ref("smtp");
 const tabs = [
@@ -391,7 +380,26 @@ const apiKeyColumns = [
 ];
 
 onMounted(async () => {
-  await Promise.all([loadSettings(), loadWebhooks(), loadAPIKeys()]);
+  // Load settings sequentially to avoid simultaneous 401 errors and token refresh conflicts
+  // Load critical settings first, then others in parallel
+  try {
+    await loadSettings();
+    // Load webhooks and API keys in parallel after settings are loaded
+    // This ensures token is refreshed if needed before loading other data
+    await Promise.all([
+      loadWebhooks().catch(() => {
+        // Silently ignore if redirecting
+      }),
+      loadAPIKeys().catch(() => {
+        // Silently ignore if redirecting
+      })
+    ]);
+  } catch (error) {
+    // Ignore errors if redirecting to login
+    if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+      console.error("Failed to load settings:", error);
+    }
+  }
 });
 
 async function loadSettings(): Promise<void> {
@@ -408,9 +416,19 @@ async function loadSettings(): Promise<void> {
       if (data.branding) {
         brandingSettings.value = data.branding;
       }
+    } else if (response.status === 401) {
+      // Token refresh will be handled by fetchWithAuth
+      // If redirect happens, don't log error
+      if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+        // Only log if we're still on settings page (no redirect happened)
+        // The redirect will happen automatically
+      }
     }
   } catch (error) {
-    console.error("Failed to load settings:", error);
+    // Don't log if we're being redirected to login
+    if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+      console.error("Failed to load settings:", error);
+    }
   }
 }
 
@@ -482,9 +500,18 @@ async function loadWebhooks(): Promise<void> {
     if (response.ok) {
       const data = await response.json();
       webhooks.value = data.data || [];
+    } else if (response.status === 401) {
+      // Token refresh will be handled by fetchWithAuth
+      // If redirect happens, don't log error
+      if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+        // Only log if we're still on settings page (no redirect happened)
+      }
     }
   } catch (error) {
-    console.error("Failed to load webhooks:", error);
+    // Don't log if we're being redirected to login
+    if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+      console.error("Failed to load webhooks:", error);
+    }
   }
 }
 
@@ -494,9 +521,18 @@ async function loadAPIKeys(): Promise<void> {
     if (response.ok) {
       const data = await response.json();
       apiKeys.value = data.data || [];
+    } else if (response.status === 401) {
+      // Token refresh will be handled by fetchWithAuth
+      // If redirect happens, don't log error
+      if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+        // Only log if we're still on settings page (no redirect happened)
+      }
     }
   } catch (error) {
-    console.error("Failed to load API keys:", error);
+    // Don't log if we're being redirected to login
+    if (!window.location.pathname.includes("/auth/") && !window.location.pathname.includes("/signin")) {
+      console.error("Failed to load API keys:", error);
+    }
   }
 }
 

@@ -59,12 +59,16 @@ const emit = defineEmits<Emits>();
 const pageRefs = ref<any[]>([]);
 
 const numberOfPages = computed(() => {
-  if (!props.document) return 0;
+  if (!props.document) {
+    return 0;
+  }
   return props.document.metadata?.pdf?.number_of_pages || props.document.preview_images.length;
 });
 
 const previewImagesIndex = computed(() => {
-  if (!props.document) return {};
+  if (!props.document) {
+    return {};
+  }
   return props.document.preview_images.reduce(
     (acc, e) => {
       e.url = `${props.document.url}/${props.document.id}`;
@@ -76,7 +80,9 @@ const previewImagesIndex = computed(() => {
 });
 
 const sortedPreviewImages = computed(() => {
-  if (!props.document || !props.document.preview_images.length) return [];
+  if (!props.document || !props.document.preview_images.length) {
+    return [];
+  }
   const lazyloadMetadata = props.document.preview_images[props.document.preview_images.length - 1].metadata;
   return [...Array(numberOfPages.value).keys()].map((i) => {
     return (
@@ -96,10 +102,14 @@ onBeforeUpdate(() => {
 
 function scrollToArea(area: Area): void {
   const pageRef = pageRefs.value[area.page];
-  if (!pageRef || !pageRef.areaRefs) return;
+  if (!pageRef || !pageRef.areaRefs) {
+    return;
+  }
 
   const areaRef = pageRef.areaRefs.find((e: any) => e.area === area);
-  if (!areaRef || !areaRef.$el) return;
+  if (!areaRef || !areaRef.$el) {
+    return;
+  }
 
   areaRef.$el.scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -111,7 +121,9 @@ function setPageRefs(el: any): void {
 }
 
 function handleDropField(event: any): void {
-  if (!props.document) return;
+  if (!props.document) {
+    return;
+  }
   emit("drop-field", { ...event, attachment_id: props.document.id });
 }
 
@@ -120,7 +132,9 @@ function handleRemoveArea(area: Area): void {
 }
 
 function handleDraw(event: any): void {
-  if (!props.document) return;
+  if (!props.document) {
+    return;
+  }
   emit("draw", { ...event, attachment_id: props.document.id });
 }
 

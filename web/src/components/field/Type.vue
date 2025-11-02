@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { fieldIcons, fieldNames } from "@/components/field/constants.ts";
-import { useDropdown } from "@/composables/useDropdown";
+import { useDropdown } from "@/composables/ui";
 
 const props = defineProps({
   modelValue: {

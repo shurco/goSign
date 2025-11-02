@@ -59,7 +59,7 @@ CREATE INDEX "template_folder_on_account_id" ON "public"."template_folder" USING
 
 CREATE TABLE "public"."template" (
   "id" uuid DEFAULT gen_random_uuid (),
-  "folder_id" uuid NOT NULL,
+  "folder_id" uuid,
   "slug" varchar(255) NOT NULL,
   "name" varchar(255) NOT NULL,
   "schema" jsonb NOT NULL DEFAULT '{}'::jsonb,

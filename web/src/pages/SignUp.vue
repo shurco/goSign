@@ -24,7 +24,7 @@
           <span class="block sm:inline">{{ success }}</span>
         </div>
 
-        <div class="space-y-4 rounded-md shadow-sm">
+        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="first-name" class="sr-only">First name</label>
@@ -118,15 +118,15 @@
         <div class="grid grid-cols-2 gap-3">
           <button
             type="button"
+            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
             @click="handleGoogleSignIn"
-            class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
           >
             Google
           </button>
           <button
             type="button"
+            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
             @click="handleGitHubSignIn"
-            class="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-500 shadow-sm hover:bg-gray-50"
           >
             GitHub
           </button>
@@ -138,9 +138,9 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+// import { useRouter } from "vue-router";
 
-const router = useRouter();
+// const router = useRouter();
 
 const formData = ref({
   firstName: "",

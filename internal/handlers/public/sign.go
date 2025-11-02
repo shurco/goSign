@@ -15,7 +15,7 @@ import (
 
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/pdf/sign"
-	"github.com/shurco/gosign/pkg/utils/fsutil"
+	"github.com/shurco/gosign/pkg/utils"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -25,7 +25,7 @@ func SignPDF(c *fiber.Ctx) error {
 
 	fileHeader, err := c.FormFile("document")
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	if fileHeader.Header["Content-Type"][0] != "application/pdf" {
@@ -35,19 +35,19 @@ func SignPDF(c *fiber.Ctx) error {
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	defer file.Close()
 
 	fileNameUUID := uuid.New().String()
 	fileNameSignedUUID := uuid.New().String()
-	fileExt := fsutil.ExtName(fileHeader.Filename)
+	fileExt := utils.ExtName(fileHeader.Filename)
 	response.FileName = fmt.Sprintf("%s.%s", fileNameUUID, fileExt)
 	response.FileNameSigned = fmt.Sprintf("%s.%s", fileNameSignedUUID, fileExt)
 	filePath := fmt.Sprintf("./lc_uploads/%s", response.FileName)
 
 	if err := c.SaveFile(fileHeader, filePath); err != nil {
-		return webutil.StatusInternalServerError(c)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// sign process

@@ -1,22 +1,68 @@
 <template>
-  <div class="field-input-wrapper">
-    <Input
-      v-if="type === 'text'"
+  <TextInput
+    v-if="isTextType"
+    v-model="localValue"
+    :type="type"
+    :placeholder="placeholder"
+    :required="required"
+    :readonly="readonly"
+    :disabled="disabled"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
+  />
+  <DateInput
+    v-else-if="type === 'date'"
+    v-model="localValue"
+    :placeholder="placeholder"
+    :required="required"
+    :readonly="readonly"
+    :disabled="disabled"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
+  />
+  <SelectInput
+    v-else-if="isSelectType"
+    v-model="localValue"
+    :type="type as any"
+    :placeholder="placeholder"
+    :required="required"
+    :disabled="disabled"
+    :options="options"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
+  />
+  <FileInput
+    v-else-if="type === 'file' || type === 'image'"
       v-model="localValue"
-      type="text"
+    :type="type"
       :placeholder="placeholder"
       :required="required"
       :readonly="readonly"
       :disabled="disabled"
-      @blur="handleBlur"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
     />
-    <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
+  <div v-else class="field-input-wrapper">
+    <div class="text-sm text-gray-500">Field type "{{ type }}" not yet implemented</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import Input from "@/components/ui/Input.vue";
+import { computed, ref, watch } from "vue";
+import TextInput from "@/components/field/inputs/TextInput.vue";
+import DateInput from "@/components/field/inputs/DateInput.vue";
+import SelectInput from "@/components/field/inputs/SelectInput.vue";
+import FileInput from "@/components/field/inputs/FileInput.vue";
+
+interface Option {
+  id?: string;
+  value?: string;
+  label?: string;
+}
 
 interface Props {
   type: string;
@@ -26,6 +72,7 @@ interface Props {
   required?: boolean;
   readonly?: boolean;
   disabled?: boolean;
+  options?: Option[];
   error?: string;
 }
 
@@ -41,11 +88,20 @@ const props = withDefaults(defineProps<Props>(), {
   required: false,
   readonly: false,
   disabled: false,
+  options: () => [],
   error: ""
 });
 
 const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
+
+const isTextType = computed(() => {
+  return ["text", "number", "phone"].includes(props.type);
+});
+
+const isSelectType = computed(() => {
+  return ["select", "radio", "checkbox", "multiple"].includes(props.type);
+});
 
 watch(
   () => props.modelValue,
@@ -53,11 +109,9 @@ watch(
     localValue.value = newValue;
   }
 );
-watch(localValue, (newValue) => {
-  emit("update:modelValue", newValue);
-});
 
-function handleBlur(): void {
-  emit("blur");
+function handleUpdate(value: string | boolean | string[]): void {
+  localValue.value = value;
+  emit("update:modelValue", value);
 }
 </script>

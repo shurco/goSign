@@ -21,7 +21,7 @@
           <span class="block sm:inline">{{ success }}</span>
         </div>
 
-        <div class="rounded-md shadow-sm">
+        <div class="rounded-md border border-gray-200 bg-white p-6 transition-colors">
           <div>
             <label for="email-address" class="sr-only">Email address</label>
             <input

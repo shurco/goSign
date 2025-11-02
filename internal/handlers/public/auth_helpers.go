@@ -23,23 +23,28 @@ type Validator interface {
 // parseAndValidate parses request body and validates it
 func parseAndValidate(c *fiber.Ctx, v Validator) error {
 	if err := c.BodyParser(v); err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	if err := v.Validate(); err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	return nil
 }
 
 // createAuthTokens creates and stores access and refresh tokens
 func createAuthTokens(ctx context.Context, user *queries.UserRecord) (access, refresh string, err error) {
+	return createAuthTokensWithOrg(ctx, user, "")
+}
+
+// createAuthTokensWithOrg creates and stores access and refresh tokens with organization context
+func createAuthTokensWithOrg(ctx context.Context, user *queries.UserRecord, organizationID string) (access, refresh string, err error) {
 	modelUser := &models.User{
 		ID:    user.ID,
 		Name:  fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		Email: user.Email,
 	}
 
-	accessToken, err := middleware.CreateToken(modelUser)
+	accessToken, err := middleware.CreateTokenWithOrg(modelUser, organizationID)
 	if err != nil {
 		return "", "", err
 	}

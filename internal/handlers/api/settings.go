@@ -85,7 +85,7 @@ type UpdateEmailRequest struct {
 func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 	var req UpdateEmailRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	// TODO: Validate settings
@@ -122,7 +122,7 @@ type UpdateStorageRequest struct {
 func (h *SettingsHandler) UpdateStorage(c *fiber.Ctx) error {
 	var req UpdateStorageRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	// TODO: Validation based on provider
@@ -156,7 +156,7 @@ type UpdateBrandingRequest struct {
 func (h *SettingsHandler) UpdateBranding(c *fiber.Ctx) error {
 	var req UpdateBrandingRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	// TODO: Save to DB (account.settings_jsonb)
@@ -193,7 +193,7 @@ type TestEmailRequest struct {
 func (h *SettingsHandler) TestEmail(c *fiber.Ctx) error {
 	var req TestEmailRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	// Create temporary email provider with test settings
@@ -209,7 +209,7 @@ func (h *SettingsHandler) TestEmail(c *fiber.Ctx) error {
 	// Parse port
 	var port int
 	if _, err := fmt.Sscanf(req.SMTPPort, "%d", &port); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid SMTP port")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid SMTP port", nil)
 	}
 	smtpConfig.Port = port
 
@@ -265,7 +265,7 @@ type TestStorageRequest struct {
 func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 	var req TestStorageRequest
 	if err := c.BodyParser(&req); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request body")
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
 	// Create storage configuration
@@ -273,7 +273,7 @@ func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 	switch req.Provider {
 	case "local":
 		if req.BasePath == "" {
-			return webutil.StatusBadRequest(c, "base_path is required for local storage")
+			return webutil.Response(c, fiber.StatusBadRequest, "base_path is required for local storage", nil)
 		}
 		storageConfig = storage.Config{
 			Provider: "local",
@@ -281,7 +281,7 @@ func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 		}
 	case "s3":
 		if req.Bucket == "" || req.Region == "" {
-			return webutil.StatusBadRequest(c, "bucket and region are required for S3")
+			return webutil.Response(c, fiber.StatusBadRequest, "bucket and region are required for S3", nil)
 		}
 		options := make(map[string]string)
 		if req.AccessKeyID != "" {
@@ -298,7 +298,7 @@ func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 			Options:  options,
 		}
 	default:
-		return webutil.StatusBadRequest(c, "unsupported storage provider")
+		return webutil.Response(c, fiber.StatusBadRequest, "unsupported storage provider", nil)
 	}
 
 	// Create storage instance

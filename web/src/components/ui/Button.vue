@@ -30,13 +30,12 @@ const buttonClasses = computed(() => {
     "inline-flex items-center justify-center gap-2 font-semibold border-0 cursor-pointer select-none text-center transition-all duration-200 focus:outline-none active:scale-95 no-underline normal-case";
 
   const variants = {
-    primary:
-      "bg-[var(--color-primary)] text-[var(--color-primary-content)] hover:bg-[var(--color-primary-focus)] shadow-md",
+    primary: "bg-[var(--color-primary)] text-[var(--color-primary-content)] hover:bg-[var(--color-primary-focus)]",
     ghost: "bg-transparent hover:bg-[var(--color-base-200)] text-[var(--color-base-content)] border border-transparent",
-    success: "bg-[var(--color-success)] text-[var(--color-success-content)] hover:brightness-110 shadow-md",
-    warning: "bg-[var(--color-warning)] text-[var(--color-warning-content)] hover:brightness-110 shadow-md",
-    error: "bg-[var(--color-error)] text-[var(--color-error-content)] hover:brightness-110 shadow-md",
-    info: "bg-[var(--color-info)] text-[var(--color-info-content)] hover:brightness-110 shadow-md"
+    success: "bg-[var(--color-success)] text-[var(--color-success-content)] hover:brightness-110",
+    warning: "bg-[var(--color-warning)] text-[var(--color-warning-content)] hover:brightness-110",
+    error: "bg-[var(--color-error)] text-[var(--color-error-content)] hover:brightness-110",
+    info: "bg-[var(--color-info)] text-[var(--color-info-content)] hover:brightness-110"
   };
 
   const sizes = props.circle

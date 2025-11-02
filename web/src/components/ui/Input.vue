@@ -1,14 +1,25 @@
 <template>
-  <input :class="inputClasses" :type="type" v-bind="$attrs" />
+  <input
+    :class="inputClasses"
+    :type="type"
+    :value="modelValue"
+    @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+    v-bind="$attrs"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 
 interface Props {
+  modelValue?: string | number;
   type?: "text" | "email" | "password" | "number" | "date" | "tel" | "url" | "search" | "color";
   error?: boolean;
   size?: "sm" | "md" | "lg";
+}
+
+interface Emits {
+  (e: "update:modelValue", value: string | number): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -16,6 +27,8 @@ const props = withDefaults(defineProps<Props>(), {
   error: false,
   size: "md"
 });
+
+const emit = defineEmits<Emits>();
 
 const inputClasses = computed(() => {
   const base =

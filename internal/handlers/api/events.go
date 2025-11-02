@@ -33,9 +33,9 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 	}
 
 	// Get user ID from auth context
-	userID := c.Locals("user_id")
-	if userID == nil || userID.(string) == "" {
-		return webutil.StatusUnauthorized(c, nil)
+	_, err := GetUserID(c)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Implement actual events query

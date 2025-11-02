@@ -20,7 +20,7 @@ const isActive = computed(() => activeTab?.value === props.value);
 
 const tabClasses = computed(() => {
   const base = "px-4 py-2 rounded-md text-sm font-medium transition-colors";
-  const active = isActive.value ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900";
+  const active = isActive.value ? "bg-white text-gray-900 border border-gray-200" : "text-gray-600 hover:text-gray-900";
 
   return [base, active].join(" ");
 });

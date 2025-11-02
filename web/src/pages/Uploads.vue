@@ -1,7 +1,7 @@
 <template>
   <div class="uploads-page">
     <h1 class="mb-6 text-3xl font-bold">Uploads</h1>
-    
+
     <label
       for="assetsFieldHandle"
       class="relative block h-52 w-64 cursor-pointer rounded-xl border-2 border-dashed border-[#e7e2df] hover:bg-[#efeae6]/30"
@@ -10,38 +10,38 @@
       @drop="drop"
       @change="onChange"
     >
-    <div class="absolute top-0 right-0 bottom-0 left-0 flex items-center justify-center">
-      <div class="flex flex-col items-center">
-        <span v-if="!status" data-target="file-dropzone.icon" class="flex flex-col items-center">
-          <span>
-            <SvgIcon name="cloud-upload" class="h-10 w-10" />
+      <div class="absolute top-0 right-0 bottom-0 left-0 flex items-center justify-center">
+        <div class="flex flex-col items-center">
+          <span v-if="!status" data-target="file-dropzone.icon" class="flex flex-col items-center">
+            <span>
+              <SvgIcon name="cloud-upload" class="h-10 w-10" />
+            </span>
+            <div class="mb-1 font-medium">Upload New Document</div>
+            <div class="text-xs"><span class="font-medium">Click to upload</span> or drag and drop</div>
           </span>
-          <div class="mb-1 font-medium">Upload New Document</div>
-          <div class="text-xs"><span class="font-medium">Click to upload</span> or drag and drop</div>
-        </span>
-        <span v-else data-target="file-dropzone.loading" class="flex flex-col items-center">
-          <SvgIcon name="upload" class="h-10 w-10 animate-spin" />
-          <div class="mb-1 font-medium">Uploading...</div>
-        </span>
-      </div>
+          <span v-else data-target="file-dropzone.loading" class="flex flex-col items-center">
+            <SvgIcon name="upload" class="h-10 w-10 animate-spin" />
+            <div class="mb-1 font-medium">Uploading...</div>
+          </span>
+        </div>
 
-      <input
-        id="assetsFieldHandle"
-        ref="file"
-        name="fields[assetsFieldHandle][]"
-        class="hidden"
-        type="file"
-        accept="image/png, image/jpeg, image/tiff, application/pdf, .docx, .doc, .xlsx, .xls"
-        multiple
-      />
-    </div>
-  </label>
+        <input
+          id="assetsFieldHandle"
+          ref="file"
+          name="fields[assetsFieldHandle][]"
+          class="hidden"
+          type="file"
+          accept="image/png, image/jpeg, image/tiff, application/pdf, .docx, .doc, .xlsx, .xls"
+          multiple
+        />
+      </div>
+    </label>
   </div>
 </template>
 
 <script setup lang="ts">
 import { getCurrentInstance, ref } from "vue";
-import { fetchWithAuth } from "@/utils/api/auth";
+import { fetchWithAuth } from "@/utils/auth";
 
 const status = ref(false);
 const instance: any = getCurrentInstance();

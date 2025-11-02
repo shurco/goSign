@@ -4,21 +4,24 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/shurco/gosign/internal/handlers/api"
-	private "github.com/shurco/gosign/internal/handlers/private"
 	public "github.com/shurco/gosign/internal/handlers/public"
 	"github.com/shurco/gosign/internal/middleware"
 )
 
 // APIHandlers contains all API handlers
 type APIHandlers struct {
-	Submissions *api.SubmissionHandler
-	Submitters  *api.SubmitterHandler
-	Templates   *api.TemplateHandler
-	Webhooks    *api.WebhookHandler
-	Settings    *api.SettingsHandler
-	APIKeys     *api.APIKeyHandler
-	Stats       *api.StatsHandler
-	Events      *api.EventHandler
+	Submissions    *api.SubmissionHandler
+	Submitters     *api.SubmitterHandler
+	Templates      *api.TemplateHandler
+	Webhooks       *api.WebhookHandler
+	Settings       *api.SettingsHandler
+	APIKeys        *api.APIKeyHandler
+	Stats          *api.StatsHandler
+	Events         *api.EventHandler
+	Organizations  *api.OrganizationHandler
+	Members        *api.MemberHandler
+	Invitations    *api.InvitationHandler
+	Users          *api.UserHandler
 }
 
 // ApiRoutes configures all API routes
@@ -66,6 +69,12 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	// Upload endpoint (protected)
 	apiV1.Post("/upload", public.Upload)
 
+	// Invitations (public routes for accepting invitations)
+	if handlers.Invitations != nil {
+		invitations := c.Group("/api/v1/invitations")
+		handlers.Invitations.RegisterRoutes(invitations)
+	}
+
 	// Submissions API
 	if handlers.Submissions != nil {
 		submissions := apiV1.Group("/submissions")
@@ -82,6 +91,17 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	if handlers.Templates != nil {
 		templates := apiV1.Group("/templates")
 		handlers.Templates.RegisterRoutes(templates)
+	}
+
+	// Organizations API
+	if handlers.Organizations != nil {
+		organizations := apiV1.Group("/organizations")
+		handlers.Organizations.RegisterRoutes(organizations)
+	}
+
+	// Members API (organization members and invitations)
+	if handlers.Members != nil {
+		handlers.Members.RegisterRoutes(apiV1)
 	}
 
 	// Webhooks API
@@ -114,7 +134,9 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 		handlers.Events.RegisterRoutes(events)
 	}
 
-	// Legacy routes (backward compatibility)
-	api := c.Group("/api")
-	api.Get("/templates", private.Template) // TODO: migrate to v1
+	// Users API
+	if handlers.Users != nil {
+		users := apiV1.Group("/users")
+		handlers.Users.RegisterRoutes(users)
+	}
 }

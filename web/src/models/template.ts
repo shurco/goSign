@@ -1,4 +1,4 @@
-import type { Fields, Areas, Submitters } from "./index";
+import type { Areas, Field as BaseField, Submitter } from "./index";
 
 /**
  * Extended Area interface with frontend-specific properties
@@ -22,7 +22,7 @@ export interface FieldOption {
 /**
  * Extended Field interface with frontend-specific properties
  */
-export interface Field extends Omit<Fields, "areas"> {
+export type Field = Omit<BaseField, "areas"> & {
   readonly?: boolean;
   default_value?: string;
   areas?: Area[];
@@ -33,9 +33,9 @@ export interface Field extends Omit<Fields, "areas"> {
     currency?: string; // payment currency
     [key: string]: any;
   };
-}
+};
 
 /**
  * Submitter with extended properties
  */
-export type Submitter = Submitters;
+export type { Submitter };
