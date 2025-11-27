@@ -21,7 +21,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.26.0
-	github.com/redis/go-redis/v9 v9.16.0
+	github.com/redis/go-redis/v9 v9.17.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.34.0
 	github.com/signintech/gopdf v0.33.0
