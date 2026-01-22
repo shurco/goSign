@@ -6,10 +6,10 @@
         <div
           ref="modalRef"
           :class="modalClasses"
-          class="relative z-10 w-full rounded-lg border border-gray-200 bg-white transition-colors"
+          class="relative z-10 flex max-h-[90vh] w-full flex-col rounded-lg border border-gray-200 bg-white transition-colors"
           @click.stop
         >
-          <div v-if="$slots.header || title" class="border-b border-gray-200 px-6 py-4">
+          <div v-if="$slots.header || title" class="flex-shrink-0 border-b border-gray-200 px-6 py-4">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold">
                 <slot name="header">{{ title }}</slot>
@@ -19,10 +19,10 @@
               </button>
             </div>
           </div>
-          <div class="px-6 py-4">
+          <div class="flex-1 overflow-y-auto px-6 py-4">
             <slot />
           </div>
-          <div v-if="$slots.footer" class="border-t border-gray-200 px-6 py-4">
+          <div v-if="$slots.footer" class="flex-shrink-0 border-t border-gray-200 px-6 py-4">
             <slot name="footer" />
           </div>
         </div>

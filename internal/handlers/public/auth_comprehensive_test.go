@@ -18,7 +18,7 @@ import (
 // so that I can securely access the application
 
 func TestSignUpFlow(t *testing.T) {
-	t.Run("successful user registration", func(t *testing.T) {
+	t.Run("successful_user_registration", func(t *testing.T) {
 		// Given: a new user wants to register
 		signupData := models.SignUp{
 			Email:     "newuser@example.com",
@@ -42,7 +42,7 @@ func TestSignUpFlow(t *testing.T) {
 		assert.True(t, resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusBadRequest)
 	})
 
-	t.Run("reject weak password", func(t *testing.T) {
+	t.Run("reject_weak_password", func(t *testing.T) {
 		// Given: user attempts registration with weak password
 		signupData := models.SignUp{
 			Email:     "test@example.com",
@@ -90,7 +90,7 @@ func TestSignUpFlow(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("reject missing required fields", func(t *testing.T) {
+	t.Run("reject_missing_required_fields", func(t *testing.T) {
 		tests := []struct {
 			name string
 			data models.SignUp
@@ -140,7 +140,7 @@ func TestSignUpFlow(t *testing.T) {
 }
 
 func TestSignInFlow(t *testing.T) {
-	t.Run("signin with invalid credentials", func(t *testing.T) {
+	t.Run("signin_with_invalid_credentials", func(t *testing.T) {
 		// Given: attempting to sign in with wrong credentials
 		signinData := models.SignIn{
 			Email:    "nonexistent@example.com",
@@ -162,7 +162,7 @@ func TestSignInFlow(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("signin with empty password", func(t *testing.T) {
+	t.Run("signin_with_empty_password", func(t *testing.T) {
 		// Given: attempting sign in without password
 		signinData := models.SignIn{
 			Email:    "test@example.com",
@@ -184,7 +184,7 @@ func TestSignInFlow(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("signin with malformed JSON", func(t *testing.T) {
+	t.Run("signin_with_malformed_json", func(t *testing.T) {
 		// Given: malformed JSON request
 		app := setupTestApp()
 		app.Post("/auth/signin", SignIn)
@@ -201,7 +201,7 @@ func TestSignInFlow(t *testing.T) {
 }
 
 func TestPasswordManagement(t *testing.T) {
-	t.Run("forgot password with valid email", func(t *testing.T) {
+	t.Run("forgot_password_with_valid_email", func(t *testing.T) {
 		// Given: user wants to reset password
 		forgotData := models.ForgotPassword{
 			Email: "test@example.com",
@@ -243,7 +243,7 @@ func TestPasswordManagement(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("reset password with invalid token", func(t *testing.T) {
+	t.Run("reset_password_with_invalid_token", func(t *testing.T) {
 		// Given: invalid reset token
 		resetData := models.ResetPassword{
 			Token:       "invalid-token",
@@ -265,7 +265,7 @@ func TestPasswordManagement(t *testing.T) {
 		assert.True(t, resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusInternalServerError)
 	})
 
-	t.Run("reset password with weak new password", func(t *testing.T) {
+	t.Run("reset_password_with_weak_new_password", func(t *testing.T) {
 		// Given: weak new password
 		resetData := models.ResetPassword{
 			Token:       "valid-token-would-be-here",
@@ -304,7 +304,7 @@ func TestEmailVerification(t *testing.T) {
 		assert.True(t, resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusInternalServerError)
 	})
 
-	t.Run("verify email without token", func(t *testing.T) {
+	t.Run("verify_email_without_token", func(t *testing.T) {
 		// Given: no token provided
 		app := setupTestApp()
 		app.Get("/auth/verify-email", VerifyEmail)
@@ -321,7 +321,7 @@ func TestEmailVerification(t *testing.T) {
 }
 
 func TestPasswordHashing(t *testing.T) {
-	t.Run("password hashing and verification", func(t *testing.T) {
+	t.Run("password_hashing_and_verification", func(t *testing.T) {
 		// Given: a plain text password
 		plainPassword := "SecureP@ssw0rd123"
 
@@ -356,7 +356,7 @@ func TestPasswordHashing(t *testing.T) {
 }
 
 func TestValidationHelpers(t *testing.T) {
-	t.Run("validate signup data structure", func(t *testing.T) {
+	t.Run("validate_signup_data_structure", func(t *testing.T) {
 		validSignup := models.SignUp{
 			Email:     "valid@example.com",
 			Password:  "SecureP@ssw0rd123",
@@ -371,7 +371,7 @@ func TestValidationHelpers(t *testing.T) {
 		assert.NotEmpty(t, validSignup.LastName)
 	})
 
-	t.Run("validate signin data structure", func(t *testing.T) {
+	t.Run("validate_signin_data_structure", func(t *testing.T) {
 		validSignin := models.SignIn{
 			Email:    "user@example.com",
 			Password: "password123",
@@ -415,7 +415,7 @@ func TestSecurityFeatures(t *testing.T) {
 		}
 	})
 
-	t.Run("email enumeration prevention", func(t *testing.T) {
+	t.Run("email_enumeration_prevention", func(t *testing.T) {
 		// Given: forgot password requests for existing and non-existing emails
 		app := setupTestApp()
 		app.Post("/auth/password/forgot", ForgotPassword)
@@ -447,14 +447,14 @@ func TestSecurityFeatures(t *testing.T) {
 }
 
 func TestUserRoles(t *testing.T) {
-	t.Run("user role constants are correct", func(t *testing.T) {
+	t.Run("user_role_constants_are_correct", func(t *testing.T) {
 		// Verify new role system
 		assert.Equal(t, models.UserRole(1), models.UserRoleUser)
 		assert.Equal(t, models.UserRole(2), models.UserRoleModerator)
 		assert.Equal(t, models.UserRole(3), models.UserRoleAdmin)
 	})
 
-	t.Run("roles are properly ordered", func(t *testing.T) {
+	t.Run("roles_are_properly_ordered", func(t *testing.T) {
 		// User < Moderator < Admin
 		assert.True(t, models.UserRoleUser < models.UserRoleModerator)
 		assert.True(t, models.UserRoleModerator < models.UserRoleAdmin)

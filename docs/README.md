@@ -1,6 +1,6 @@
 # goSign Documentation
 
-**Last Updated**: 2025-11-02 00:00 UTC
+**Last Updated**: 2026-01-21 00:00 UTC
 
 ## 📚 Available Documentation
 
@@ -51,6 +51,36 @@
   - Design principles (KISS, DRY, Composition)
   - Usage examples and best practices
 
+### Enterprise Features
+- **[ENTERPRISE_IMPROVEMENTS_SUMMARY.md](ENTERPRISE_IMPROVEMENTS_SUMMARY.md)** - Complete enterprise features overview
+  - Multilingual support (i18n) implementation
+  - Conditional fields system
+  - Formula engine
+  - White-label branding
+  - Email templates customization
+
+- **[MULTILINGUAL.md](MULTILINGUAL.md)** - Multilingual support guide
+  - 7 UI languages and 14 signing portal languages
+  - Automatic locale detection
+  - RTL support for Arabic and Hebrew
+  - Field-level translations
+
+- **[CONDITIONAL_FIELDS.md](CONDITIONAL_FIELDS.md)** - Conditional fields documentation
+  - Show/hide fields based on conditions
+  - Condition builder UI
+  - Backend validation and evaluation
+
+- **[FORMULAS.md](FORMULAS.md)** - Formula engine documentation
+  - Dynamic field calculations
+  - Formula builder interface
+  - Supported functions and operators
+
+- **[WHITE_LABEL.md](WHITE_LABEL.md)** - White-label branding guide
+  - Custom logos, colors, and fonts
+  - Signing page themes
+  - Email template customization
+  - Custom CSS support
+
 ## 🔗 Quick Access
 
 ### API Reference (When Running)
@@ -88,6 +118,19 @@ Templates:
 API Keys:
   GET    /api/v1/apikeys        - List API keys
   POST   /api/v1/apikeys        - Create API key
+
+Branding:
+  GET    /api/v1/branding       - Get branding settings
+  PUT    /api/v1/branding       - Update branding settings
+
+i18n:
+  GET    /api/v1/i18n/locales   - List available locales
+  PUT    /api/v1/account/locale - Update account locale
+
+Email Templates:
+  GET    /api/v1/email-templates - List email templates
+  POST   /api/v1/email-templates - Create email template
+  PUT    /api/v1/email-templates/:id - Update email template
 
 Public:
   GET    /s/:slug               - Submitter signing portal
@@ -146,6 +189,11 @@ All documentation follows these standards:
 - **Organization Context**: JWT tokens include organization_id for multi-tenant isolation
 - **Organization Templates**: Templates can be shared within organizations
 - **Team Collaboration**: Members can collaborate on templates and submissions
+- **Multilingual Support**: 7 UI languages and 14 signing portal languages with RTL support
+- **Conditional Fields**: Show/hide fields based on dynamic conditions
+- **Formula Engine**: Dynamic field calculations with formula builder
+- **White-Label Branding**: Custom logos, colors, fonts, and themes
+- **Email Templates**: Customizable email templates with locale support
 
 ### Authentication Features
 - **User Registration**: Sign up with email verification
@@ -166,33 +214,68 @@ All documentation follows these standards:
 | Code Examples | 100% | ✅ Complete |
 | Architecture | 100% | ✅ Complete |
 | Testing | 100% | ✅ Complete |
+| Enterprise Features | 100% | ✅ Complete |
 
 ---
 
 **Status**: ✅ Complete  
-**Total Documents**: 8  
-**Version**: 2.3.0
+**Total Documents**: 13  
+**Version**: 2.4.0
 
 ## 🆕 Enterprise Features
 
+### v2.4.0 - Advanced Enterprise Features
+goSign v2.4 adds comprehensive enterprise-grade improvements:
+
+#### Multilingual Support (i18n)
+- 7 UI languages (EN, RU, ES, FR, DE, IT, PT)
+- 14 signing portal languages with additional languages
+- Automatic locale detection and RTL support
+- Field-level translations for templates
+
+#### Conditional Fields
+- Dynamic show/hide fields based on conditions
+- Visual condition builder interface
+- Support for complex logical expressions
+- Backend validation and evaluation
+
+#### Formula Engine
+- Dynamic field calculations
+- Formula builder with syntax highlighting
+- Support for mathematical and logical operations
+- Real-time formula evaluation
+
+#### White-Label Branding
+- Custom logos, colors, and fonts
+- Multiple signing page themes (default, minimal, corporate)
+- Email template customization
+- Custom CSS support for advanced styling
+
+#### Email Templates
+- Customizable email templates per organization
+- Locale-specific email templates
+- Template variables and placeholders
+- Rich HTML email support
+
+### v2.3.0 - Organization Management
 goSign v2.3 adds comprehensive organization and team management:
 
-### Organizations
+#### Organizations
 - Create and manage organizations
 - Switch between personal and organization contexts
 - Organization-scoped data isolation
 
-### Team Management
+#### Team Management
 - Invite members via email
 - Manage member roles and permissions
 - View organization members and their roles
 
-### Role-Based Access Control
+#### Role-Based Access Control
 - **Owner**: Full control, can delete organization
 - **Admin**: Manage members and organization settings
 - **Member**: Create and manage templates/submissions
 - **Viewer**: Read-only access to organization data
 
 ### API Integration
-All organization endpoints are documented in Swagger UI and follow RESTful conventions. See [API_AUTHENTICATION.md](API_AUTHENTICATION.md) for details on organization context in JWT tokens.
+All endpoints are documented in Swagger UI and follow RESTful conventions. See [API_AUTHENTICATION.md](API_AUTHENTICATION.md) for details on authentication and [ENTERPRISE_IMPROVEMENTS_SUMMARY.md](ENTERPRISE_IMPROVEMENTS_SUMMARY.md) for enterprise features.
 

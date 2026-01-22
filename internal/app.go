@@ -9,14 +9,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/robfig/cron/v3"
 
+	"github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/handlers/api"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
+	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/internal/services/submission"
 	"github.com/shurco/gosign/internal/trust"
 	"github.com/shurco/gosign/pkg/logging"
+	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
 )
@@ -43,9 +47,12 @@ func (r *simpleTemplateRepository) Create(item *models.Template) error {
 	return fmt.Errorf("not implemented")
 }
 
+// Update updates a template by ID using the template queries service.
 func (r *simpleTemplateRepository) Update(id string, item *models.Template) error {
-	// TODO: Implement proper template update
-	return fmt.Errorf("not implemented")
+	if r.templateQueries == nil {
+		return fmt.Errorf("template queries not initialized")
+	}
+	return r.templateQueries.UpdateTemplate(context.Background(), id, item)
 }
 
 func (r *simpleTemplateRepository) Delete(id string) error {
@@ -85,6 +92,37 @@ func (r *simpleSubmissionRepository) Update(id string, item *models.Submission) 
 
 func (r *simpleSubmissionRepository) Delete(id string) error {
 	// TODO: Implement proper submission deletion
+	return fmt.Errorf("not implemented")
+}
+
+// simpleWebhookRepository is a simple implementation of ResourceRepository for webhooks
+type simpleWebhookRepository struct {
+	// TODO: Add webhook queries when needed
+}
+
+func (r *simpleWebhookRepository) List(page, pageSize int, filters map[string]string) ([]models.Webhook, int, error) {
+	// TODO: Implement proper webhook listing with pagination and filters
+	// For now, return empty list to avoid errors
+	return []models.Webhook{}, 0, nil
+}
+
+func (r *simpleWebhookRepository) Get(id string) (*models.Webhook, error) {
+	// TODO: Implement proper webhook retrieval
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (r *simpleWebhookRepository) Create(item *models.Webhook) error {
+	// TODO: Implement proper webhook creation
+	return fmt.Errorf("not implemented")
+}
+
+func (r *simpleWebhookRepository) Update(id string, item *models.Webhook) error {
+	// TODO: Implement proper webhook update
+	return fmt.Errorf("not implemented")
+}
+
+func (r *simpleWebhookRepository) Delete(id string) error {
+	// TODO: Implement proper webhook deletion
 	return fmt.Errorf("not implemented")
 }
 
@@ -131,6 +169,7 @@ func New() error {
 	templateQueries := &queries.TemplateQueries{Pool: pool}
 	organizationQueries := queries.NewOrganizationQueries(pool)
 	userQueries := queries.NewUserQueries(pool)
+	accountQueries := queries.NewAccountQueries(pool)
 
 	// Create template repository (for now using a simple implementation)
 	templateRepo := &simpleTemplateRepository{
@@ -177,20 +216,38 @@ func New() error {
 	app.Static("/drive/signed", "./lc_signed")
 	app.Static("/drive/uploads", "./lc_uploads")
 
+	// Initialize webhook repository
+	webhookRepo := &simpleWebhookRepository{}
+
+	// Initialize notification service (with nil repository - can work without it)
+	notificationService := notification.NewService(nil)
+
+	// Initialize API key repository and service
+	// Convert pgxpool.Pool to sql.DB for APIKeyRepository
+	sqlDB := stdlib.OpenDBFromPool(pool)
+	apiKeyRepo := queries.NewAPIKeyRepository(sqlDB)
+	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
+
+	// Initialize email template queries
+	emailTemplateQueries := &queries.EmailTemplateQueries{Pool: pool}
+
 	// Initialize API handlers
 	apiHandlers := &routes.APIHandlers{
 		Submissions:    api.NewSubmissionHandler(submissionRepoImpl, submissionService),
 		Submitters:     nil, // TODO: initialize with repository and service
 		Templates:      api.NewTemplateHandler(templateRepo, templateQueries),
-		Webhooks:       nil, // TODO: initialize with repository
-		Settings:       nil, // TODO: initialize with notification service
-		APIKeys:        nil, // TODO: initialize with API key service
+		Webhooks:       api.NewWebhookHandler(webhookRepo),
+		Settings:       api.NewSettingsHandler(notificationService),
+		APIKeys:        api.NewAPIKeyHandler(apiKeyService),
 		Stats:          api.NewStatsHandler(),
 		Events:         api.NewEventHandler(),
-		Organizations:  api.NewOrganizationHandler(organizationQueries),
-		Members:        api.NewMemberHandler(organizationQueries),
+		Organizations:  api.NewOrganizationHandler(organizationQueries, userQueries),
+		Members:        api.NewMemberHandler(organizationQueries, userQueries),
 		Invitations:    api.NewInvitationHandler(organizationQueries),
 		Users:          api.NewUserHandler(userQueries),
+		I18n:           api.NewI18nHandler(userQueries, accountQueries),
+		Branding:       api.NewBrandingHandler(accountQueries, userQueries, nil), // TODO: initialize with storage
+		EmailTemplates: api.NewEmailTemplateHandler(emailTemplateQueries, userQueries),
 	}
 
 	routes.ApiRoutes(app, apiHandlers)

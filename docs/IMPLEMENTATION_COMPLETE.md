@@ -309,7 +309,7 @@ GET    /embed/sign              (Embedded signing URL)
 2. SMS provider integration
 3. Advanced PDF manipulation
 4. Template marketplace
-5. Multi-language support
+5. Additional file format support (DOCX, XLSX, JPEG, PNG, ZIP) - Currently only PDF is fully supported
 
 ## 🎉 Achievement Summary
 
@@ -358,8 +358,8 @@ github.com/robfig/cron/v3 // Background worker scheduling
 ---
 
 **Status**: ✅ COMPLETE
-**Date**: November 1, 2025
-**Version**: 2.3.0
+**Last Updated**: January 2025
+**Version**: 2.4.0
 
 ## 🏢 Enterprise Features (v2.3)
 

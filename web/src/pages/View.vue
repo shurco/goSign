@@ -458,7 +458,6 @@ function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
 }
 
 async function save({ force } = { force: false }): Promise<object> {
-  console.log("save");
 
   if (!autosave.value && !force) {
     return Promise.resolve({});

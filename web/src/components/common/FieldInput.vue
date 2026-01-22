@@ -1,6 +1,21 @@
 <template>
+  <!-- Calculated field (read-only) -->
   <TextInput
-    v-if="isTextType"
+    v-if="isCalculated"
+    :modelValue="formatCalculated(calculatedValue)"
+    type="text"
+    :placeholder="placeholder"
+    :required="required"
+    readonly
+    :disabled="disabled"
+    :error="error"
+    class="calculated-field"
+    @update:modelValue="() => {}"
+    @blur="$emit('blur')"
+  />
+  <!-- Regular text input -->
+  <TextInput
+    v-else-if="isTextType"
     v-model="localValue"
     :type="type"
     :placeholder="placeholder"
@@ -74,6 +89,9 @@ interface Props {
   disabled?: boolean;
   options?: Option[];
   error?: string;
+  formula?: string;
+  calculationType?: 'number' | 'currency';
+  calculatedValue?: number;
 }
 
 interface Emits {
@@ -103,12 +121,33 @@ const isSelectType = computed(() => {
   return ["select", "radio", "checkbox", "multiple"].includes(props.type);
 });
 
+const isCalculated = computed(() => {
+  return !!props.formula;
+});
+
+function formatCalculated(value: number | undefined): string {
+  if (value === undefined || value === null) return ''
+  
+  if (props.calculationType === 'currency') {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value)
+  }
+  
+  return value.toFixed(2)
+}
+
 watch(
   () => props.modelValue,
   (newValue) => {
     localValue.value = newValue;
   }
 );
+
+// Watch calculatedValue to update display for calculated fields
+// Note: For calculated fields, the value is displayed directly from calculatedValue prop
+// No need to update localValue as it's read-only
 
 function handleUpdate(value: string | boolean | string[]): void {
   localValue.value = value;

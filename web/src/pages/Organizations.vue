@@ -3,117 +3,129 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">Organizations</h1>
-        <p class="mt-1 text-sm text-gray-600">Manage your organizations and team members</p>
+        <h1 class="text-3xl font-bold">{{ $t('organizations.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t('organizations.description') }}</p>
       </div>
-      <Button variant="primary" @click="showCreateModal = true">
-        <PlusIcon class="mr-2 h-5 w-5" />
-        Create Organization
-      </Button>
-    </div>
-
-    <!-- Content -->
-    <div class="organizations-content">
-      <!-- Organizations Grid -->
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div
-          v-for="org in (organizations || []).filter((o) => o != null)"
-          :key="org?.id || Math.random()"
-          class="cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors hover:border-gray-300"
-          @click="selectOrganization(org)"
-        >
-          <div class="p-6">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500">
-                  <BuildingOfficeIcon class="h-6 w-6 text-white" />
-                </div>
-                <div class="ml-4">
-                  <h3 class="text-lg font-medium text-gray-900">{{ org.name }}</h3>
-                  <p class="text-sm text-gray-500">{{ org.description || "No description" }}</p>
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span
-                  v-if="org.owner_id === currentUserId"
-                  class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
-                >
-                  Owner
-                </span>
-                <button
-                  class="rounded-full p-1 text-gray-400 hover:text-gray-600"
-                  @click.stop="openOrganizationMenu(org)"
-                >
-                  <EllipsisVerticalIcon class="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div class="mt-4 flex items-center justify-between">
-              <div class="flex items-center text-sm text-gray-500">
-                <UsersIcon class="mr-1 h-4 w-4" />
-                <span>Members</span>
-              </div>
-              <div class="text-sm text-gray-500">Created {{ formatDate(org.created_at) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div
-          v-if="organizations.length === 0 && !loading"
-          class="col-span-full rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 text-center"
-        >
-          <BuildingOfficeIcon class="mx-auto h-12 w-12 text-gray-400" />
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No organizations</h3>
-          <p class="mt-1 text-sm text-gray-500">Get started by creating your first organization.</p>
-          <div class="mt-6">
-            <Button variant="primary" @click="showCreateModal = true">
-              <PlusIcon class="mr-2 h-5 w-5" />
-              Create Organization
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="col-span-full flex justify-center py-12">
-        <div class="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+      <div class="flex items-center gap-3">
+        <Button variant="primary" @click="openCreateModal">
+          <SvgIcon name="plus" class="mr-2 h-5 w-5" />
+          {{ $t('organizations.createOrganization') }}
+        </Button>
       </div>
     </div>
+
+    <!-- Organizations Table -->
+    <ResourceTable
+      :data="organizations"
+      :columns="columns"
+      :is-loading="loading"
+      searchable
+      :search-keys="['name', 'description']"
+      :search-placeholder="$t('organizations.searchOrganizations')"
+      :empty-message="$t('organizations.noOrganizations')"
+      :show-edit="false"
+      :show-delete="false"
+    >
+      <template #cell-name="{ item }">
+        <div class="flex items-center gap-2">
+          <button
+            class="cursor-pointer text-left font-medium text-gray-900 hover:text-blue-600"
+            @click="selectOrganization(item as Organization)"
+          >
+            {{ (item as Organization).name }}
+          </button>
+          <span
+            v-if="currentOrganization && (item as Organization).id === currentOrganization.id"
+            class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800"
+          >
+            {{ $t('organizations.current') }}
+          </span>
+        </div>
+      </template>
+
+      <template #cell-description="{ value, item }">
+        <span class="text-sm text-gray-500">
+          {{ value || $t('organizations.noDescription') }}
+        </span>
+      </template>
+
+      <template #cell-created_at="{ value }">
+        <span class="text-sm text-gray-500">{{ formatDate(value) }}</span>
+      </template>
+
+      <template #actions="{ item }">
+        <div class="flex items-center justify-end gap-2">
+          <button
+            v-if="currentOrganization && (item as Organization).id === currentOrganization.id"
+            class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
+            @click.stop="exitOrganization"
+            :title="$t('organizations.exitOrganization')"
+          >
+            <SvgIcon name="exit" class="h-5 w-5 stroke-[2]" />
+          </button>
+          <button
+            class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+            @click.stop="editOrganization(item as Organization)"
+            :title="$t('organizations.editOrganization')"
+          >
+            <SvgIcon name="settings" class="h-5 w-5 stroke-[2]" />
+          </button>
+          <button
+            class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+            @click.stop="manageMembers(item as Organization)"
+            :title="$t('organizations.manageMembers')"
+          >
+            <SvgIcon name="users" class="h-5 w-5 stroke-[2]" />
+          </button>
+        </div>
+      </template>
+    </ResourceTable>
 
     <!-- Create Organization Modal -->
-    <CreateOrganizationModal v-if="showCreateModal" @close="showCreateModal = false" @created="onOrganizationCreated" />
+    <CreateOrganizationModal v-model="showCreateModal" @created="onOrganizationCreated" />
 
-    <!-- Organization Menu -->
-    <OrganizationMenu
-      v-if="selectedOrgForMenu"
-      :organization="selectedOrgForMenu"
-      @close="selectedOrgForMenu = null"
-      @edit="editOrganization"
-      @delete="deleteOrganization(selectedOrgForMenu)"
-      @manage-members="manageMembers(selectedOrgForMenu)"
+    <!-- Edit Organization Modal -->
+    <EditOrganizationModal
+      v-model="showEditModal"
+      :organization="selectedOrgForEdit"
+      @updated="onOrganizationUpdated"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onActivated, onMounted, ref, watch } from "vue";
+import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { BuildingOfficeIcon, EllipsisVerticalIcon, PlusIcon, UsersIcon } from "@heroicons/vue/24/outline";
+import { useI18n } from "vue-i18n";
 import { apiDelete, apiGet, apiPost } from "@/services/api";
 import { Organization } from "@/models";
 import CreateOrganizationModal from "@/components/organization/CreateOrganizationModal.vue";
-import OrganizationMenu from "@/components/organization/OrganizationMenu.vue";
+import EditOrganizationModal from "@/components/organization/EditOrganizationModal.vue";
 import Button from "@/components/ui/Button.vue";
+import ResourceTable from "@/components/common/ResourceTable.vue";
+import SvgIcon from "@/components/SvgIcon.vue";
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 const organizations = ref<Organization[]>([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
-const selectedOrgForMenu = ref<Organization | null>(null);
+const showEditModal = ref(false);
+const selectedOrgForEdit = ref<Organization | null>(null);
 const currentUserId = ref("");
+const currentOrganization = ref<{ id: string; name: string; role?: string } | null>(null);
+
+const columns = computed(() => [
+  { key: "name", label: t('organizations.organizationName'), sortable: true },
+  { key: "description", label: t('organizations.description'), sortable: false },
+  {
+    key: "created_at",
+    label: t('submissions.created'),
+    sortable: true,
+    formatter: (value: unknown): string => formatDate(value as string)
+  }
+]);
 
 let loadOrganizationsPromise: Promise<void> | null = null;
 
@@ -146,7 +158,11 @@ const loadOrganizations = async () => {
         return;
       }
 
-      const data = response.data?.organizations || response.data;
+      // API returns: { success: true, message: "...", data: [...] } or { success: true, message: "...", data: { organizations: [...] } }
+      let data = response.data;
+      if (data && typeof data === 'object' && 'organizations' in data) {
+        data = data.organizations;
+      }
       // Ensure organizations is always an array
       organizations.value = Array.isArray(data) ? data : [];
     } catch (error: any) {
@@ -188,20 +204,47 @@ const selectOrganization = async (org: Organization) => {
     localStorage.setItem("refresh_token", response.data.refresh_token);
 
     // Update current organization in localStorage
-    localStorage.setItem(
-      "current_organization",
-      JSON.stringify({
-        id: org.id,
-        name: org.name,
-        role: response.data.role
-      })
-    );
+    const orgData = {
+      id: org.id,
+      name: org.name,
+      role: response.data.role
+    };
+    localStorage.setItem("current_organization", JSON.stringify(orgData));
+    currentOrganization.value = orgData;
 
-    // Navigate to dashboard or organization overview
-    router.push("/dashboard");
+    // Reload organizations to refresh the list and update current organization indicator
+    await loadOrganizations();
   } catch (error) {
     console.error("Failed to switch organization:", error);
   }
+};
+
+const exitOrganization = async () => {
+  try {
+    const response = await apiPost("/api/v1/organizations/switch");
+
+    // Store new tokens
+    localStorage.setItem("access_token", response.data.access_token);
+    localStorage.setItem("refresh_token", response.data.refresh_token);
+
+    // Clear current organization from localStorage
+    localStorage.removeItem("current_organization");
+    currentOrganization.value = null;
+
+    // Reload organizations to refresh the list
+    await loadOrganizations();
+  } catch (error) {
+    console.error("Failed to exit organization:", error);
+    alert(t('organizations.exitError') || 'Failed to exit organization');
+  }
+};
+
+const openCreateModal = () => {
+  showCreateModal.value = true;
+};
+
+const handleCloseModal = () => {
+  showCreateModal.value = false;
 };
 
 const onOrganizationCreated = (newOrg: Organization) => {
@@ -219,33 +262,27 @@ const onOrganizationCreated = (newOrg: Organization) => {
   showCreateModal.value = false;
 };
 
-const openOrganizationMenu = (org: Organization) => {
-  selectedOrgForMenu.value = org;
+const editOrganization = (org: Organization) => {
+  selectedOrgForEdit.value = org;
+  showEditModal.value = true;
 };
 
-const editOrganization = () => {
-  // TODO: Implement edit organization
-  selectedOrgForMenu.value = null;
-};
-
-const deleteOrganization = async (org: Organization) => {
-  if (!confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
-    return;
+const onOrganizationUpdated = (updatedOrg: Organization) => {
+  const index = organizations.value.findIndex((o) => o.id === updatedOrg.id);
+  if (index !== -1) {
+    // Update organization in place to ensure Vue reactivity
+    Object.assign(organizations.value[index], updatedOrg);
+    console.log("Organization updated in list at index:", index, "New value:", organizations.value[index]);
+  } else {
+    // If not found, reload organizations
+    loadOrganizations();
   }
-
-  try {
-    await apiDelete(`/api/v1/organizations/${org.id}`);
-    organizations.value = organizations.value.filter((o) => o.id !== org.id);
-  } catch (error) {
-    console.error("Failed to delete organization:", error);
-  } finally {
-    selectedOrgForMenu.value = null;
-  }
+  showEditModal.value = false;
+  selectedOrgForEdit.value = null;
 };
 
 const manageMembers = (org: Organization) => {
   router.push(`/organizations/${org.id}/members`);
-  selectedOrgForMenu.value = null;
 };
 
 const formatDate = (dateString: string | undefined) => {
@@ -263,6 +300,16 @@ onMounted(() => {
   });
   // TODO: Get current user ID
   currentUserId.value = "user-id"; // Replace with actual user ID
+  
+  // Load current organization from localStorage
+  const storedOrg = localStorage.getItem("current_organization");
+  if (storedOrg) {
+    try {
+      currentOrganization.value = JSON.parse(storedOrg);
+    } catch (e) {
+      console.error("Failed to parse current organization:", e);
+    }
+  }
 });
 
 // Reload organizations when component is activated (reused by router)
@@ -292,8 +339,42 @@ watch(
           }
         }, 50);
       }
+      // Reload current organization from localStorage when navigating to this page
+      const storedOrg = localStorage.getItem("current_organization");
+      if (storedOrg) {
+        try {
+          currentOrganization.value = JSON.parse(storedOrg);
+        } catch (e) {
+          console.error("Failed to parse current organization:", e);
+          currentOrganization.value = null;
+        }
+      } else {
+        currentOrganization.value = null;
+      }
     }
   },
   { immediate: false }
 );
+
+// Watch for changes in localStorage to update current organization
+// This handles cases where organization is switched from another page
+const updateCurrentOrganization = () => {
+  const storedOrg = localStorage.getItem("current_organization");
+  if (storedOrg) {
+    try {
+      currentOrganization.value = JSON.parse(storedOrg);
+    } catch (e) {
+      console.error("Failed to parse current organization:", e);
+      currentOrganization.value = null;
+    }
+  } else {
+    currentOrganization.value = null;
+  }
+};
+
+// Listen for storage events (when localStorage changes in another tab/window)
+window.addEventListener("storage", updateCurrentOrganization);
+
+// Also check periodically (for same-tab updates)
+setInterval(updateCurrentOrganization, 1000);
 </script>

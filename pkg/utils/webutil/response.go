@@ -15,7 +15,7 @@ type HTTPResponse struct {
 func Response(c *fiber.Ctx, code int, message string, data any) error {
 	if len(message) > 0 {
 		return c.Status(code).JSON(HTTPResponse{
-			Success: code == fiber.StatusOK,
+			Success: code >= fiber.StatusOK && code < fiber.StatusMultipleChoices,
 			Message: message,
 			Data:    data,
 		})

@@ -160,6 +160,15 @@ onMounted(async () => {
     if (res && res.data) {
       template.value = res.data;
 
+      // Ensure at least one submitter exists
+      if (!template.value.submitters || template.value.submitters.length === 0) {
+        template.value.submitters = [{
+          id: v4(),
+          name: "Signer 1",
+          colorIndex: 0
+        }];
+      }
+
       if (template.value.submitters && template.value.submitters.length > 0) {
         selectedSubmitter.value = template.value.submitters[0];
       }
@@ -628,7 +637,6 @@ function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
 }
 
 async function save({ force } = { force: false }): Promise<object> {
-  console.log("save");
 
   if (!force) {
     return Promise.resolve({});

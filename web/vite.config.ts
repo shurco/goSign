@@ -4,6 +4,7 @@ import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 import VueDevTools from 'vite-plugin-vue-devtools'
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import path from "path";
 
 export default defineConfig({
@@ -39,6 +40,9 @@ export default defineConfig({
     VueDevTools(),
     vue(),
     tailwindcss(),
+    VueI18nPlugin({
+      include: [path.resolve(__dirname, './src/i18n/locales/**')],
+    }),
     createSvgIconsPlugin({
       iconDirs: [path.resolve(process.cwd(), "./src/assets/svg")],
       symbolId: "icon-[dir]-[name]",

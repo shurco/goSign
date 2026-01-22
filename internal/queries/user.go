@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -292,11 +293,42 @@ func (q *UserQueries) Enable2FA(ctx context.Context, userID, secret string) erro
 	return nil
 }
 
+// UpdateUserLocale updates user's preferred locale
+func (q *UserQueries) UpdateUserLocale(ctx context.Context, userID, locale string) error {
+	_, err := q.pool.Exec(ctx, `
+		UPDATE "user"
+		SET preferred_locale = $1, updated_at = NOW()
+		WHERE id = $2
+	`, locale, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update user locale: %w", err)
+	}
+	return nil
+}
+
+// GetUserAccountID retrieves account ID for a user
+// Returns empty string if account_id is NULL
+func (q *UserQueries) GetUserAccountID(ctx context.Context, userID string) (string, error) {
+	var accountID sql.NullString
+	err := q.pool.QueryRow(ctx, `
+		SELECT account_id
+		FROM "user"
+		WHERE id = $1
+	`, userID).Scan(&accountID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user account: %w", err)
+	}
+	if accountID.Valid {
+		return accountID.String, nil
+	}
+	return "", nil // Return empty string if account_id is NULL
+}
+
 // Disable2FA disables 2FA for user
 func (q *UserQueries) Disable2FA(ctx context.Context, userID string) error {
 	_, err := q.pool.Exec(ctx, `
 		UPDATE "user"
-		SET otp_secret = '{}'::jsonb, 
+		SET otp_secret = '{}'::jsonb,
 		    otp_enabled = false, 
 		    consumed_timestep = NULL,
 		    updated_at = NOW()

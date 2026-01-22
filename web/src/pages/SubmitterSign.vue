@@ -87,21 +87,25 @@
               <h2 class="card-title mb-4">Complete Fields</h2>
 
               <div class="space-y-4">
-                <div v-for="field in myFields" :id="`field-${field.id}`" :key="field.id" class="form-control">
+                <div v-for="field in visibleFields" :id="`field-${field.id}`" :key="field.id" class="form-control">
                   <label class="label">
                     <span class="label-text font-semibold">
-                      {{ field.name }}
-                      <span v-if="field.required" class="text-error">*</span>
+                      {{ getFieldLabel(field) }}
+                      <span v-if="fieldStates.value[field.id]?.required || field.required" class="text-error">*</span>
                     </span>
                   </label>
 
                   <FieldInput
                     v-model="formData[field.id]"
                     :type="field.type as any"
-                    :required="field.required"
+                    :required="fieldStates.value[field.id]?.required || field.required"
+                    :disabled="fieldStates.value[field.id]?.disabled"
                     :options="field.options"
-                    :placeholder="field.name"
+                    :placeholder="getFieldLabel(field)"
                     :error="fieldErrors[field.id]"
+                    :formula="field.formula"
+                    :calculationType="field.calculationType as 'number' | 'currency' | undefined"
+                    :calculatedValue="calculatedValues.value[field.id]"
                     @blur="validateField(field)"
                   />
                 </div>
@@ -109,14 +113,14 @@
 
               <!-- Actions -->
               <div class="card-actions mt-6 justify-between">
-                <button class="btn btn-ghost btn-sm" :disabled="isSubmitting" @click="handleDecline">Decline</button>
+                <button class="btn btn-ghost btn-sm" :disabled="isSubmitting" @click="handleDecline">{{ t('signing.decline') }}</button>
                 <button
                   class="rounded-[--radius-btn] bg-[--color-primary] px-4 py-2 text-white transition-colors hover:opacity-90 focus:ring-2 focus:ring-[--color-primary] focus:outline-none"
                   :class="{ loading: isSubmitting }"
                   :disabled="!isFormValid || isSubmitting"
                   @click="handleSubmit"
                 >
-                  {{ isSubmitting ? "Submitting..." : "Complete" }}
+                  {{ isSubmitting ? t('common.loading') : t('signing.complete') }}
                 </button>
               </div>
 
@@ -128,7 +132,7 @@
                 <progress
                   class="progress progress-primary mt-2 w-full"
                   :value="completedFieldsCount"
-                  :max="myFields.length"
+                  :max="visibleFields.length"
                 ></progress>
               </div>
             </div>
@@ -142,26 +146,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import FieldInput from "@/components/common/FieldInput.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
 import { fetchWithAuth } from "@/utils/auth";
+import { useConditions } from "@/composables/useConditions";
+import { useFormulas } from "@/composables/useFormulas";
+import type { Field } from "@/models/template";
 
-interface Field {
-  id: string;
-  submitter_id: string;
-  name: string;
-  type: string;
-  required: boolean;
-  options?: { id: string; value: string }[];
-  areas?: {
-    attachment_id: string;
-    page: number;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  }[];
-}
+// Field type is imported from @/models/template
 
 interface Submitter {
   id: string;
@@ -192,11 +185,14 @@ interface Template {
 }
 
 const route = useRoute();
+const { t, locale } = useI18n();
 
 const slug = ref(route.params.slug as string);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const error = ref("");
+const signingLocale = ref(locale.value as string);
+const showLanguageSelector = ref(true);
 
 const template = ref<Template | null>(null);
 const submitter = ref<Submitter | null>(null);
@@ -208,6 +204,26 @@ const myFields = computed(() => {
     return [];
   }
   return template.value.fields.filter((f) => f.submitter_id === submitter.value?.id);
+});
+
+// Use conditions composable
+const { fieldStates } = useConditions(
+  computed(() => template.value?.fields || []),
+  formData
+);
+
+// Use formulas composable
+const { calculatedValues } = useFormulas(
+  computed(() => template.value?.fields || []),
+  formData
+);
+
+// Filter visible fields based on conditions
+const visibleFields = computed(() => {
+  return myFields.value.filter(field => {
+    const state = fieldStates.value[field.id]
+    return state ? state.visible : true
+  })
 });
 
 const completedFieldsCount = computed(() => {
@@ -230,7 +246,7 @@ const completedFieldsCount = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  return completedFieldsCount.value === myFields.value.length && Object.keys(fieldErrors.value).length === 0;
+  return completedFieldsCount.value === visibleFields.value.length && Object.keys(fieldErrors.value).length === 0;
 });
 
 onMounted(async () => {

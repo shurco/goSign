@@ -42,9 +42,18 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user", nil)
 	}
 
+	// Get account_id from user
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userID)
+	if err != nil {
+		log.Error().Err(err).Str("user_id", userID).Msg("Failed to get user account ID")
+		// Don't fail the request, just log the error
+		accountID = ""
+	}
+
 	// Return user data (without sensitive information like password)
 	return webutil.Response(c, fiber.StatusOK, "User retrieved successfully", map[string]interface{}{
 		"id":         user.ID,
+		"account_id": accountID,
 		"first_name": user.FirstName,
 		"last_name":  user.LastName,
 		"email":      user.Email,

@@ -103,26 +103,48 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       if (!response.ok) {
+        // Only redirect on auth errors (401/403) - token is invalid
+        // For other errors (network, server errors), don't redirect - might be temporary
         if (response.status === 401 || response.status === 403) {
+          // Token is invalid, clear and redirect
           clearTokensAndRedirect();
         }
         return null;
       }
 
       const data = await response.json();
-      const newAccessToken = data.data?.access_token || data.access_token;
-      const newRefreshToken = data.data?.refresh_token || data.refresh_token;
-
-      if (newAccessToken) {
-        localStorage.setItem("access_token", newAccessToken);
+      
+      // Handle different response formats
+      let newAccessToken: string | undefined;
+      let newRefreshToken: string | undefined;
+      
+      if (data.data) {
+        // Format: { success: true, message: "...", data: { access_token: "...", refresh_token: "..." } }
+        newAccessToken = data.data.access_token;
+        newRefreshToken = data.data.refresh_token;
+      } else if (data.access_token) {
+        // Format: { access_token: "...", refresh_token: "..." }
+        newAccessToken = data.access_token;
+        newRefreshToken = data.refresh_token;
       }
+
+      if (!newAccessToken) {
+        console.error("Failed to get access token from refresh response:", data);
+        // Don't redirect here - might be temporary issue with response format
+        // Only redirect if we get 401/403 from the refresh endpoint itself
+        return null;
+      }
+
+      localStorage.setItem("access_token", newAccessToken);
       if (newRefreshToken) {
         localStorage.setItem("refresh_token", newRefreshToken);
       }
 
-      return newAccessToken || null;
-    } catch {
-      clearTokensAndRedirect();
+      return newAccessToken;
+    } catch (error) {
+      // Only redirect on auth errors, not on network errors
+      console.error("Error refreshing token:", error);
+      // Don't redirect immediately - let the calling code handle it
       return null;
     } finally {
       isRefreshing = false;
@@ -201,8 +223,18 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     let token = localStorage.getItem("access_token");
 
     if (!token) {
+      // Try to refresh token
       const newToken = await refreshAccessToken();
       if (!newToken) {
+        // Check if refresh token still exists
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
+          // Refresh token was cleared (likely by refreshAccessToken on 401/403)
+          // User is already being redirected, just return error
+          return createUnauthorizedResponse();
+        }
+        // Refresh failed but token still exists - might be temporary error
+        // Don't redirect, just return error and let user retry
         return createUnauthorizedResponse();
       }
       token = localStorage.getItem("access_token");
@@ -226,13 +258,24 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
 
   // Handle 401 with token refresh
   if (response.status === 401 && requiresAuth) {
+    // Don't refresh if already on auth page
+    if (isAuthPage()) {
+      return createUnauthorizedResponse();
+    }
+
     if (isRefreshing && refreshPromise) {
       await refreshPromise;
-      if (isAuthPage()) {
-        return createUnauthorizedResponse();
-      }
       const refreshedToken = localStorage.getItem("access_token");
       if (!refreshedToken || refreshedToken.trim() === "") {
+        // Check if refresh token still exists - if not, user was logged out
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
+          // Refresh token was cleared (likely by refreshAccessToken on 401/403)
+          // User is already being redirected, just return error
+          return createUnauthorizedResponse();
+        }
+        // Refresh failed but token still exists - might be temporary error
+        // Don't redirect, just return error and let user retry
         return createUnauthorizedResponse();
       }
       const newHeaders = mergeHeaders(options);
@@ -242,13 +285,19 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
 
     const newToken = await refreshAccessToken();
     if (!newToken) {
+      // Check if refresh token still exists - if not, user was logged out
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        // Refresh token was cleared (likely by refreshAccessToken on 401/403)
+        // User is already being redirected, just return error
+        return createUnauthorizedResponse();
+      }
+      // Refresh failed but token still exists - might be temporary error
+      // Don't redirect, just return error and let user retry
       return createUnauthorizedResponse();
     }
 
-    if (isAuthPage()) {
-      return createUnauthorizedResponse();
-    }
-
+    // Retry the original request with new token
     const newHeaders = mergeHeaders(options);
     newHeaders.set("Authorization", `Bearer ${newToken.trim()}`);
     return fetch(url, { ...options, headers: newHeaders });

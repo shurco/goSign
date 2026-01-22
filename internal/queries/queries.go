@@ -18,15 +18,17 @@ type Base struct {
 	TrustQueries
 	TemplateQueries
 	UserQueries
+	EmailTemplateQueries
 }
 
 // New is ...
 func New(pool *pgxpool.Pool) error {
 	DB = &Base{
-		SystemQueries:   SystemQueries{pool},
-		TrustQueries:    TrustQueries{pool},
-		TemplateQueries: TemplateQueries{pool},
-		UserQueries:     UserQueries{pool},
+		SystemQueries:        SystemQueries{pool},
+		TrustQueries:         TrustQueries{pool},
+		TemplateQueries:      TemplateQueries{pool},
+		UserQueries:          UserQueries{pool},
+		EmailTemplateQueries: EmailTemplateQueries{pool},
 	}
 
 	return nil

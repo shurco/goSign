@@ -45,11 +45,12 @@ interface Props {
   closeOnOutsideClick?: boolean;
   closeOnEscape?: boolean;
   validateOnMount?: boolean;
+  onSubmit?: (formData: Record<string, unknown>) => void | Promise<void>;
 }
 
 interface Emits {
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", formData: Record<string, unknown>): void;
+  (e: "submit", formData: Record<string, unknown>): void | Promise<void>;
   (e: "cancel" | "close"): void;
 }
 
@@ -61,7 +62,8 @@ const props = withDefaults(defineProps<Props>(), {
   closeButton: true,
   closeOnOutsideClick: true,
   closeOnEscape: true,
-  validateOnMount: false
+  validateOnMount: false,
+  onSubmit: undefined
 });
 
 const emit = defineEmits<Emits>();
@@ -85,10 +87,20 @@ watch(isOpen, (newValue) => {
   }
   // Initialize formData when modal opens
   if (newValue) {
-    // Ensure formData has expected structure based on common fields
+    // Initialize formData with default values if empty
+    // Individual fields will be initialized by v-model in the template
     if (!formData.value.name) {
       formData.value.name = "";
     }
+    if (!formData.value.email) {
+      formData.value.email = "";
+    }
+    if (!formData.value.role) {
+      formData.value.role = "member";
+    }
+  } else {
+    // Reset form when modal closes
+    resetForm();
   }
 });
 
@@ -113,11 +125,40 @@ async function handleSubmit(): Promise<void> {
   }
 
   isSubmitting.value = true;
+  
   try {
-    emit("submit", formData.value);
-  } finally {
+    // Try to call onSubmit prop first (if provided), then emit
+    let result: void | Promise<void> | undefined;
+    
+    if (props.onSubmit) {
+      result = props.onSubmit(formData.value);
+    } else {
+      // Emit submit event - parent handler should handle async operations
+      emit("submit", formData.value);
+    }
+    
+    // If we got a Promise, wait for it
+    if (result instanceof Promise) {
+      console.log('Waiting for Promise to resolve');
+      await result;
+      // After promise resolves, reset submitting state
+      isSubmitting.value = false;
+    } else {
+      // For non-async handlers, keep isSubmitting true
+      // Parent should close modal or reset it on success/error
+      // This allows the loading state to persist during async operations
+    }
+  } catch (error) {
+    // Re-throw error so parent component can handle it
+    console.error("FormModal submit error:", error);
     isSubmitting.value = false;
+    throw error;
   }
+}
+
+// Expose method to reset submitting state (for parent components)
+function resetSubmitting(): void {
+  isSubmitting.value = false;
 }
 
 function validateForm(): void {
@@ -157,6 +198,7 @@ defineExpose({
   clearAllErrors,
   resetForm,
   validateForm,
-  isValid: () => isValid.value
+  isValid: () => isValid.value,
+  resetSubmitting
 });
 </script>

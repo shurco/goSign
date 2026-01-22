@@ -36,11 +36,63 @@ type WebhookSettings struct {
 	Timeout    int  `json:"timeout"` // in seconds
 }
 
-// BrandingSettings branding configuration
+// BrandingSettings extended configuration
 type BrandingSettings struct {
-	LogoURL      string `json:"logo_url,omitempty"`
-	PrimaryColor string `json:"primary_color,omitempty"`
-	CompanyName  string `json:"company_name,omitempty"`
+	// Basic
+	LogoURL         string `json:"logo_url,omitempty"`
+	FaviconURL      string `json:"favicon_url,omitempty"`
+	CompanyName     string `json:"company_name,omitempty"`
+	
+	// Colors
+	PrimaryColor    string `json:"primary_color,omitempty"`    // #4F46E5
+	SecondaryColor  string `json:"secondary_color,omitempty"`  // #6366F1
+	AccentColor     string `json:"accent_color,omitempty"`     // #10B981
+	BackgroundColor string `json:"background_color,omitempty"` // #FFFFFF
+	TextColor       string `json:"text_color,omitempty"`       // #111827
+	
+	// Typography
+	FontFamily      string `json:"font_family,omitempty"` // 'Inter', 'Roboto', etc.
+	FontURL         string `json:"font_url,omitempty"`    // Google Fonts URL
+	
+	// Signing Page
+	SigningPageTheme string `json:"signing_page_theme,omitempty"` // 'default', 'minimal', 'corporate'
+	ShowPoweredBy    bool   `json:"show_powered_by"`              // default: true
+	CustomCSS        string `json:"custom_css,omitempty"`         // Advanced customization
+	
+	// Email Templates
+	EmailHeaderURL  string `json:"email_header_url,omitempty"`
+	EmailFooterText string `json:"email_footer_text,omitempty"`
+	EmailTheme      string `json:"email_theme,omitempty"` // 'default', 'minimal', 'corporate'
+	
+	// Custom Domain
+	CustomDomain    string `json:"custom_domain,omitempty"`
+	
+	// Legal
+	TermsURL        string `json:"terms_url,omitempty"`
+	PrivacyURL      string `json:"privacy_url,omitempty"`
+}
+
+// BrandingAsset represents uploaded branding assets
+type BrandingAsset struct {
+	ID        string    `json:"id"`
+	AccountID string    `json:"account_id"`
+	Type      string    `json:"type"` // logo, favicon, email_header, watermark
+	FilePath  string    `json:"file_path"`
+	MimeType  string    `json:"mime_type"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// CustomDomain represents custom domain configuration
+type CustomDomain struct {
+	ID                string     `json:"id"`
+	AccountID         string     `json:"account_id"`
+	Domain            string     `json:"domain"`
+	Verified          bool       `json:"verified"`
+	VerificationToken string     `json:"verification_token"`
+	SSLEnabled        bool       `json:"ssl_enabled"`
+	CreatedAt         time.Time  `json:"created_at"`
+	VerifiedAt        *time.Time `json:"verified_at,omitempty"`
 }
 
 // AccountType represents the type of account
@@ -91,6 +143,11 @@ type OrganizationMember struct {
 	Role           OrganizationRole `json:"role"`
 	JoinedAt       time.Time       `json:"joined_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+	// Extended fields (not in DB, populated from joins)
+	Email      string `json:"email,omitempty"`
+	FirstName  string `json:"first_name,omitempty"`
+	LastName   string `json:"last_name,omitempty"`
+	UserName   string `json:"user_name,omitempty"`
 }
 
 // OrganizationInvitation represents an invitation to join an organization

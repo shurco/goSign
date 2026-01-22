@@ -133,6 +133,33 @@
                   Draw new area
                 </a>
               </li>
+              <hr v-if="editable && !defaultField" class="mt-0.5 pb-0.5" />
+              <li v-if="editable && !defaultField" @click.stop>
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="
+                    showConditionBuilder = true;
+                    closeDropdown();
+                  "
+                >
+                  <SvgIcon name="settings" width="18" height="18" />
+                  Conditional Logic
+                </a>
+              </li>
+              <li v-if="editable && !defaultField && ['number', 'text'].includes(field.type)" @click.stop>
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="
+                    showFormulaBuilder = true;
+                    closeDropdown();
+                  "
+                >
+                  <SvgIcon name="settings" width="18" height="18" />
+                  Formula
+                </a>
+              </li>
               <li
                 v-if="
                   field.areas?.length === 1 && ['date', 'signature', 'initials', 'text', 'cells'].includes(field.type)
@@ -208,6 +235,72 @@
         <button v-if="field.options" class="w-full pb-1 text-center text-sm" @click="addOption">+ Add option</button>
       </div>
     </div>
+
+    <!-- Condition Builder Modal -->
+    <Modal v-model="showConditionBuilder" size="lg">
+      <template #header>
+        <h3 class="text-lg font-semibold">{{ t('fields.conditions.title') }}</h3>
+      </template>
+      <template #default>
+        <ConditionBuilder
+          :field="field"
+          :available-fields="template.value.fields.filter((f: any) => f.id !== field.id)"
+          @update:conditions="(conditions) => {
+            field.condition_groups = conditions;
+            save();
+          }"
+        />
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <button
+            class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+            @click="showConditionBuilder = false"
+          >
+            {{ t('common.close') }}
+          </button>
+        </div>
+      </template>
+    </Modal>
+
+    <!-- Formula Builder Modal -->
+    <Modal v-model="showFormulaBuilder" size="lg">
+      <template #header>
+        <h3 class="text-lg font-semibold">{{ t('fields.formula.title') }}</h3>
+      </template>
+      <template #default>
+        <FormulaBuilder
+          ref="formulaBuilderRef"
+          :field="field"
+          :available-fields="template.value.fields.filter((f: any) => f.id !== field.id && ['number', 'text'].includes(f.type))"
+        />
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <button
+            class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+            @click="showFormulaBuilder = false"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
+            @click="
+              if (formulaBuilderRef?.getFormula) {
+                field.formula = formulaBuilderRef.getFormula();
+                if (field.formula && !field.calculationType) {
+                  field.calculationType = 'number';
+                }
+                save();
+                showFormulaBuilder = false;
+              }
+            "
+          >
+            {{ t('common.save') }}
+          </button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -216,8 +309,12 @@
 // managed by the parent component. Direct mutation is used for performance optimization.
 // Rule vue/no-mutating-props is disabled for this file in eslint.config.mjs
 import { computed, inject, nextTick, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import FieldType from "@/components/field/Type.vue";
+import ConditionBuilder from "@/components/field/ConditionBuilder.vue";
+import FormulaBuilder from "@/components/field/FormulaBuilder.vue";
+import Modal from "@/components/ui/Modal.vue";
 import { borderColors, fieldNames as fieldNamesConst, subNames } from "@/components/field/constants.ts";
 import { useDropdown } from "@/composables/ui";
 import { v4 } from "uuid";
@@ -246,6 +343,7 @@ const props = defineProps({
 
 const emit = defineEmits(["set-draw", "remove", "scroll-to"]);
 
+const { t } = useI18n();
 const template: any = inject("template");
 const save: any = inject("save");
 const selectedAreaRef: any = inject("selectedAreaRef");
@@ -253,7 +351,10 @@ const selectedAreaRef: any = inject("selectedAreaRef");
 const nameRef: any = ref(null);
 const optionsRef: any = ref(null);
 const dropdownRef = ref<HTMLElement | null>(null);
+const formulaBuilderRef = ref<any>(null);
 const isNameFocus = ref(false);
+const showConditionBuilder = ref(false);
+const showFormulaBuilder = ref(false);
 
 const { isOpen: renderDropdown, close: closeDropdown } = useDropdown(dropdownRef);
 

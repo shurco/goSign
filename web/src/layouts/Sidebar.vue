@@ -22,20 +22,57 @@
       <!-- Navigation Menu -->
       <nav class="flex-1 overflow-hidden px-2 py-3">
         <ul class="space-y-0.5">
+          <!-- Organization Selector -->
+          <li v-if="!isCollapsed" class="mb-4">
+            <div class="px-2.5">
+              <label class="mb-1 block text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
+                {{ $t('navigation.organization') }}
+              </label>
+              <Select
+                :model-value="currentOrganizationId"
+                @update:model-value="handleOrganizationChange"
+                size="sm"
+                class="text-[13px]"
+              >
+                <option value="">{{ $t('navigation.noOrganization') }}</option>
+                <option
+                  v-for="org in organizations"
+                  :key="org.id"
+                  :value="org.id"
+                >
+                  {{ org.name }}
+                </option>
+              </Select>
+            </div>
+          </li>
+          <li v-else class="mb-4 flex justify-center">
+            <div
+              class="group relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              :title="currentOrganizationName || $t('navigation.noOrganization')"
+            >
+              <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
+              <span
+                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100 whitespace-nowrap"
+              >
+                {{ currentOrganizationName || $t('navigation.noOrganization') }}
+              </span>
+            </div>
+          </li>
+
           <li>
             <RouterLink
               to="/dashboard"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/dashboard') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? 'Dashboard' : ''"
+              :title="isCollapsed ? $t('navigation.dashboard') : ''"
             >
               <SvgIcon name="dashboard" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Dashboard</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.dashboard') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Dashboard
+                {{ $t('navigation.dashboard') }}
               </span>
             </RouterLink>
           </li>
@@ -45,15 +82,15 @@
               to="/submissions"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/submissions') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? 'Submissions' : ''"
+              :title="isCollapsed ? $t('navigation.submissions') : ''"
             >
               <SvgIcon name="submissions" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Submissions</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.submissions') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Submissions
+                {{ $t('navigation.submissions') }}
               </span>
             </RouterLink>
           </li>
@@ -63,15 +100,15 @@
               to="/templates"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/templates') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? 'Templates' : ''"
+              :title="isCollapsed ? $t('navigation.templates') : ''"
             >
               <SvgIcon name="templates" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Templates</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.templates') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Templates
+                {{ $t('navigation.templates') }}
               </span>
             </RouterLink>
           </li>
@@ -84,15 +121,15 @@
                 { 'bg-gray-100 text-gray-900': isActive('/organizations') },
                 isCollapsed ? 'justify-center' : ''
               ]"
-              :title="isCollapsed ? 'Organizations' : ''"
+              :title="isCollapsed ? $t('navigation.organizations') : ''"
             >
               <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Organizations</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.organizations') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Organizations
+                {{ $t('navigation.organizations') }}
               </span>
             </RouterLink>
           </li>
@@ -102,15 +139,15 @@
               to="/uploads"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/uploads') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? 'Uploads' : ''"
+              :title="isCollapsed ? $t('navigation.uploads') : ''"
             >
               <SvgIcon name="uploads" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Uploads</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.uploads') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Uploads
+                {{ $t('navigation.uploads') }}
               </span>
             </RouterLink>
           </li>
@@ -120,22 +157,22 @@
               v-show="!isCollapsed"
               class="mb-1.5 px-2.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase"
             >
-              System
+              {{ $t('navigation.system') }}
             </div>
             <div v-if="isCollapsed" class="mb-1.5 border-t border-gray-200"></div>
             <RouterLink
               to="/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/settings') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? 'Settings' : ''"
+              :title="isCollapsed ? $t('navigation.settings') : ''"
             >
               <SvgIcon name="settings" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">Settings</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.settings') }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                Settings
+                {{ $t('navigation.settings') }}
               </span>
             </RouterLink>
           </li>
@@ -146,7 +183,7 @@
       <div class="flex justify-center border-t border-gray-100 py-2">
         <button
           class="group relative flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-          :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          :title="isCollapsed ? $t('navigation.expandSidebar') : $t('navigation.collapseSidebar')"
           @click="toggleSidebar"
         >
           <SvgIcon
@@ -158,7 +195,7 @@
             v-if="isCollapsed"
             class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
           >
-            Expand
+            {{ $t('navigation.expand') }}
           </span>
         </button>
       </div>
@@ -181,11 +218,11 @@
             <p class="truncate text-[13px] font-medium text-gray-900">
               {{
                 userData?.first_name || userData?.last_name
-                  ? `${userData.first_name || ""} ${userData.last_name || ""}`.trim() || "User"
-                  : "User"
+                  ? `${userData.first_name || ""} ${userData.last_name || ""}`.trim() || $t('navigation.user')
+                  : $t('navigation.user')
               }}
             </p>
-            <p class="truncate text-[11px] text-gray-500">{{ userData?.email || "Loading..." }}</p>
+            <p class="truncate text-[11px] text-gray-500">{{ userData?.email || $t('navigation.loading') }}</p>
           </div>
         </div>
         <div v-else class="flex justify-center">
@@ -207,15 +244,15 @@
             @click="handleLogout"
             class="group relative flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1.5 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50"
             :class="isCollapsed ? 'h-8 w-8 p-0' : 'w-full'"
-            :title="isCollapsed ? 'Exit' : ''"
+            :title="isCollapsed ? $t('navigation.exit') : ''"
           >
             <SvgIcon name="exit" class="h-3.5 w-3.5 flex-shrink-0" />
-            <span v-show="!isCollapsed">Exit</span>
+            <span v-show="!isCollapsed">{{ $t('navigation.exit') }}</span>
             <span
               v-if="isCollapsed"
               class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
             >
-              Exit
+              {{ $t('navigation.exit') }}
             </span>
           </button>
         </div>
@@ -230,11 +267,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { logout } from "@/utils/auth";
-import { apiGet } from "@/services/api";
+import { apiGet, apiPost } from "@/services/api";
 import SvgIcon from "@/components/SvgIcon.vue";
+import Select from "@/components/ui/Select.vue";
+import { Organization } from "@/models";
+
+const { t } = useI18n();
 
 const route = useRoute();
 const isCollapsed = ref(false);
@@ -250,6 +292,89 @@ interface UserData {
 
 const userData = ref<UserData | null>(null);
 
+// Organizations data
+const organizations = ref<Organization[]>([]);
+const currentOrganizationId = ref<string>("");
+const currentOrganizationName = ref<string>("");
+
+// Load organizations
+const loadOrganizations = async () => {
+  try {
+    const response = await apiGet("/api/v1/organizations");
+    let data = response.data;
+    if (data && typeof data === 'object' && 'organizations' in data) {
+      data = data.organizations;
+    }
+    organizations.value = Array.isArray(data) ? data : [];
+    
+    // Update current organization from localStorage
+    updateCurrentOrganization();
+  } catch (error) {
+    console.error("Failed to load organizations:", error);
+    organizations.value = [];
+  }
+};
+
+// Update current organization from localStorage
+const updateCurrentOrganization = () => {
+  const storedOrg = localStorage.getItem("current_organization");
+  if (storedOrg) {
+    try {
+      const org = JSON.parse(storedOrg);
+      currentOrganizationId.value = org.id || "";
+      currentOrganizationName.value = org.name || "";
+    } catch (e) {
+      console.error("Failed to parse current organization:", e);
+      currentOrganizationId.value = "";
+      currentOrganizationName.value = "";
+    }
+  } else {
+    currentOrganizationId.value = "";
+    currentOrganizationName.value = "";
+  }
+};
+
+// Handle organization change
+const handleOrganizationChange = async (orgId: string) => {
+  if (orgId === "") {
+    // Exit organization
+    try {
+      const response = await apiPost("/api/v1/organizations/switch");
+      localStorage.setItem("access_token", response.data.access_token);
+      localStorage.setItem("refresh_token", response.data.refresh_token);
+      localStorage.removeItem("current_organization");
+      currentOrganizationId.value = "";
+      currentOrganizationName.value = "";
+      // Reload page to refresh data
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to exit organization:", error);
+    }
+  } else {
+    // Switch to organization
+    const org = organizations.value.find((o) => o.id === orgId);
+    if (org) {
+      try {
+        const response = await apiPost(`/api/v1/organizations/${orgId}/switch`);
+        localStorage.setItem("access_token", response.data.access_token);
+        localStorage.setItem("refresh_token", response.data.refresh_token);
+        const orgData = {
+          id: org.id,
+          name: org.name,
+          role: response.data.role
+        };
+        localStorage.setItem("current_organization", JSON.stringify(orgData));
+        currentOrganizationId.value = orgId;
+        currentOrganizationName.value = org.name;
+        // Reload page to refresh data
+        window.location.reload();
+      } catch (error) {
+        console.error("Failed to switch organization:", error);
+      }
+    }
+  }
+};
+
 // Load current user data
 const loadUserData = async () => {
   try {
@@ -262,8 +387,18 @@ const loadUserData = async () => {
   }
 };
 
+// Watch for localStorage changes
+const watchStorage = () => {
+  window.addEventListener("storage", updateCurrentOrganization);
+  // Also check periodically for same-tab updates
+  setInterval(updateCurrentOrganization, 1000);
+};
+
 onMounted(() => {
   loadUserData();
+  loadOrganizations();
+  updateCurrentOrganization();
+  watchStorage();
 });
 
 /**

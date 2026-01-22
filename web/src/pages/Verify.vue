@@ -8,7 +8,6 @@
         :class="{ 'bg-[#efeae6]0': status }"
         @dragover="dragover"
         @drop="drop"
-        @change="onChange"
       >
         <div class="absolute top-0 right-0 bottom-0 left-0 flex items-center justify-center">
           <div class="flex flex-col items-center">
@@ -32,6 +31,7 @@
             class="hidden"
             type="file"
             accept="application/pdf"
+            @change="onChange"
           />
         </div>
       </label>
@@ -155,12 +155,21 @@ const onChange = async () => {
       body: formData
     });
 
-    verifyInfo.value = await response.json();
     if (!response.ok) {
-      throw new Error("File upload failed");
+      throw new Error(`File upload failed: ${response.statusText}`);
     }
+
+    verifyInfo.value = await response.json();
   } catch (error) {
     console.error("Error uploading file:", error);
+    verifyInfo.value = {
+      success: false,
+      data: {
+        verify: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+        signers: []
+      }
+    };
   } finally {
     status.value = false;
   }
@@ -172,7 +181,10 @@ const dragover = (event: any) => {
 
 const drop = (event: any) => {
   event.preventDefault();
-  instance.refs.file.files = event.dataTransfer.files;
-  onChange();
+  event.stopPropagation();
+  if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    instance.refs.file.files = event.dataTransfer.files;
+    onChange();
+  }
 };
 </script>

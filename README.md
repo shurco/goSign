@@ -32,7 +32,7 @@ goSign is a complete document signing solution that combines powerful backend se
 - 📦 **Bulk Operations**: CSV/XLSX import for mass submissions
 
 ### Advanced Features
-- 📁 **Template System**: Reusable document templates with 14 field types
+- 📁 **Template System**: Reusable document templates with 14 field types (PDF file import supported)
 - 🗄️ **Flexible Storage**: Local, S3, GCS, or Azure Blob storage
 - ⚡ **Rate Limiting**: Configurable API rate limits
 - 🔍 **Event Logging**: Comprehensive audit trail
@@ -58,8 +58,7 @@ goSign is a complete document signing solution that combines powerful backend se
 - **Storage**: Local, S3, GCS, Azure
 - **PDF Processing**: 
   - digitorus/pdf - Digital signing
-  - pdfcpu - Document manipulation
-  - signintech/gopdf - PDF generation
+  - pdfcpu - Document manipulation and generation
 - **Task Scheduling**: robfig/cron v3
 - **Logging**: zerolog
 - **API Docs**: Swagger/OpenAPI

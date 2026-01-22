@@ -1,6 +1,7 @@
 package api
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,12 +16,14 @@ import (
 // MemberHandler handles organization member-related requests
 type MemberHandler struct {
 	organizationQueries *queries.OrganizationQueries
+	userQueries         *queries.UserQueries
 }
 
 // NewMemberHandler creates a new member handler
-func NewMemberHandler(organizationQueries *queries.OrganizationQueries) *MemberHandler {
+func NewMemberHandler(organizationQueries *queries.OrganizationQueries, userQueries *queries.UserQueries) *MemberHandler {
 	return &MemberHandler{
 		organizationQueries: organizationQueries,
+		userQueries:         userQueries,
 	}
 }
 
@@ -111,8 +114,15 @@ func (h *MemberHandler) UpdateMemberRole(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check if user has permission to update roles
-	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check user membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
@@ -200,8 +210,15 @@ func (h *MemberHandler) RemoveOrganizationMember(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check if user has permission to remove members
-	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check user membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
@@ -340,8 +357,15 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check if user has permission to invite members
-	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check user membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
@@ -368,9 +392,19 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusForbidden, "Insufficient permissions to invite with this role", nil)
 	}
 
-	// TODO: Check if user is already a member (requires user lookup by email)
-	// TODO: Check if email is already invited
-	// For now, we'll allow invitations even if user exists - they can accept or decline
+	// Check if email is already invited (pending invitation)
+	existingInvitations, err := h.organizationQueries.GetOrganizationInvitations(c.Context(), orgID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to check existing invitations")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check existing invitations", nil)
+	}
+
+	// Check if there's already a pending invitation for this email
+	for _, inv := range existingInvitations {
+		if inv.Email == email && inv.AcceptedAt == nil {
+			return webutil.Response(c, fiber.StatusConflict, "An invitation has already been sent to this email", nil)
+		}
+	}
 
 	// Create invitation
 	invitation := &models.OrganizationInvitation{
@@ -380,11 +414,24 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 		Role:           role,
 		Token:          uuid.New().String(), // In production, use crypto/rand
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		InvitedByID:    userIDStr,
+		InvitedByID:    accountID, // Use account_id, not user_id
+		CreatedAt:      time.Now(),
 	}
 
 	if err := h.organizationQueries.CreateOrganizationInvitation(c.Context(), invitation); err != nil {
-		log.Error().Err(err).Msg("Failed to create invitation")
+		log.Error().
+			Err(err).
+			Str("organization_id", orgID).
+			Str("email", email).
+			Str("role", string(role)).
+			Msg("Failed to create invitation")
+		
+		// Check for duplicate key error (PostgreSQL unique constraint violation)
+		errStr := err.Error()
+		if strings.Contains(errStr, "duplicate key") || strings.Contains(errStr, "unique constraint") || strings.Contains(errStr, "unique_org_email") {
+			return webutil.Response(c, fiber.StatusConflict, "An invitation has already been sent to this email", nil)
+		}
+		
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create invitation", nil)
 	}
 
@@ -397,14 +444,14 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 		Str("invitation_token", invitation.Token).
 		Msg("Organization invitation created - email sending not yet implemented")
 
-	// For now, just return success with token (for testing)
-
+	// Return success response
 	return webutil.Response(c, fiber.StatusCreated, "Invitation sent successfully", map[string]interface{}{
 		"invitation": map[string]interface{}{
 			"id":         invitation.ID,
 			"email":      invitation.Email,
-			"role":       invitation.Role,
-			"expires_at": invitation.ExpiresAt,
+			"role":       string(invitation.Role),
+			"expires_at": invitation.ExpiresAt.Format(time.RFC3339),
+			"created_at": invitation.CreatedAt.Format(time.RFC3339),
 		},
 	})
 }

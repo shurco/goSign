@@ -220,9 +220,13 @@ func (q *OrganizationQueries) GetOrganizationMember(ctx context.Context, orgID, 
 func (q *OrganizationQueries) GetOrganizationMembers(ctx context.Context, orgID string) ([]models.OrganizationMember, error) {
 	query := `
 		SELECT om.id, om.organization_id, om.user_id, om.role, om.joined_at, om.updated_at,
-		       a.name as user_name, a.timezone, a.locale
+		       a.name as user_name, a.timezone, a.locale,
+		       COALESCE(u.email, '') as user_email,
+		       COALESCE(u.first_name, '') as first_name,
+		       COALESCE(u.last_name, '') as last_name
 		FROM "organization_member" om
 		INNER JOIN "account" a ON om.user_id = a.id
+		LEFT JOIN "user" u ON u.account_id = a.id
 		WHERE om.organization_id = $1
 		ORDER BY om.joined_at ASC
 	`
@@ -236,7 +240,7 @@ func (q *OrganizationQueries) GetOrganizationMembers(ctx context.Context, orgID 
 	var members []models.OrganizationMember
 	for rows.Next() {
 		var member models.OrganizationMember
-		var userName, timezone, locale string
+		var userName, timezone, locale, userEmail, firstName, lastName string
 		err := rows.Scan(
 			&member.ID,
 			&member.OrganizationID,
@@ -247,10 +251,18 @@ func (q *OrganizationQueries) GetOrganizationMembers(ctx context.Context, orgID 
 			&userName,
 			&timezone,
 			&locale,
+			&userEmail,
+			&firstName,
+			&lastName,
 		)
 		if err != nil {
 			return nil, err
 		}
+		// Populate extended fields
+		member.Email = userEmail
+		member.FirstName = firstName
+		member.LastName = lastName
+		member.UserName = userName
 		members = append(members, member)
 	}
 

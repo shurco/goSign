@@ -1,14 +1,20 @@
 <template>
   <div class="dashboard-page">
-    <h1 class="mb-6 text-3xl font-bold">Dashboard</h1>
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">{{ $t('dashboard.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t('dashboard.description') }}</p>
+      </div>
+    </div>
 
     <!-- Stats Grid -->
     <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Stats>
         <Stat
-          title="Total Submissions"
+          :title="$t('dashboard.totalSubmissions')"
           :value="stats.total_submissions"
-          :description="`${stats.pending_submissions} pending`"
+          :description="`${stats.pending_submissions} ${$t('dashboard.pendingSubmissions').toLowerCase()}`"
           variant="primary"
         >
           <template #figure>
@@ -19,9 +25,9 @@
 
       <Stats>
         <Stat
-          title="Completed"
+          :title="$t('dashboard.completedSubmissions')"
           :value="stats.completed_submissions"
-          :description="`${completionRate}% completion rate`"
+          :description="`${completionRate}% ${$t('common.complete')}`"
           variant="success"
         >
           <template #figure>
@@ -32,9 +38,9 @@
 
       <Stats>
         <Stat
-          title="Templates"
+          :title="$t('dashboard.totalTemplates')"
           :value="stats.total_templates"
-          :description="`${stats.active_templates} active`"
+          :description="`${stats.active_templates || 0} ${$t('dashboard.active')}`"
           variant="primary"
         >
           <template #figure>
@@ -44,7 +50,7 @@
       </Stats>
 
       <Stats>
-        <Stat title="Submitters" :value="stats.total_submitters" description="This month" variant="info">
+        <Stat :title="$t('dashboard.submitters')" :value="stats.total_submitters" :description="$t('dashboard.thisMonth')" variant="info">
           <template #figure>
             <SvgIcon name="users" class="inline-block h-8 w-8 text-[var(--color-info)]" />
           </template>
@@ -57,7 +63,7 @@
       <!-- Recent Submissions -->
       <Card>
         <template #header>
-          <h2 class="text-lg font-semibold">Recent Submissions</h2>
+          <h2 class="text-lg font-semibold">{{ $t('dashboard.recentSubmissions') }}</h2>
         </template>
         <ResourceTable
           :data="recentSubmissions"
@@ -66,7 +72,7 @@
           :has-actions="false"
           :searchable="false"
           :show-filters="false"
-          empty-message="No submissions yet"
+          :empty-message="$t('submissions.title')"
           @row-click="viewSubmission"
         >
           <template #cell-status="{ value }">
@@ -77,7 +83,7 @@
         </ResourceTable>
         <template #footer>
           <div class="flex justify-end">
-            <Button variant="ghost" size="sm" @click="$router.push('/submissions')">View All →</Button>
+            <Button variant="ghost" size="sm" @click="$router.push('/submissions')">{{ $t('common.viewAll') }} →</Button>
           </div>
         </template>
       </Card>
@@ -85,7 +91,7 @@
       <!-- Activity Timeline -->
       <Card>
         <template #header>
-          <h2 class="text-lg font-semibold">Recent Activity</h2>
+          <h2 class="text-lg font-semibold">{{ $t('dashboard.recentActivity') }}</h2>
         </template>
         <div class="space-y-4">
           <div v-for="event in recentEvents" :key="event.id" class="flex gap-4">
@@ -99,7 +105,7 @@
               <p class="text-sm text-gray-500">{{ formatDate(event.created_at) }}</p>
             </div>
           </div>
-          <div v-if="recentEvents.length === 0" class="py-8 text-center text-gray-500">No recent activity</div>
+          <div v-if="recentEvents.length === 0" class="py-8 text-center text-gray-500">{{ $t('dashboard.noActivity') }}</div>
         </div>
       </Card>
     </div>
@@ -109,6 +115,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import Stats from "@/components/ui/Stats.vue";
 import Stat from "@/components/ui/Stat.vue";
@@ -146,16 +153,18 @@ const stats = ref<Stats>({
 const recentSubmissions = ref<Submission[]>([]);
 const recentEvents = ref<Event[]>([]);
 
-const submissionColumns = [
-  { key: "title", label: "Title", sortable: true },
-  { key: "status", label: "Status", sortable: true },
+const { t } = useI18n();
+
+const submissionColumns = computed(() => [
+  { key: "title", label: t('submissions.titleField'), sortable: true },
+  { key: "status", label: t('submissions.status'), sortable: true },
   {
     key: "created_at",
-    label: "Created",
+    label: t('submissions.created'),
     sortable: true,
     formatter: (value: unknown): string => new Date(String(value)).toLocaleDateString()
   }
-];
+]);
 
 const completionRate = computed(() => {
   if (stats.value.total_submissions === 0) {
@@ -278,16 +287,16 @@ function formatDate(dateString: string): string {
   const days = Math.floor(diff / 86400000);
 
   if (minutes < 1) {
-    return "Just now";
+    return t('time.justNow');
   }
   if (minutes < 60) {
-    return `${minutes}m ago`;
+    return t('time.minutesAgo', { minutes });
   }
   if (hours < 24) {
-    return `${hours}h ago`;
+    return t('time.hoursAgo', { hours });
   }
   if (days < 7) {
-    return `${days}d ago`;
+    return t('time.daysAgo', { days });
   }
 
   return date.toLocaleDateString();

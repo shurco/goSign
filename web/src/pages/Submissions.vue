@@ -1,13 +1,15 @@
 <template>
   <div class="submissions-page">
+    <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-3xl font-bold">Submissions</h1>
-      <button
-        class="rounded-[--radius-btn] bg-[--color-primary] px-4 py-2 text-white transition-colors hover:opacity-90 focus:ring-2 focus:ring-[--color-primary] focus:outline-none"
-        @click="openCreateModal"
-      >
-        + New Submission
-      </button>
+      <div>
+        <h1 class="text-3xl font-bold">{{ $t('submissions.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t('submissions.description') }}</p>
+      </div>
+      <Button variant="primary" @click="openCreateModal">
+        <SvgIcon name="plus" class="mr-2 h-5 w-5" />
+        {{ $t('submissions.newSubmission') }}
+      </Button>
     </div>
 
     <!-- Submissions Table -->
@@ -18,7 +20,7 @@
       searchable
       selectable
       :search-keys="['title', 'template.name']"
-      search-placeholder="Search submissions..."
+      :search-placeholder="$t('submissions.searchSubmissions')"
       @select="(items: unknown[]) => handleSelect(items as Submission[])"
       @edit="(item: unknown) => handleEdit(item as Submission)"
       @delete="(item: unknown) => handleDelete(item as Submission)"
@@ -53,15 +55,15 @@
             class="btn btn-primary btn-sm"
             @click="sendSubmission(item as Submission)"
           >
-            Send
+            {{ $t('submissions.send') }}
           </button>
-          <button class="btn btn-ghost btn-sm" @click="viewSubmission(item as Submission)">View</button>
+          <button class="btn btn-ghost btn-sm" @click="viewSubmission(item as Submission)">{{ $t('submissions.view') }}</button>
           <button
             v-if="['pending', 'in_progress'].includes((item as Submission).status)"
             class="btn btn-warning btn-sm"
             @click="sendReminder(item as Submission)"
           >
-            Remind
+            {{ $t('submissions.remind') }}
           </button>
         </div>
       </template>
@@ -73,14 +75,14 @@
         <div class="space-y-4">
           <div class="form-control">
             <label class="label">
-              <span class="label-text">Title</span>
+              <span class="label-text">{{ $t('submissions.titleField') }}</span>
             </label>
             <input
               v-model="formData.title"
               type="text"
               class="input-bordered input"
               :class="{ 'input-error': errors.title }"
-              placeholder="Contract for John Doe"
+              :placeholder="$t('submissions.placeholder')"
             />
             <label v-if="errors.title" class="label">
               <span class="label-text-alt text-error">{{ errors.title }}</span>
@@ -89,18 +91,17 @@
 
           <div class="form-control">
             <label class="label">
-              <span class="label-text">Template</span>
+              <span class="label-text">{{ $t('submissions.template') }}</span>
             </label>
-            <select
+            <Select
               v-model="formData.template_id"
-              class="select-bordered select"
-              :class="{ 'select-error': errors.template_id }"
+              :error="!!errors.template_id"
             >
-              <option value="">Select a template</option>
+              <option value="">{{ $t('submissions.selectTemplate') }}</option>
               <option v-for="template in templates" :key="template.id" :value="template.id">
-                {{ template.name }}
+                {{ getTemplateDisplayName(template) }}
               </option>
-            </select>
+            </Select>
             <label v-if="errors.template_id" class="label">
               <span class="label-text-alt text-error">{{ errors.template_id }}</span>
             </label>
@@ -137,9 +138,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import FormModal from "@/components/common/FormModal.vue";
+import Button from "@/components/ui/Button.vue";
+import Select from "@/components/ui/Select.vue";
+import SvgIcon from "@/components/SvgIcon.vue";
 import { fetchWithAuth } from "@/utils/auth";
+import { apiGet } from "@/services/api";
 
 interface Submission {
   id: string;
@@ -155,12 +161,15 @@ interface Submission {
 interface Template {
   id: string;
   name: string;
+  folder_id?: string;
 }
 
 const router = useRouter();
+const { t } = useI18n();
 
 const submissions = ref<Submission[]>([]);
 const templates = ref<Template[]>([]);
+const folders = ref<{ id: string; name: string }[]>([]);
 const isLoading = ref(false);
 const showModal = ref(false);
 const editingSubmission = ref<Submission | null>(null);
@@ -169,25 +178,25 @@ const selectedSubmissions = ref<Submission[]>([]);
 let loadSubmissionsPromise: Promise<void> | null = null;
 let loadTemplatesPromise: Promise<void> | null = null;
 
-const columns = [
-  { key: "title", label: "Title", sortable: true },
-  { key: "template.name", label: "Template", sortable: true },
-  { key: "status", label: "Status", sortable: true },
-  { key: "progress", label: "Progress" },
+const columns = computed(() => [
+  { key: "title", label: t('submissions.titleField'), sortable: true },
+  { key: "template.name", label: t('submissions.template'), sortable: true },
+  { key: "status", label: t('submissions.status'), sortable: true },
+  { key: "progress", label: t('signing.progress') },
   {
     key: "created_at",
-    label: "Created",
+    label: t('submissions.created'),
     sortable: true,
     formatter: (value: unknown): string => new Date(String(value)).toLocaleDateString()
   }
-];
+]);
 
 const modalTitle = computed(() => {
-  return editingSubmission.value ? "Edit Submission" : "Create Submission";
+  return editingSubmission.value ? t('submissions.edit') : t('submissions.create');
 });
 
 onMounted(async () => {
-  await Promise.all([loadSubmissions(), loadTemplates()]);
+  await Promise.all([loadSubmissions(), loadTemplates(), loadFolders()]);
 });
 
 async function loadSubmissions(): Promise<void> {
@@ -230,19 +239,65 @@ async function loadTemplates(): Promise<void> {
 
   loadTemplatesPromise = (async () => {
     try {
-      const response = await fetchWithAuth("/api/v1/templates");
-      if (response.ok) {
-        const data = await response.json();
-        templates.value = data.data || [];
+      // Use search endpoint which properly filters by organization
+      // This will return all templates from root and folders in current organization
+      const response = await apiGet("/api/v1/templates/search?limit=1000");
+      
+      if (response && response.data) {
+        // Search endpoint returns: { success: true, message: "templates", data: { templates: [...], total: ... } }
+        const result = response.data;
+        if (result.templates && Array.isArray(result.templates)) {
+          templates.value = result.templates;
+        } else if (Array.isArray(result)) {
+          // Fallback if API returns array directly
+          templates.value = result;
+        } else {
+          templates.value = [];
+        }
+      } else {
+        templates.value = [];
       }
     } catch (error) {
       console.error("Failed to load templates:", error);
+      templates.value = [];
     } finally {
       loadTemplatesPromise = null;
     }
   })();
 
   return loadTemplatesPromise;
+}
+
+async function loadFolders(): Promise<void> {
+  try {
+    const response = await apiGet("/api/v1/templates/folders");
+    if (response && response.data) {
+      const result = response.data;
+      if (Array.isArray(result)) {
+        folders.value = result.map((f: any) => ({ id: f.id, name: f.name }));
+      } else if (result.folders && Array.isArray(result.folders)) {
+        folders.value = result.folders.map((f: any) => ({ id: f.id, name: f.name }));
+      } else {
+        folders.value = [];
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load folders:", error);
+    folders.value = [];
+  }
+}
+
+function getTemplateDisplayName(template: Template): string {
+  if (!template.folder_id) {
+    return template.name;
+  }
+  
+  const folder = folders.value.find((f) => f.id === template.folder_id);
+  if (folder) {
+    return `${folder.name} / ${template.name}`;
+  }
+  
+  return template.name;
 }
 
 function openCreateModal(): void {

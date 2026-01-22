@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -131,21 +132,51 @@ func (q *TemplateQueries) Template(ctx context.Context, id string) (*models.Temp
 func (q *TemplateQueries) CreateTemplate(ctx context.Context, template *models.Template) error {
 	query := `
 		INSERT INTO "template" (
-			"id", "slug", "name", "description", "folder_id", "submitters", "fields", "schema",
+			"id", "slug", "name", "source", "folder_id", "organization_id", "submitters", "fields", "schema",
 			"category", "tags", "is_favorite", "preview_image_id", "settings",
 			"created_at", "updated_at"
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`
+
+	// Handle UUID fields - convert empty strings to nil
+	var folderID interface{}
+	if template.FolderID != "" {
+		folderID = template.FolderID
+	} else {
+		folderID = nil
+	}
+
+	var orgID interface{}
+	if template.OrganizationID != "" {
+		orgID = template.OrganizationID
+	} else {
+		orgID = nil
+	}
+
+	// Ensure nil slices are converted to empty arrays to avoid NULL in database
+	submitters := template.Submitters
+	if submitters == nil {
+		submitters = []models.Submitter{}
+	}
+	fields := template.Fields
+	if fields == nil {
+		fields = []models.Field{}
+	}
+	schema := template.Schema
+	if schema == nil {
+		schema = []models.Schema{}
+	}
 
 	_, err := q.Exec(ctx, query,
 		template.ID,
 		template.Slug,
 		template.Name,
-		template.Description,
-		template.FolderID,
-		template.Submitters,
-		template.Fields,
-		template.Schema,
+		template.Source,
+		folderID,
+		orgID,
+		submitters,
+		fields,
+		schema,
 		template.Category,
 		template.Tags,
 		template.IsFavorite,
@@ -160,6 +191,107 @@ func (q *TemplateQueries) CreateTemplate(ctx context.Context, template *models.T
 		return err
 	}
 
+	return nil
+}
+
+// CreateStorageBlob creates a new storage_blob record
+func (q *TemplateQueries) CreateStorageBlob(ctx context.Context, blobID, filename, contentType string, byteSize int64, metadata map[string]any) error {
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	query := `
+		INSERT INTO "storage_blob" ("id", "filename", "content_type", "metadata", "byte_size")
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err = q.Exec(ctx, query, blobID, filename, contentType, metadataJSON, byteSize)
+	if err != nil {
+		logging.Log.Err(err)
+		return err
+	}
+	return nil
+}
+
+// CreateStorageAttachment creates a new storage_attachment record
+func (q *TemplateQueries) CreateStorageAttachment(ctx context.Context, attachmentID, blobID, recordType, recordID, name, serviceName string) error {
+	query := `
+		INSERT INTO "storage_attachment" ("id", "blob_id", "record_type", "record_id", "name", "service_name", "created_at")
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+	`
+	_, err := q.Exec(ctx, query, attachmentID, blobID, recordType, recordID, name, serviceName)
+	if err != nil {
+		logging.Log.Err(err)
+		return err
+	}
+	return nil
+}
+
+// UpdateTemplateSchema updates the schema field of a template
+func (q *TemplateQueries) UpdateTemplateSchema(ctx context.Context, templateID string, schema []models.Schema) error {
+	schemaJSON, err := json.Marshal(schema)
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema: %w", err)
+	}
+
+	query := `
+		UPDATE "template"
+		SET "schema" = $1, "updated_at" = NOW()
+		WHERE "id" = $2
+	`
+	_, err = q.Exec(ctx, query, schemaJSON, templateID)
+	if err != nil {
+		logging.Log.Err(err)
+		return err
+	}
+	return nil
+}
+
+// UpdateTemplate updates template fields (name, category, etc.).
+// It builds a dynamic UPDATE query based on the provided fields in the template struct.
+// If category is an empty string, it sets the category to NULL in the database.
+// The updated_at field is always updated to the current timestamp.
+func (q *TemplateQueries) UpdateTemplate(ctx context.Context, templateID string, template *models.Template) error {
+	// Build dynamic UPDATE query based on provided fields
+	var setParts []string
+	var args []interface{}
+	argIndex := 1
+
+	if template.Name != "" {
+		setParts = append(setParts, fmt.Sprintf(`"name" = $%d`, argIndex))
+		args = append(args, template.Name)
+		argIndex++
+	}
+
+	// Handle category - if empty string, set to NULL, otherwise set the value
+	if template.Category != "" {
+		setParts = append(setParts, fmt.Sprintf(`"category" = $%d`, argIndex))
+		args = append(args, template.Category)
+		argIndex++
+	} else {
+		// Explicitly set to NULL if empty string
+		setParts = append(setParts, `"category" = NULL`)
+	}
+
+	// Always update updated_at
+	setParts = append(setParts, `"updated_at" = NOW()`)
+
+	if len(setParts) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE "template"
+		SET %s
+		WHERE "id" = $%d
+	`, strings.Join(setParts, ", "), argIndex)
+	args = append(args, templateID)
+
+	_, err := q.Exec(ctx, query, args...)
+	if err != nil {
+		logging.Log.Err(err)
+		return err
+	}
 	return nil
 }
 

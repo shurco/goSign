@@ -2,11 +2,11 @@
   <div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
     <div class="w-full max-w-md space-y-8">
       <div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">{{ $t('auth.signin') }}</h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          Or
+          {{ $t('common.or') }}
           <router-link to="/auth/signup" class="font-medium text-indigo-600 hover:text-indigo-500">
-            create a new account
+            {{ $t('auth.createAccount') }}
           </router-link>
         </p>
       </div>
@@ -28,7 +28,7 @@
               required
               :disabled="requires2FA"
               class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:opacity-50 sm:text-sm"
-              placeholder="Email address"
+              :placeholder="$t('auth.email')"
             />
           </div>
 
@@ -68,7 +68,7 @@
         <div class="flex items-center justify-between">
           <div class="text-sm">
             <router-link to="/auth/password/forgot" class="font-medium text-indigo-600 hover:text-indigo-500">
-              Forgot your password?
+              {{ $t('auth.forgotPassword') }}
             </router-link>
           </div>
         </div>
@@ -79,8 +79,8 @@
             :disabled="isLoading"
             class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
           >
-            <span v-if="isLoading">Signing in...</span>
-            <span v-else>Sign in</span>
+            <span v-if="isLoading">{{ $t('common.loading') }}</span>
+            <span v-else>{{ $t('auth.signin') }}</span>
           </button>
         </div>
 

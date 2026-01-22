@@ -9,6 +9,7 @@
     />
 
     <FieldSubmitter
+      v-if="selectedSubmitter"
       :model-value="selectedSubmitter.id"
       class="w-full rounded-lg bg-[#faf7f5]"
       :submitters="submitters"
@@ -114,7 +115,8 @@ const props = defineProps({
   },
   selectedSubmitter: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   },
   selectedField: {
     type: Object,
@@ -145,7 +147,12 @@ const fieldsRef = ref();
 
 const fieldNames = computed(() => fieldNamesConst);
 const fieldIcons = computed(() => fieldIconsConst);
-const submitterFields = computed(() => props.fields.filter((f: any) => f.submitter_id === props.selectedSubmitter.id));
+const submitterFields = computed(() => {
+  if (!props.selectedSubmitter) {
+    return [];
+  }
+  return props.fields.filter((f: any) => f.submitter_id === props.selectedSubmitter.id);
+});
 
 onMounted(() => {
   fieldsRef.value = [];
@@ -208,7 +215,7 @@ function addField(type: any): void {
     id: v4(),
     required: type !== "checkbox",
     areas: [],
-    submitter_id: props.selectedSubmitter.id,
+    submitter_id: props.selectedSubmitter?.id || (props.submitters.length > 0 ? props.submitters[0].id : ""),
     type
   };
 

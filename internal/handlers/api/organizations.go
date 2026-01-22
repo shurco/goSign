@@ -18,12 +18,14 @@ import (
 // OrganizationHandler handles organization-related requests
 type OrganizationHandler struct {
 	organizationQueries *queries.OrganizationQueries
+	userQueries         *queries.UserQueries
 }
 
 // NewOrganizationHandler creates a new organization handler
-func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries) *OrganizationHandler {
+func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries, userQueries *queries.UserQueries) *OrganizationHandler {
 	return &OrganizationHandler{
 		organizationQueries: organizationQueries,
+		userQueries:         userQueries,
 	}
 }
 
@@ -44,6 +46,13 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
+	}
+
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
 	}
 
 	// Parse request body
@@ -71,7 +80,7 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Description: req.Description,
-		OwnerID:     userIDStr,
+		OwnerID:     accountID, // Use account_id instead of user_id
 	}
 
 	if err := h.organizationQueries.CreateOrganization(c.Context(), org); err != nil {
@@ -83,7 +92,7 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 	ownerMember := &models.OrganizationMember{
 		ID:             uuid.New().String(),
 		OrganizationID: org.ID,
-		UserID:         userIDStr,
+		UserID:         accountID, // Use account_id instead of user_id
 		Role:           models.OrganizationRoleOwner,
 	}
 
@@ -112,8 +121,15 @@ func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Get organizations
-	organizations, err := h.organizationQueries.GetUserOrganizations(c.Context(), userIDStr)
+	organizations, err := h.organizationQueries.GetUserOrganizations(c.Context(), accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get user organizations")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get organizations", nil)
@@ -156,15 +172,19 @@ func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
 	// Check if user has permission to view this organization
 	userIDStr, err := GetUserID(c)
 	if err == nil {
-		// Check if user is a member
-		member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to check organization membership")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
-		}
+		// Get account_id from user_id
+		accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+		if err == nil {
+			// Check if user is a member
+			member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to check organization membership")
+				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
+			}
 
-		if member == nil {
-			return webutil.Response(c, fiber.StatusForbidden, "Access denied", nil)
+			if member == nil {
+				return webutil.Response(c, fiber.StatusForbidden, "Access denied", nil)
+			}
 		}
 	}
 
@@ -222,8 +242,15 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check membership and role
-	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
@@ -244,7 +271,17 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update organization", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", nil)
+	// Get updated organization to return
+	updatedOrg, err := h.organizationQueries.GetOrganization(c.Context(), orgID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get updated organization")
+		// Still return success as update was successful
+		return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", map[string]interface{}{
+		"organization": updatedOrg,
+	})
 }
 
 // DeleteOrganization deletes an organization (owner only)
@@ -271,8 +308,15 @@ func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check membership and role
-	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
@@ -319,8 +363,15 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 		return err
 	}
 
+	// Get account_id from user_id
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user account ID")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+	}
+
 	// Check if user is a member of this organization
-	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
+	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check membership", nil)
@@ -391,6 +442,66 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 	})
 }
 
+// ExitOrganization switches the current user's context to personal account (no organization)
+// @Summary Exit organization context
+// @Description Switch to personal account and get new access tokens without organization context
+// @Tags organizations
+// @Produce json
+// @Success 200 {object} map[string]any
+// @Failure 401 {object} map[string]any
+// @Failure 500 {object} map[string]any
+// @Router /api/v1/organizations/switch [post]
+func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
+	userIDStr, err := GetUserID(c)
+	if err != nil {
+		return err
+	}
+
+	// Get user record for token creation
+	userRecord, err := queries.DB.GetUserByID(c.Context(), userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get user record")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user data", nil)
+	}
+
+	if userRecord == nil {
+		return webutil.Response(c, fiber.StatusNotFound, "User not found", nil)
+	}
+
+	// Create new tokens without organization context (personal account)
+	modelUser := &models.User{
+		ID:    userRecord.ID,
+		Name:  fmt.Sprintf("%s %s", userRecord.FirstName, userRecord.LastName),
+		Email: userRecord.Email,
+	}
+
+	// Use empty string for organizationID to create personal account token
+	accessToken, err := middleware.CreateTokenWithOrg(modelUser, "")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create access token")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create access token", nil)
+	}
+
+	refreshToken, err := middleware.CreateRefreshToken(userIDStr)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create refresh token")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create refresh token", nil)
+	}
+
+	// Store refresh token in Redis
+	refreshKey := fmt.Sprintf("refresh_token:%s", userIDStr)
+	if err := redis.Conn.Set(refreshKey, refreshToken, 7*24*time.Hour); err != nil {
+		log.Error().Err(err).Msg("Failed to store refresh token")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to store refresh token", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Exited organization successfully", map[string]interface{}{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"organization": nil,
+	})
+}
+
 // RegisterRoutes registers all organization routes
 func (h *OrganizationHandler) RegisterRoutes(router fiber.Router) {
 	// Organization CRUD
@@ -401,5 +512,6 @@ func (h *OrganizationHandler) RegisterRoutes(router fiber.Router) {
 	router.Delete("/:organization_id", h.DeleteOrganization)
 
 	// Organization switching
+	router.Post("/switch", h.ExitOrganization) // Must be before /:organization_id/switch
 	router.Post("/:organization_id/switch", h.SwitchOrganization)
 }

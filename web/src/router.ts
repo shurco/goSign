@@ -55,8 +55,46 @@ const router = createRouter({
     {
       path: "/settings",
       name: "settings",
-      meta: { layout: "Sidebar", requiresAuth: true },
-      component: () => import("@/pages/Settings.vue")
+      meta: { layout: "SettingsSidebar", requiresAuth: true },
+      component: () => import("@/pages/Settings.vue"),
+      redirect: { name: "settings-general" },
+      children: [
+        {
+          path: "general",
+          name: "settings-general",
+          component: () => import("@/pages/settings/SettingsGeneral.vue")
+        },
+        {
+          path: "email/smtp",
+          name: "settings-smtp",
+          component: () => import("@/pages/settings/SettingsSmtp.vue")
+        },
+        {
+          path: "storage",
+          name: "settings-storage",
+          component: () => import("@/pages/settings/SettingsStorage.vue")
+        },
+        {
+          path: "webhooks",
+          name: "settings-webhooks",
+          component: () => import("@/pages/settings/SettingsWebhooks.vue")
+        },
+        {
+          path: "api-keys",
+          name: "settings-api-keys",
+          component: () => import("@/pages/settings/SettingsApiKeys.vue")
+        },
+        {
+          path: "branding",
+          name: "settings-branding",
+          component: () => import("@/pages/settings/SettingsBranding.vue")
+        },
+        {
+          path: "email/templates",
+          name: "settings-email-templates",
+          component: () => import("@/pages/settings/SettingsEmailTemplates.vue")
+        }
+      ]
     },
     {
       path: "/templates",
@@ -115,7 +153,7 @@ const router = createRouter({
     {
       path: "/organizations/:organization_id/members",
       name: "organization-members",
-      meta: { layout: "Main", requiresAuth: true },
+      meta: { layout: "Sidebar", requiresAuth: true },
       component: () => import("@/pages/OrganizationMembers.vue")
     },
     {

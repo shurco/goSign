@@ -12,28 +12,37 @@ type TemplateSettings struct {
 	ReminderDays     []int  `json:"reminder_days,omitempty"` // [1, 3, 7] - reminders after N days
 }
 
+// Translation represents template translations for different locales
+type Translation struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	Fields      map[string]string `json:"fields,omitempty"` // field_id -> translated label
+}
+
 // Template is ...
 type Template struct {
-	ID             string            `json:"id"`
-	FolderID       string            `json:"folder_id"`
-	OrganizationID string            `json:"organization_id,omitempty"`
-	Slug           string            `json:"slug"`
-	Name           string            `json:"name"`
-	Description     string            `json:"description,omitempty"`
-	Source          string            `json:"source,omitempty"`
-	Author          *Author           `json:"author,omitempty"`
-	Submitters      []Submitter       `json:"submitters"`
-	Fields          []Field           `json:"fields"`
-	Schema          []Schema          `json:"schema"`
-	Documents       []Document        `json:"documents"`
-	Settings        *TemplateSettings `json:"settings,omitempty"`
-	Category        string            `json:"category,omitempty"`
-	Tags            []string          `json:"tags,omitempty"`
-	IsFavorite      bool              `json:"is_favorite"`
-	PreviewImageID  string            `json:"preview_image_id,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
-	ArchivedAt      *time.Time        `json:"archived_at,omitempty"`
+	ID             string                 `json:"id"`
+	FolderID       string                 `json:"folder_id"`
+	OrganizationID string                 `json:"organization_id,omitempty"`
+	Slug           string                 `json:"slug"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	Source         string                 `json:"source,omitempty"`
+	Author         *Author                `json:"author,omitempty"`
+	Submitters     []Submitter            `json:"submitters"`
+	Fields         []Field                `json:"fields"`
+	Schema         []Schema               `json:"schema"`
+	Documents      []Document             `json:"documents"`
+	Settings       *TemplateSettings      `json:"settings,omitempty"`
+	Category       string                 `json:"category,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	IsFavorite     bool                   `json:"is_favorite"`
+	PreviewImageID string                 `json:"preview_image_id,omitempty"`
+	DefaultLocale  string                 `json:"default_locale,omitempty"`
+	Translations   map[string]Translation `json:"translations,omitempty"` // locale -> Translation
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+	ArchivedAt     *time.Time             `json:"archived_at,omitempty"`
 }
 
 // Author is ...
@@ -94,17 +103,68 @@ const (
 	FieldTypePayment     FieldType = "payment"
 )
 
+// ConditionOperator represents comparison operator
+type ConditionOperator string
+
+const (
+	ConditionEquals       ConditionOperator = "equals"
+	ConditionNotEquals    ConditionOperator = "not_equals"
+	ConditionContains     ConditionOperator = "contains"
+	ConditionNotContains  ConditionOperator = "not_contains"
+	ConditionGreaterThan  ConditionOperator = "greater_than"
+	ConditionLessThan     ConditionOperator = "less_than"
+	ConditionIsEmpty      ConditionOperator = "is_empty"
+	ConditionIsNotEmpty   ConditionOperator = "is_not_empty"
+)
+
+// ConditionAction represents action to take when condition is met
+type ConditionAction string
+
+const (
+	ActionShow    ConditionAction = "show"
+	ActionHide    ConditionAction = "hide"
+	ActionRequire ConditionAction = "require"
+	ActionDisable ConditionAction = "disable"
+)
+
+// LogicOperator for combining multiple conditions
+type LogicOperator string
+
+const (
+	LogicAND LogicOperator = "AND"
+	LogicOR  LogicOperator = "OR"
+)
+
+// FieldCondition single condition rule
+type FieldCondition struct {
+	FieldID  string            `json:"field_id"`  // target field to check
+	Operator ConditionOperator `json:"operator"`
+	Value    interface{}       `json:"value"` // value to compare against
+}
+
+// FieldConditionGroup allows AND/OR logic
+type FieldConditionGroup struct {
+	Logic      LogicOperator     `json:"logic"` // AND or OR
+	Conditions []FieldCondition  `json:"conditions"`
+	Action     ConditionAction   `json:"action"`
+}
+
 // Field is ...
 type Field struct {
-	ID           string    `json:"id"`
-	SubmitterID  string    `json:"submitter_id"`
-	Name         string    `json:"name"`
-	Type         FieldType `json:"type"`
-	Required     bool      `json:"required"`
-	DefaultValue string    `json:"default_value,omitempty"`
-	Options      []string  `json:"options,omitempty"` // for select, radio
-	Validation   string    `json:"validation,omitempty"`
-	Areas        []*Areas  `json:"areas,omitempty"`
+	ID              string               `json:"id"`
+	SubmitterID     string               `json:"submitter_id"`
+	Name            string               `json:"name"`
+	Label           string               `json:"label,omitempty"`        // base label for display
+	Type            FieldType            `json:"type"`
+	Required        bool                 `json:"required"`
+	DefaultValue    string               `json:"default_value,omitempty"`
+	Options         []string             `json:"options,omitempty"` // for select, radio
+	Validation      string               `json:"validation,omitempty"`
+	Translations    map[string]string    `json:"translations,omitempty"` // locale -> translated label
+	ConditionGroups []FieldConditionGroup `json:"condition_groups,omitempty"`
+	Formula         string               `json:"formula,omitempty"`         // e.g., "field_1 + field_2 * 0.2"
+	CalculationType string               `json:"calculation_type,omitempty"` // "number", "currency"
+	Areas           []*Areas             `json:"areas,omitempty"`
 }
 
 // Areas is ...

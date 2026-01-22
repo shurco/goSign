@@ -97,6 +97,10 @@ export interface OrganizationMember {
   role: OrganizationRole;
   joined_at: any /* time.Time */;
   updated_at: any /* time.Time */;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  user_name?: string;
 }
 /**
  * OrganizationInvitation represents an invitation to join an organization

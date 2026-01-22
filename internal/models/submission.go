@@ -30,9 +30,10 @@ type Submission struct {
 	CreatedByID string           `json:"created_by_id,omitempty"`
 	Status      SubmissionStatus `json:"status"`
 	SigningMode SigningMode      `json:"signing_mode"`
+	Locale      string           `json:"locale,omitempty"` // locale for this submission
 	ExpiredAt   *time.Time       `json:"expired_at,omitempty"`
 	CompletedAt *time.Time       `json:"completed_at,omitempty"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
+	Metadata    map[string]any   `json:"metadata,omitempty"`
 	CreatedAt   time.Time        `json:"created_at"`
 	UpdatedAt   time.Time        `json:"updated_at"`
 }

@@ -10,18 +10,21 @@ import (
 
 // APIHandlers contains all API handlers
 type APIHandlers struct {
-	Submissions    *api.SubmissionHandler
-	Submitters     *api.SubmitterHandler
-	Templates      *api.TemplateHandler
-	Webhooks       *api.WebhookHandler
-	Settings       *api.SettingsHandler
-	APIKeys        *api.APIKeyHandler
-	Stats          *api.StatsHandler
-	Events         *api.EventHandler
-	Organizations  *api.OrganizationHandler
-	Members        *api.MemberHandler
-	Invitations    *api.InvitationHandler
-	Users          *api.UserHandler
+	Submissions     *api.SubmissionHandler
+	Submitters      *api.SubmitterHandler
+	Templates       *api.TemplateHandler
+	Webhooks        *api.WebhookHandler
+	Settings        *api.SettingsHandler
+	APIKeys         *api.APIKeyHandler
+	Stats           *api.StatsHandler
+	Events          *api.EventHandler
+	Organizations   *api.OrganizationHandler
+	Members         *api.MemberHandler
+	Invitations     *api.InvitationHandler
+	Users           *api.UserHandler
+	I18n            *api.I18nHandler
+	Branding        *api.BrandingHandler
+	EmailTemplates  *api.EmailTemplateHandler
 }
 
 // ApiRoutes configures all API routes
@@ -96,12 +99,16 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	// Organizations API
 	if handlers.Organizations != nil {
 		organizations := apiV1.Group("/organizations")
+		
+		// Members API (organization members and invitations)
+		// Register members routes FIRST to avoid route conflicts
+		// More specific routes should be registered before less specific ones
+		if handlers.Members != nil {
+			handlers.Members.RegisterRoutes(organizations)
+		}
+		
+		// Then register organization routes
 		handlers.Organizations.RegisterRoutes(organizations)
-	}
-
-	// Members API (organization members and invitations)
-	if handlers.Members != nil {
-		handlers.Members.RegisterRoutes(apiV1)
 	}
 
 	// Webhooks API
@@ -138,5 +145,23 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	if handlers.Users != nil {
 		users := apiV1.Group("/users")
 		handlers.Users.RegisterRoutes(users)
+	}
+
+	// I18n API
+	if handlers.I18n != nil {
+		i18n := apiV1.Group("/i18n")
+		handlers.I18n.RegisterRoutes(i18n)
+	}
+
+	// Branding API
+	if handlers.Branding != nil {
+		branding := apiV1.Group("/branding")
+		handlers.Branding.RegisterRoutes(branding)
+	}
+
+	// Email Templates API
+	if handlers.EmailTemplates != nil {
+		emailTemplates := apiV1.Group("/email-templates", middleware.StrictRateLimiter())
+		handlers.EmailTemplates.RegisterRoutes(emailTemplates)
 	}
 }

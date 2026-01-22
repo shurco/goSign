@@ -34,3 +34,20 @@ func GetOrganizationID(c *fiber.Ctx) (string, error) {
 	return orgIDStr, nil
 }
 
+// GetAccountID extracts account ID from request context or user's account
+func GetAccountID(c *fiber.Ctx) (string, error) {
+	// Try to get from context first
+	accountID := c.Locals("account_id")
+	if accountID != nil {
+		accountIDStr, ok := accountID.(string)
+		if ok && accountIDStr != "" {
+			return accountIDStr, nil
+		}
+	}
+
+	// Fallback: get from user's account_id via database
+	// This requires UserQueries, so we'll handle it in the handler
+	// For now, return error - middleware should set account_id
+	return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found in context")
+}
+

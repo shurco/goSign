@@ -1,54 +1,156 @@
 package main
 
 import (
-	"github.com/signintech/gopdf"
+	"log"
+	"os"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func main() {
-	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-	pdf.AddTTFFont("arial", "arial.ttf")
-	pdf.SetFont("arial", "", 8)
+	// Create PDF with multiple pages using pdfcpu primitives API
+	rootPDF := &primitives.PDF{
+		Origin:     "UpperLeft",
+		Debug:      false,
+		ContentBox: false,
+		Guides:     false,
+		Fonts: map[string]*primitives.FormFont{
+			"helvetica": {Name: "Helvetica", Size: 8},
+		},
+		Pages: map[string]*primitives.PDFPage{
+			// Page 1: Import existing PDF page (if example.pdf exists)
+			// TODO: For importing existing PDF pages, use api.MergeCreateFile instead
+			// This example creates a new page with text indicating import functionality
+			"1": {
+				Content: &primitives.Content{
+					TextBoxes: []*primitives.TextBox{
+						{
+							Value:    "Import existing PDF into GoPDF Document",
+							Position: [2]float64{70, 50},
+							Font:     &primitives.FormFont{Name: "Helvetica", Size: 20},
+						},
+						{
+							Value:    "Note: To import existing PDF pages, use api.MergeCreateFile",
+							Position: [2]float64{70, 80},
+							Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+						},
+					},
+				},
+			},
+			// Page 2: Rectangle and image
+			"2": {
+				Content: &primitives.Content{
+					SimpleBoxes: []*primitives.SimpleBox{
+						{
+							Dx:        50,
+							Dy:        100,
+							Width:     400,
+							Height:    600,
+							FillColor: "#7CFC00", // lime green (124, 252, 0)
+							Border: &primitives.Border{
+								Width: 1,
+								Color: "#000000",
+							},
+						},
+					},
+					ImageBoxes: []*primitives.ImageBox{
+						{
+							Src:    "./image.png",
+							Dx:     100,
+							Dy:     150,
+							Width:  200,
+							Height: 200,
+						},
+					},
+					TextBoxes: []*primitives.TextBox{
+						{
+							Value:    "Page with rectangle and image",
+							Position: [2]float64{70, 50},
+							Font:     &primitives.FormFont{Name: "Helvetica", Size: 12},
+						},
+					},
+				},
+			},
+			// Page 3: Text content
+			"3": {
+				Content: &primitives.Content{
+					TextBoxes: []*primitives.TextBox{
+						{
+							Value:    "page 1 content",
+							Position: [2]float64{50, 400},
+							Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+						},
+					},
+				},
+			},
+			// Page 4: More text content
+			"4": {
+				Content: &primitives.Content{
+					TextBoxes: []*primitives.TextBox{
+						{
+							Value:    "page 2 content",
+							Position: [2]float64{50, 400},
+							Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+						},
+					},
+				},
+			},
+		},
+	}
 
-	pdf.AddFooter(func() {
-		pdf.SetY(825)
-		pdf.Cell(nil, "footer")
-	})
+	conf := model.NewDefaultConfiguration()
+	conf.Cmd = model.CREATE
 
-	// ----
-	pdf.AddPage()
-	tpl1 := pdf.ImportPage("example.pdf", 1, "/MediaBox")
-	pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
+	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// ----
-	pdf.AddPage()
+	rootPDF.Conf = ctx.Configuration
+	rootPDF.XRefTable = ctx.XRefTable
+	rootPDF.Optimize = ctx.Optimize
 
-	pdf.SetLineWidth(0.1)
-	pdf.SetFillColor(124, 252, 0)
-	pdf.RectFromUpperLeftWithStyle(50, 100, 400, 600, "FD")
-	pdf.SetFillColor(0, 0, 0)
+	if err := rootPDF.Validate(); err != nil {
+		log.Fatal(err)
+	}
 
-	pdf.Image("./image.png", 100, 150, nil)
+	pages, fontMap, err := rootPDF.RenderPages()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	pdf.SetFont("arial", "", 20)
-	pdf.SetXY(70, 50)
-	pdf.Cell(nil, "Import existing PDF into GoPDF Document")
-	pdf.Close()
+	if _, _, err := create.UpdatePageTree(ctx, pages, fontMap); err != nil {
+		log.Fatal(err)
+	}
 
-	pdf.AddPage()
-	pdf.SetY(400)
-	pdf.Text("page 1 content")
-	pdf.AddPage()
-	pdf.SetY(400)
-	pdf.Text("page 2 content")
+	if err = api.ValidateContext(ctx); err != nil {
+		log.Fatal(err)
+	}
 
-	// ---------
-	pdf.SetInfo(gopdf.PdfInfo{
-		Title:   "Title",
-		Author:  "goSign (https://github.com/shurco/goSign)",
-		Subject: "Subject",
-		Creator: "goSign (https://github.com/shurco/goSign)",
-		// Producer: "Producer",
-	})
-	pdf.WritePdf("new.pdf")
+	// Set PDF metadata
+	ctx.Author = "goSign (https://github.com/shurco/goSign)"
+	ctx.Title = "Title"
+	ctx.Subject = "Subject"
+	ctx.Creator = "goSign (https://github.com/shurco/goSign)"
+	ctx.Producer = "goSign (https://github.com/shurco/goSign)"
+
+	// Save PDF
+	fileName := "new.pdf"
+	pdfFile, err := os.Create(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pdfFile.Close()
+
+	model.VersionStr = "goSign"
+	if err := api.WriteContext(ctx, pdfFile); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("PDF created successfully: %s\n", fileName)
 }

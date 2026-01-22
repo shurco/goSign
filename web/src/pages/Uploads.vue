@@ -1,6 +1,12 @@
 <template>
   <div class="uploads-page">
-    <h1 class="mb-6 text-3xl font-bold">Uploads</h1>
+    <!-- Header -->
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">{{ $t('uploads.title') }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t('uploads.description') }}</p>
+      </div>
+    </div>
 
     <label
       for="assetsFieldHandle"
@@ -16,12 +22,12 @@
             <span>
               <SvgIcon name="cloud-upload" class="h-10 w-10" />
             </span>
-            <div class="mb-1 font-medium">Upload New Document</div>
-            <div class="text-xs"><span class="font-medium">Click to upload</span> or drag and drop</div>
+            <div class="mb-1 font-medium">{{ $t('uploads.uploadNewDocument') }}</div>
+            <div class="text-xs"><span class="font-medium">{{ $t('uploads.clickToUpload') }}</span> {{ $t('uploads.dragAndDrop') }}</div>
           </span>
           <span v-else data-target="file-dropzone.loading" class="flex flex-col items-center">
             <SvgIcon name="upload" class="h-10 w-10 animate-spin" />
-            <div class="mb-1 font-medium">Uploading...</div>
+            <div class="mb-1 font-medium">{{ $t('uploads.uploading') }}</div>
           </span>
         </div>
 
@@ -41,7 +47,10 @@
 
 <script setup lang="ts">
 import { getCurrentInstance, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { fetchWithAuth } from "@/utils/auth";
+
+const { t } = useI18n();
 
 const status = ref(false);
 const instance: any = getCurrentInstance();
@@ -67,7 +76,6 @@ const onChange = async () => {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("File uploaded successfully:", data);
       // Reset file input
       if (instance?.refs.file) {
         instance.refs.file.value = "";

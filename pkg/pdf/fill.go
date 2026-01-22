@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/signintech/gopdf"
 
 	"github.com/shurco/gosign/internal/models"
 )
@@ -167,49 +169,138 @@ type GenerateAuditTrailInput struct {
 	Events     []*models.Event
 }
 
-// GenerateAuditTrail generates audit trail page
+// GenerateAuditTrail generates audit trail page using pdfcpu
 func GenerateAuditTrail(input GenerateAuditTrailInput) ([]byte, error) {
-	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-	pdf.AddPage()
+	// Build text content for audit trail
+	var textBoxes []*primitives.TextBox
+	yPos := 50.0
+	lineHeight := 12.0
 
-	// TODO: Add font (font file required)
-	// pdf.AddTTFFont("Arial", "./fonts/arial.ttf")
-	// pdf.SetFont("Arial", "", 16)
+	// Header
+	textBoxes = append(textBoxes, &primitives.TextBox{
+		Value:    "Audit Trail",
+		Position: [2]float64{50, yPos},
+		Font:     &primitives.FormFont{Name: "Helvetica-Bold", Size: 16},
+	})
+	yPos += lineHeight * 2
 
-	// Simple version without fonts
-	// Full implementation should:
-	// 1. Add TTF fonts
-	// 2. Draw header
-	// 3. Add submission information
-	// 4. Add list of signers with dates
-	// 5. Add events timeline
+	// Submission information
+	textBoxes = append(textBoxes, &primitives.TextBox{
+		Value:    fmt.Sprintf("Submission ID: %s", input.Submission.ID),
+		Position: [2]float64{50, yPos},
+		Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+	})
+	yPos += lineHeight
 
-	// Document information (without fonts - structure only)
-	text := fmt.Sprintf("Audit Trail\n\nSubmission ID: %s\nCreated: %s\n\n",
-		input.Submission.ID,
-		input.Submission.CreatedAt.Format("2006-01-02 15:04:05"))
+	textBoxes = append(textBoxes, &primitives.TextBox{
+		Value:    fmt.Sprintf("Created: %s", input.Submission.CreatedAt.Format("2006-01-02 15:04:05")),
+		Position: [2]float64{50, yPos},
+		Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+	})
+	yPos += lineHeight * 2
 
 	// Signers
-	text += "Signers:\n"
+	textBoxes = append(textBoxes, &primitives.TextBox{
+		Value:    "Signers:",
+		Position: [2]float64{50, yPos},
+		Font:     &primitives.FormFont{Name: "Helvetica-Bold", Size: 10},
+	})
+	yPos += lineHeight
+
 	for _, submitter := range input.Submitters {
-		text += fmt.Sprintf("- %s (%s)\n", submitter.Name, submitter.Email)
+		signerText := fmt.Sprintf("- %s (%s)", submitter.Name, submitter.Email)
+		textBoxes = append(textBoxes, &primitives.TextBox{
+			Value:    signerText,
+			Position: [2]float64{60, yPos},
+			Font:     &primitives.FormFont{Name: "Helvetica", Size: 10},
+		})
+		yPos += lineHeight
+
 		if submitter.CompletedAt != nil {
-			text += fmt.Sprintf("  Signed at: %s\n", submitter.CompletedAt.Format("2006-01-02 15:04:05"))
+			signedText := fmt.Sprintf("  Signed at: %s", submitter.CompletedAt.Format("2006-01-02 15:04:05"))
+			textBoxes = append(textBoxes, &primitives.TextBox{
+				Value:    signedText,
+				Position: [2]float64{60, yPos},
+				Font:     &primitives.FormFont{Name: "Helvetica", Size: 9},
+			})
+			yPos += lineHeight
 		}
 	}
 
-	// Events
+	// Events timeline
 	if len(input.Events) > 0 {
-		text += "\nTimeline:\n"
+		yPos += lineHeight
+		textBoxes = append(textBoxes, &primitives.TextBox{
+			Value:    "Timeline:",
+			Position: [2]float64{50, yPos},
+			Font:     &primitives.FormFont{Name: "Helvetica-Bold", Size: 10},
+		})
+		yPos += lineHeight
+
 		for _, event := range input.Events {
-			text += fmt.Sprintf("%s - %s\n", event.CreatedAt.Format("2006-01-02 15:04:05"), event.Type)
+			eventText := fmt.Sprintf("%s - %s", event.CreatedAt.Format("2006-01-02 15:04:05"), event.Type)
+			textBoxes = append(textBoxes, &primitives.TextBox{
+				Value:    eventText,
+				Position: [2]float64{60, yPos},
+				Font:     &primitives.FormFont{Name: "Helvetica", Size: 9},
+			})
+			yPos += lineHeight
 		}
 	}
 
+	// Create PDF using pdfcpu primitives
+	rootPDF := &primitives.PDF{
+		Origin:     "UpperLeft",
+		Debug:      false,
+		ContentBox: false,
+		Guides:     false,
+		Fonts: map[string]*primitives.FormFont{
+			"helvetica":      {Name: "Helvetica", Size: 10},
+			"helvetica-bold": {Name: "Helvetica-Bold", Size: 10},
+		},
+		Pages: map[string]*primitives.PDFPage{
+			"1": {
+				Content: &primitives.Content{
+					TextBoxes: textBoxes,
+				},
+			},
+		},
+	}
+
+	conf := model.NewDefaultConfiguration()
+	conf.Cmd = model.CREATE
+
+	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, types.PaperSize["A4"])
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PDF context: %w", err)
+	}
+
+	rootPDF.Conf = ctx.Configuration
+	rootPDF.XRefTable = ctx.XRefTable
+	rootPDF.Optimize = ctx.Optimize
+
+	if err := rootPDF.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate PDF: %w", err)
+	}
+
+	pages, fontMap, err := rootPDF.RenderPages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to render pages: %w", err)
+	}
+
+	if _, _, err := create.UpdatePageTree(ctx, pages, fontMap); err != nil {
+		return nil, fmt.Errorf("failed to update page tree: %w", err)
+	}
+
+	if err = api.ValidateContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to validate context: %w", err)
+	}
+
+	// Write to buffer
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
-		return nil, fmt.Errorf("failed to generate audit trail: %w", err)
+	model.VersionStr = "goSign"
+	if err := api.WriteContext(ctx, &buf); err != nil {
+		return nil, fmt.Errorf("failed to write PDF: %w", err)
 	}
 
 	return buf.Bytes(), nil

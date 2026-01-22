@@ -15,11 +15,9 @@ import (
 	"time"
 
 	"github.com/digitorus/pdf"
-	"github.com/shurco/gosign/pkg/pdf/revocation"
-
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
-
+	"github.com/shurco/gosign/pkg/pdf/revocation"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -107,9 +105,17 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 	}
 
 	// Walk over the cross references in the document
+	// Use GetObject instead of Resolve for new API
 	for _, x := range rdr.Xref() {
-		// Get the xref object Value
-		v := rdr.Resolve(x.Ptr(), x.Ptr())
+		// Get object ID from xref pointer
+		ptr := x.Ptr()
+		objID := ptr.GetID()
+		
+		// Get the object value using GetObject
+		v, err := rdr.GetObject(objID)
+		if err != nil {
+			continue
+		}
 
 		// get document info
 		parseDocumentInfo(v, &documentInfo)
