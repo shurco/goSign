@@ -247,36 +247,66 @@ func (q *TemplateQueries) UpdateTemplateSchema(ctx context.Context, templateID s
 	return nil
 }
 
-// UpdateTemplate updates template fields (name, category, etc.).
-// It builds a dynamic UPDATE query based on the provided fields in the template struct.
-// If category is an empty string, it sets the category to NULL in the database.
-// The updated_at field is always updated to the current timestamp.
-func (q *TemplateQueries) UpdateTemplate(ctx context.Context, templateID string, template *models.Template) error {
-	// Build dynamic UPDATE query based on provided fields
+// TemplateUpdatePatch describes a partial update for the template record.
+// Pointers are used to distinguish "field not provided" from "provided empty".
+type TemplateUpdatePatch struct {
+	Name            *string
+	CategoryProvided bool
+	// Category:
+	// - CategoryProvided=false: don't touch DB column
+	// - CategoryProvided=true and Category=nil: set to NULL
+	// - CategoryProvided=true and Category!=nil: set to value
+	Category   *string
+	Submitters *[]models.Submitter
+	Fields     *[]models.Field
+	Schema     *[]models.Schema
+}
+
+// UpdateTemplatePatch updates only the provided template fields (name, category, schema, fields, submitters).
+// Always updates updated_at.
+func (q *TemplateQueries) UpdateTemplatePatch(ctx context.Context, templateID string, patch TemplateUpdatePatch) error {
 	var setParts []string
 	var args []interface{}
 	argIndex := 1
 
-	if template.Name != "" {
+	if patch.Name != nil {
 		setParts = append(setParts, fmt.Sprintf(`"name" = $%d`, argIndex))
-		args = append(args, template.Name)
+		args = append(args, *patch.Name)
 		argIndex++
 	}
 
-	// Handle category - if empty string, set to NULL, otherwise set the value
-	if template.Category != "" {
-		setParts = append(setParts, fmt.Sprintf(`"category" = $%d`, argIndex))
-		args = append(args, template.Category)
+	if patch.CategoryProvided {
+		if patch.Category == nil {
+			setParts = append(setParts, `"category" = NULL`)
+		} else {
+			setParts = append(setParts, fmt.Sprintf(`"category" = $%d`, argIndex))
+			args = append(args, *patch.Category)
+			argIndex++
+		}
+	}
+
+	if patch.Submitters != nil {
+		setParts = append(setParts, fmt.Sprintf(`"submitters" = $%d`, argIndex))
+		args = append(args, *patch.Submitters)
 		argIndex++
-	} else {
-		// Explicitly set to NULL if empty string
-		setParts = append(setParts, `"category" = NULL`)
+	}
+
+	if patch.Fields != nil {
+		setParts = append(setParts, fmt.Sprintf(`"fields" = $%d`, argIndex))
+		args = append(args, *patch.Fields)
+		argIndex++
+	}
+
+	if patch.Schema != nil {
+		setParts = append(setParts, fmt.Sprintf(`"schema" = $%d`, argIndex))
+		args = append(args, *patch.Schema)
+		argIndex++
 	}
 
 	// Always update updated_at
 	setParts = append(setParts, `"updated_at" = NOW()`)
 
-	if len(setParts) == 0 {
+	if len(setParts) == 1 { // only updated_at
 		return fmt.Errorf("no fields to update")
 	}
 
@@ -293,6 +323,19 @@ func (q *TemplateQueries) UpdateTemplate(ctx context.Context, templateID string,
 		return err
 	}
 	return nil
+}
+
+// UpdateTemplate updates template fields for callers that still pass a concrete models.Template.
+// NOTE: This method cannot reliably distinguish omitted JSON fields from "empty" values,
+// so it only updates a safe subset to avoid unintentionally wiping columns.
+func (q *TemplateQueries) UpdateTemplate(ctx context.Context, templateID string, template *models.Template) error {
+	patch := TemplateUpdatePatch{}
+	if template.Name != "" {
+		patch.Name = &template.Name
+	}
+	// Intentionally do NOT touch category/fields/submitters/schema here.
+	// HTTP updates should use UpdateTemplatePatch via handler that can detect presence/null.
+	return q.UpdateTemplatePatch(ctx, templateID, patch)
 }
 
 // TemplateSearchRequest represents search and filter parameters
@@ -494,6 +537,10 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 			"template"."preview_image_id",
 			"template"."created_at",
 			"template"."updated_at",
+			CASE
+				WHEN jsonb_typeof("template"."submitters") = 'array' THEN jsonb_array_length("template"."submitters")
+				ELSE 0
+			END as submitter_count,
 			` + favoriteCheckSQL + `
 		FROM "template"
 		` + joinClause + `
@@ -529,6 +576,7 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 			&previewImageID,
 			&template.CreatedAt,
 			&template.UpdatedAt,
+			&template.SubmitterCount,
 			&isUserFavorite,
 		)
 		if err != nil {

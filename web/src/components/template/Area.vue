@@ -436,8 +436,33 @@ function handlePointerUp(): void {
   pointerMode.value = null;
 }
 
+function getMaskForArea(): HTMLElement | null {
+  // Find the page container that contains this area
+  // Start from touchTarget and traverse up to find the page container
+  let current: HTMLElement | null = touchTarget.value;
+  if (!current) return null;
+
+  // Traverse up to find the page container (div.relative.cursor-crosshair)
+  while (current && current.parentElement) {
+    current = current.parentElement;
+    if (current.classList.contains('relative') && current.classList.contains('cursor-crosshair')) {
+      // Found the page container, now find the mask within it
+      return current.querySelector('#mask') as HTMLElement | null;
+    }
+  }
+
+  return null;
+}
+
 function handleDrag(e: PointerEvent): void {
-  const mask = document.getElementById("mask");
+  // Always find the mask for this area's page to ensure correct coordinate calculation
+  let mask: HTMLElement | null = getMaskForArea();
+  
+  // If event target is the mask, we can use it directly (more efficient)
+  if (!mask && (e.target as HTMLElement).id === "mask") {
+    mask = e.target as HTMLElement;
+  }
+
   if (!mask) {
     return;
   }
@@ -446,43 +471,85 @@ function handleDrag(e: PointerEvent): void {
 
   if (e.pointerType === "touch") {
     const page = mask.previousElementSibling as HTMLElement;
+    if (!page) return;
     const rect = page.getBoundingClientRect();
     props.area.x = (dragFrom.value.x + e.clientX - rect.left) / rect.width;
     props.area.y = (dragFrom.value.y + e.clientY - rect.top) / rect.height;
   } else {
+    // For mouse events, use layerX/layerY if on mask, otherwise calculate from clientX/clientY
     if ((e.target as HTMLElement).id === "mask") {
       props.area.x = (e.layerX - dragFrom.value.x) / mask.clientWidth;
       props.area.y = (e.layerY - dragFrom.value.y) / mask.clientHeight;
+    } else {
+      // Calculate relative to mask's bounding rect
+      const rect = mask.getBoundingClientRect();
+      props.area.x = (e.clientX - rect.left - dragFrom.value.x) / mask.clientWidth;
+      props.area.y = (e.clientY - rect.top - dragFrom.value.y) / mask.clientHeight;
     }
   }
 }
 
 function handleResize(e: PointerEvent): void {
-  const mask = document.getElementById("mask");
+  // Always find the mask for this area's page to ensure correct coordinate calculation
+  let mask: HTMLElement | null = getMaskForArea();
+  
+  // If event target is the mask, we can use it directly (more efficient)
+  if (!mask && (e.target as HTMLElement).id === "mask") {
+    mask = e.target as HTMLElement;
+  }
+
   if (!mask) {
     return;
   }
 
   if (e.pointerType === "touch") {
     const page = mask.previousElementSibling as HTMLElement;
+    if (!page) return;
     const rect = page.getBoundingClientRect();
     props.area.w = (e.clientX - rect.left) / rect.width - props.area.x;
     props.area.h = (e.clientY - rect.top) / rect.height - props.area.y;
   } else {
+    // For mouse events, use layerX/layerY if on mask, otherwise calculate from clientX/clientY
     if ((e.target as HTMLElement).id === "mask") {
       props.area.w = e.layerX / mask.clientWidth - props.area.x;
       props.area.h = e.layerY / mask.clientHeight - props.area.y;
+    } else {
+      // Calculate relative to mask's bounding rect
+      const rect = mask.getBoundingClientRect();
+      props.area.w = (e.clientX - rect.left) / mask.clientWidth - props.area.x;
+      props.area.h = (e.clientY - rect.top) / mask.clientHeight - props.area.y;
     }
   }
 }
 
 function handleResizeCell(e: PointerEvent): void {
-  const mask = document.getElementById("mask");
-  if (!mask || (e.target as HTMLElement).id !== "mask") {
+  // Always find the mask for this area's page to ensure correct coordinate calculation
+  let mask: HTMLElement | null = getMaskForArea();
+  
+  // If event target is the mask, we can use it directly (more efficient)
+  if (!mask && (e.target as HTMLElement).id === "mask") {
+    mask = e.target as HTMLElement;
+  }
+
+  if (!mask) {
     return;
   }
 
-  const positionX = e.layerX / (mask.clientWidth - 1);
+  // Calculate position relative to mask
+  let positionX: number;
+  if (e.pointerType === "touch") {
+    const rect = mask.getBoundingClientRect();
+    positionX = (e.clientX - rect.left) / mask.clientWidth;
+  } else {
+    // For mouse events, use layerX if on mask, otherwise calculate from clientX
+    if ((e.target as HTMLElement).id === "mask") {
+      positionX = e.layerX / (mask.clientWidth - 1);
+    } else {
+      const rect = mask.getBoundingClientRect();
+      positionX = (e.clientX - rect.left) / mask.clientWidth;
+    }
+  }
+
   if (positionX > props.area.x) {
     props.area.cell_w = positionX - props.area.x;
   }

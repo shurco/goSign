@@ -1,12 +1,52 @@
 package pdf
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/signintech/gopdf"
 )
 
+func makeTempPDF(t *testing.T, pages int) string {
+	t.Helper()
+	if pages <= 0 {
+		pages = 1
+	}
+	f, err := os.CreateTemp("", "gosign_extract_test_*.pdf")
+	if err != nil {
+		t.Fatalf("failed to create temp pdf: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	})
+
+	pdf := gopdf.GoPdf{}
+	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+	fonts := addStandardFonts(&pdf, "")
+	if !fonts.NormalOK {
+		t.Skip("no TTF fonts available for gopdf")
+	}
+	for i := 0; i < pages; i++ {
+		pdf.AddPage()
+		_ = pdf.SetFont(fonts.NormalName, "", 10)
+		pdf.SetXY(50, 50)
+		pdf.Cell(nil, "test")
+	}
+	var buf bytes.Buffer
+	if err := pdf.Write(&buf); err != nil {
+		t.Fatalf("failed to write test pdf: %v", err)
+	}
+	if _, err := f.Write(buf.Bytes()); err != nil {
+		t.Fatalf("failed to write temp pdf bytes: %v", err)
+	}
+	return f.Name()
+}
+
 func TestExtractPages(t *testing.T) {
+	sample := makeTempPDF(t, 1)
 	tests := []struct {
 		name      string
 		input     ExtractPagesInput
@@ -16,7 +56,7 @@ func TestExtractPages(t *testing.T) {
 		{
 			name: "extract pages from valid PDF",
 			input: ExtractPagesInput{
-				PDFPath: "testdata/sample.pdf",
+				PDFPath: sample,
 			},
 			wantPages: 1,
 			wantErr:   false,
@@ -57,6 +97,8 @@ func TestGeneratePreview(t *testing.T) {
 	previewDir := filepath.Join(tmpDir, "test_previews")
 	defer os.RemoveAll(previewDir)
 
+	sample := makeTempPDF(t, 1)
+
 	if err := os.MkdirAll(previewDir, 0755); err != nil {
 		t.Fatalf("Failed to create preview dir: %v", err)
 	}
@@ -69,7 +111,7 @@ func TestGeneratePreview(t *testing.T) {
 		{
 			name: "generate preview for valid PDF",
 			input: GeneratePreviewInput{
-				PDFPath:   "testdata/sample.pdf",
+				PDFPath:   sample,
 				OutputDir: previewDir,
 			},
 			wantErr: false,
@@ -109,6 +151,7 @@ func TestGeneratePreview(t *testing.T) {
 }
 
 func TestExtractFormFields(t *testing.T) {
+	sample := makeTempPDF(t, 1)
 	tests := []struct {
 		name       string
 		input      ExtractFormFieldsInput
@@ -118,7 +161,7 @@ func TestExtractFormFields(t *testing.T) {
 		{
 			name: "extract form fields from valid PDF",
 			input: ExtractFormFieldsInput{
-				PDFPath: "testdata/sample.pdf",
+				PDFPath: sample,
 			},
 			wantFields: false, // sample.pdf doesn't have form fields
 			wantErr:    false,
@@ -129,7 +172,7 @@ func TestExtractFormFields(t *testing.T) {
 				PDFPath: "testdata/nonexistent.pdf",
 			},
 			wantFields: false,
-			wantErr:    false, // Function returns empty result, not error
+			wantErr:    true,
 		},
 	}
 

@@ -6,6 +6,13 @@ body {
   @apply bg-[#faf7f5] text-sm;
 }
 
+/* Ensure all links show hand cursor (also when using button.link). */
+a,
+.link,
+button.link {
+  cursor: pointer;
+}
+
 .autocomplete {
   background: white;
   z-index: 1000;

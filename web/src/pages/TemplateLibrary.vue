@@ -82,7 +82,7 @@
           <button
             v-else
             class="cursor-pointer text-left font-medium text-gray-900 hover:text-blue-600"
-            @click="(item as LibraryItem).type === 'folder' ? viewFolder((item as LibraryItem).data as TemplateFolder) : viewTemplate((item as LibraryItem).data as Template)"
+            @click="(item as LibraryItem).type === 'folder' ? viewFolder((item as LibraryItem).data as TemplateFolder) : openTemplateView((item as LibraryItem).data as Template)"
           >
             {{ (item as LibraryItem).type === 'folder' ? ((item as LibraryItem).data as TemplateFolder).name : ((item as LibraryItem).data as Template).name }}
           </button>
@@ -101,7 +101,11 @@
 
       <template #cell-signers="{ item }">
         <span v-if="(item as LibraryItem).type === 'template'" class="text-sm text-gray-600">
-          {{ ((item as LibraryItem).data as Template).submitters?.length || 0 }}
+          {{
+            ((item as LibraryItem).data as Template).submitter_count ??
+            ((item as LibraryItem).data as Template).submitters?.length ??
+            0
+          }}
         </span>
         <span v-else-if="(item as LibraryItem).type !== 'parent'" class="text-sm text-gray-400">—</span>
       </template>
@@ -154,6 +158,13 @@
               :title="$t('templates.moveToFolder')"
             >
               <SvgIcon name="folder" class="h-5 w-5 stroke-[2]" />
+            </button>
+            <button
+              class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-blue-600"
+              @click.stop="openTemplateEditor((item as LibraryItem).data as Template)"
+              title="Open editor"
+            >
+              <SvgIcon name="pencil" class="h-5 w-5 stroke-[2]" />
             </button>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
@@ -385,6 +396,7 @@ import FormModal from "@/components/common/FormModal.vue";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 import type { Template, TemplateFolder } from "@/models";
+import { fileToBase64Payload } from "@/utils/file";
 
 const router = useRouter();
 const route = useRoute();
@@ -537,7 +549,10 @@ const libraryItems = computed((): LibraryItem[] => {
         case "created_at":
           return new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime();
         case "usage":
-          return (b.data.submitters?.length || 0) - (a.data.submitters?.length || 0);
+          return (
+            (b.data.submitter_count ?? b.data.submitters?.length ?? 0) -
+            (a.data.submitter_count ?? a.data.submitters?.length ?? 0)
+          );
         default:
           return 0;
       }
@@ -661,8 +676,14 @@ const loadTemplatesData = async () => {
   }
 };
 
-const viewTemplate = (template: Template) => {
-  // Navigate to template editor
+const openTemplateView = (template: Template) => {
+  // Open read-only view in a new tab/window
+  const href = router.resolve({ name: "template-view", params: { id: template.id } }).href;
+  window.open(href, "_blank", "noopener,noreferrer");
+};
+
+const openTemplateEditor = (template: Template) => {
+  // Open template editor in the current tab
   router.push(`/templates/${template.id}/edit`);
 };
 
@@ -805,22 +826,8 @@ const handleCreateTemplate = async (formData: any): Promise<void> => {
       // Create template from file
       const file = selectedFile.value;
       
-      // Convert file to base64 using Promise
-      const base64String = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const result = (reader.result as string).split(',')[1]; // Remove data:application/pdf;base64, prefix
-            resolve(result);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.onerror = () => {
-          reject(new Error('Failed to read file'));
-        };
-        reader.readAsDataURL(file);
-      });
+      // Convert file to base64 (payload only)
+      const base64String = await fileToBase64Payload(file);
       
       // Determine file type
       let fileType = 'pdf';

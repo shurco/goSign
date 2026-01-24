@@ -35,7 +35,7 @@
           <div class="mt-4">
             <router-link
               to="/auth/signin"
-              class="inline-flex items-center justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              class="inline-flex items-center justify-center rounded-md border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none"
             >
               Sign in now
             </router-link>

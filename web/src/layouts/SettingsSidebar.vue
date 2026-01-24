@@ -134,24 +134,6 @@
             </RouterLink>
           </li>
 
-          <li>
-            <RouterLink
-              to="/uploads"
-              class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[{ 'bg-gray-100 text-gray-900': isActive('/uploads') }, isCollapsed ? 'justify-center' : '']"
-              :title="isCollapsed ? $t('navigation.uploads') : ''"
-            >
-              <SvgIcon name="uploads" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.uploads') }}</span>
-              <span
-                v-if="isCollapsed"
-                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
-              >
-                {{ $t('navigation.uploads') }}
-              </span>
-            </RouterLink>
-          </li>
-
           <li class="pt-3">
             <div
               v-show="!isCollapsed"
@@ -327,8 +309,10 @@ const currentOrganizationName = ref<string>("");
 // Settings tabs
 const tabs = computed(() => [
   { id: "general", label: t('settings.general'), routeName: "settings-general" },
+  { id: "geolocation", label: t('settings.geolocation'), routeName: "settings-geolocation" },
   { id: "smtp", label: `${t('settings.email')} (${t('settings.smtp')})`, routeName: "settings-smtp" },
   { id: "email_templates", label: t('settings.emailTemplates'), routeName: "settings-email-templates" },
+  { id: "sms", label: "SMS (Twilio)", routeName: "settings-sms" },
   { id: "storage", label: t('settings.storage'), routeName: "settings-storage" },
   { id: "webhooks", label: t('settings.webhooks'), routeName: "settings-webhooks" },
   { id: "api_keys", label: t('settings.apiKeys'), routeName: "settings-api-keys" },

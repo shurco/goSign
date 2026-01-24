@@ -1,16 +1,25 @@
 package api
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/internal/queries"
+	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage"
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -19,12 +28,18 @@ import (
 // SettingsHandler handles requests to settings
 type SettingsHandler struct {
 	notificationSvc *notification.Service
+	accountQueries  *queries.AccountQueries
+	userQueries     *queries.UserQueries
+	geolocationSvc  *geolocation.Service
 }
 
 // NewSettingsHandler creates new handler
-func NewSettingsHandler(notificationSvc *notification.Service) *SettingsHandler {
+func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, geolocationSvc *geolocation.Service) *SettingsHandler {
 	return &SettingsHandler{
 		notificationSvc: notificationSvc,
+		accountQueries:  accountQueries,
+		userQueries:     userQueries,
+		geolocationSvc:  geolocationSvc,
 	}
 }
 
@@ -44,9 +59,16 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 			"provider":   cfg.Settings.Email["provider"],
 			"smtp_host":  cfg.Settings.Email["smtp_host"],
 			"smtp_port":  cfg.Settings.Email["smtp_port"],
+			"smtp_user":  cfg.Settings.Email["smtp_user"],
 			"from_email": cfg.Settings.Email["from_email"],
 			"from_name":  cfg.Settings.Email["from_name"],
 			// hide smtp_pass
+		},
+		"sms": map[string]any{
+			"twilio_enabled":        cfg.Settings.Email["twilio_enabled"] == "true",
+			"twilio_account_sid":    cfg.Settings.Email["twilio_account_sid"],
+			"twilio_from_number":    cfg.Settings.Email["twilio_from_number"],
+			"twilio_auth_token_set": cfg.Settings.Email["twilio_auth_token"] != "",
 		},
 		"storage": map[string]any{
 			"provider":  cfg.Settings.Storage["provider"],
@@ -57,20 +79,68 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 		},
 		"webhook": cfg.Settings.Webhook,
 		"features": cfg.Settings.Features,
+		"geolocation": map[string]any{
+			"base_dir": "./base",                    // Hardcoded (not configurable)
+			"db_path":  "./base/GeoLite2-City.mmdb", // Hardcoded (not configurable)
+		},
+	}
+
+	// Get geolocation settings from account settings if available
+	accountID, err := h.getAccountIDFromUser(c)
+	if err == nil && h.accountQueries != nil && accountID != "" {
+		geolocSettings, err := h.accountQueries.GetAccountGeolocationSettings(c.Context(), accountID)
+		if err == nil && geolocSettings != nil {
+			if geoloc, ok := safSettings["geolocation"].(map[string]any); ok {
+				if licenseKey, ok := geolocSettings["maxmind_license_key"].(string); ok && licenseKey != "" {
+					geoloc["maxmind_license_key_set"] = true // Don't expose actual key, just indicate it's set
+				geoloc["maxmind_license_key_masked"] = maskSecretFirstLast4(licenseKey)
+				}
+				if lastUpdatedAt, ok := geolocSettings["last_updated_at"].(string); ok && strings.TrimSpace(lastUpdatedAt) != "" {
+					geoloc["last_updated_at"] = lastUpdatedAt
+				}
+				if lastUpdatedSource, ok := geolocSettings["last_updated_source"].(string); ok && strings.TrimSpace(lastUpdatedSource) != "" {
+					geoloc["last_updated_source"] = lastUpdatedSource
+				}
+				if downloadURL, ok := geolocSettings["download_url"].(string); ok {
+					geoloc["download_url"] = downloadURL
+				}
+				if downloadMethod, ok := geolocSettings["download_method"].(string); ok {
+					geoloc["download_method"] = downloadMethod
+				}
+			}
+		}
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "settings", safSettings)
 }
 
+// maskSecretFirstLast4 returns the first 4 and last 4 characters of a secret.
+// Example: "abcd1234WXYZ" -> "abcd…WXYZ"
+func maskSecretFirstLast4(secret string) string {
+	secret = strings.TrimSpace(secret)
+	if len(secret) <= 8 {
+		return secret
+	}
+	return secret[:4] + "…" + secret[len(secret)-4:]
+}
+
 // UpdateEmailRequest request body for updating email settings
 type UpdateEmailRequest struct {
-	Provider   string `json:"provider"`
-	SMTPHost   string `json:"smtp_host"`
-	SMTPPort   string `json:"smtp_port"`
-	SMTPUser   string `json:"smtp_user"`
-	SMTPPass   string `json:"smtp_pass,omitempty"` // optional - only if changing
-	FromEmail  string `json:"from_email"`
-	FromName   string `json:"from_name"`
+	// Accept both old and UI-friendly shapes.
+	Provider string `json:"provider"`
+
+	SMTPHost string `json:"smtp_host"`
+	SMTPPort string `json:"smtp_port"`
+	SMTPUser string `json:"smtp_user"`
+	SMTPPass string `json:"smtp_pass,omitempty"` // optional - only if changing
+
+	Host     string `json:"host"`
+	Port     any    `json:"port"` // number or string from UI
+	Username string `json:"username"`
+	Password string `json:"password,omitempty"` // optional - only if changing
+
+	FromEmail string `json:"from_email"`
+	FromName  string `json:"from_name"`
 }
 
 // UpdateEmail updates email settings
@@ -88,9 +158,74 @@ func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	// TODO: Validate settings
-	// TODO: Save to DB (account.settings_jsonb)
-	// TODO: Update in memory (config.Data())
+	cfg := config.Data()
+	if cfg.Settings.Email == nil {
+		cfg.Settings.Email = map[string]string{}
+	}
+
+	// Normalize payload from UI.
+	if req.Provider != "" {
+		cfg.Settings.Email["provider"] = req.Provider
+	} else if cfg.Settings.Email["provider"] == "" {
+		cfg.Settings.Email["provider"] = "smtp"
+	}
+
+	if req.SMTPHost == "" && req.Host != "" {
+		req.SMTPHost = req.Host
+	}
+	if req.SMTPUser == "" && req.Username != "" {
+		req.SMTPUser = req.Username
+	}
+	if req.SMTPPass == "" && req.Password != "" {
+		req.SMTPPass = req.Password
+	}
+	if req.SMTPPort == "" && req.Port != nil {
+		req.SMTPPort = fmt.Sprint(req.Port)
+	}
+
+	if strings.TrimSpace(req.SMTPHost) != "" {
+		cfg.Settings.Email["smtp_host"] = strings.TrimSpace(req.SMTPHost)
+	}
+	if strings.TrimSpace(req.SMTPPort) != "" {
+		cfg.Settings.Email["smtp_port"] = strings.TrimSpace(req.SMTPPort)
+	}
+	if strings.TrimSpace(req.SMTPUser) != "" {
+		cfg.Settings.Email["smtp_user"] = strings.TrimSpace(req.SMTPUser)
+	}
+	// Only overwrite password if provided.
+	if strings.TrimSpace(req.SMTPPass) != "" {
+		cfg.Settings.Email["smtp_pass"] = req.SMTPPass
+	}
+	if strings.TrimSpace(req.FromEmail) != "" {
+		cfg.Settings.Email["from_email"] = strings.TrimSpace(req.FromEmail)
+	}
+	if strings.TrimSpace(req.FromName) != "" {
+		cfg.Settings.Email["from_name"] = strings.TrimSpace(req.FromName)
+	}
+
+	// Persist to gosign.toml (single source of truth today).
+	if err := config.Save(cfg); err != nil {
+		log.Error().Err(err).Msg("Failed to persist email settings")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
+	}
+
+	// Update provider instance (best-effort). Secrets are already in cfg.
+	if h.notificationSvc != nil && cfg.Settings.Email["provider"] == "smtp" {
+		// Port parsing is best-effort; defaults are handled by provider validation too.
+		var port int
+		_, _ = fmt.Sscanf(cfg.Settings.Email["smtp_port"], "%d", &port)
+		if port == 0 {
+			port = 1025
+		}
+		h.notificationSvc.RegisterProvider(notification.NewEmailProvider(notification.SMTPConfig{
+			Host:      cfg.Settings.Email["smtp_host"],
+			Port:      port,
+			User:      cfg.Settings.Email["smtp_user"],
+			Password:  cfg.Settings.Email["smtp_pass"],
+			FromEmail: cfg.Settings.Email["from_email"],
+			FromName:  cfg.Settings.Email["from_name"],
+		}))
+	}
 
 	log.Info().Msg("Email settings updated")
 	
@@ -98,6 +233,95 @@ func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 		"status": "updated",
 	})
 }
+
+type UpdateSMSRequest struct {
+	TwilioEnabled     bool   `json:"twilio_enabled"`
+	TwilioAccountSID  string `json:"twilio_account_sid,omitempty"`
+	TwilioAuthToken   string `json:"twilio_auth_token,omitempty"` // write-only
+	TwilioFromNumber  string `json:"twilio_from_number,omitempty"`
+}
+
+func (h *SettingsHandler) UpdateSMS(c *fiber.Ctx) error {
+	var req UpdateSMSRequest
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	cfg := config.Data()
+	if cfg.Settings.Email == nil {
+		cfg.Settings.Email = map[string]string{}
+	}
+
+	if req.TwilioEnabled {
+		cfg.Settings.Email["twilio_enabled"] = "true"
+	} else {
+		cfg.Settings.Email["twilio_enabled"] = "false"
+	}
+
+	if strings.TrimSpace(req.TwilioAccountSID) != "" {
+		cfg.Settings.Email["twilio_account_sid"] = strings.TrimSpace(req.TwilioAccountSID)
+	}
+	if strings.TrimSpace(req.TwilioFromNumber) != "" {
+		cfg.Settings.Email["twilio_from_number"] = strings.TrimSpace(req.TwilioFromNumber)
+	}
+	// Only overwrite token if provided.
+	if strings.TrimSpace(req.TwilioAuthToken) != "" {
+		cfg.Settings.Email["twilio_auth_token"] = req.TwilioAuthToken
+	}
+
+	if err := config.Save(cfg); err != nil {
+		log.Error().Err(err).Msg("Failed to persist SMS settings")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
+	}
+
+	// Replace provider entry (enabled/disabled is checked by Service.CanSend()).
+	if h.notificationSvc != nil {
+		h.notificationSvc.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
+			AccountSID: cfg.Settings.Email["twilio_account_sid"],
+			AuthToken:  cfg.Settings.Email["twilio_auth_token"],
+			FromNumber: cfg.Settings.Email["twilio_from_number"],
+			Enabled:    cfg.Settings.Email["twilio_enabled"] == "true",
+		}))
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "sms_settings", map[string]any{
+		"status": "updated",
+	})
+}
+
+type TestSMSRequest struct {
+	ToPhone string `json:"to_phone" validate:"required"`
+	Message string `json:"message,omitempty"`
+}
+
+func (h *SettingsHandler) TestSMS(c *fiber.Ctx) error {
+	var req TestSMSRequest
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if err := webutil.ValidateStruct(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
+	}
+	if h.notificationSvc == nil || !h.notificationSvc.CanSend(models.NotificationTypeSMS) {
+		return webutil.Response(c, fiber.StatusBadRequest, "SMS provider is not configured", nil)
+	}
+	body := strings.TrimSpace(req.Message)
+	if body == "" {
+		body = "goSign test SMS"
+	}
+	n := &models.Notification{
+		Type:      models.NotificationTypeSMS,
+		Recipient: strings.TrimSpace(req.ToPhone),
+		Body:      body,
+		Context:   map[string]any{},
+	}
+	if err := h.notificationSvc.Send(n); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to send test SMS", map[string]any{"error": err.Error()})
+	}
+	return webutil.Response(c, fiber.StatusOK, "test_sms", map[string]any{"status": "success"})
+}
+
+// (maskSecret removed: SID isn't secret; token is write-only)
 
 // UpdateStorageRequest request body for updating storage settings
 type UpdateStorageRequest struct {
@@ -372,12 +596,471 @@ func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 }
 
 // RegisterRoutes registers all routes for settings
+// UpdateGeolocationRequest request body for updating geolocation settings
+type UpdateGeolocationRequest struct {
+	MaxMindLicenseKey string `json:"maxmind_license_key,omitempty"` // Optional: MaxMind license key
+	DownloadURL       string `json:"download_url,omitempty"`         // Optional: Download URL
+	DownloadMethod    string `json:"download_method,omitempty"`      // Optional: "maxmind" or "url"
+}
+
+// UpdateGeolocation updates geolocation settings (method and credentials in database)
+// @Summary Update geolocation settings
+// @Description Updates geolocation download method and credentials in account settings
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Param body body UpdateGeolocationRequest true "Geolocation settings"
+// @Success 200 {object} map[string]any
+// @Router /api/settings/geolocation [put]
+func (h *SettingsHandler) UpdateGeolocation(c *fiber.Ctx) error {
+	accountID, err := h.getAccountIDFromUser(c)
+	if err != nil {
+		return err
+	}
+	if accountID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	var req UpdateGeolocationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if h.accountQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Account queries not initialized", nil)
+	}
+
+	// Update ONLY the fields provided by the request.
+	// We intentionally do not "preserve" or rewrite other fields to avoid unintended updates.
+	licenseKey := strings.TrimSpace(req.MaxMindLicenseKey)
+	downloadURL := strings.TrimSpace(req.DownloadURL)
+	downloadMethod := strings.TrimSpace(req.DownloadMethod)
+
+	// Check if at least one field is provided
+	if licenseKey == "" && downloadURL == "" && downloadMethod == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "At least one field must be provided", nil)
+	}
+
+	if err := h.accountQueries.UpdateAccountGeolocationSettings(c.Context(), accountID, licenseKey, downloadURL, downloadMethod); err != nil {
+		log.Error().Err(err).Msg("Failed to update geolocation settings in database")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
+	}
+
+	// Single concise log line (avoid noise; doesn't imply other fields were updated)
+	log.Info().
+		Str("account_id", accountID).
+		Str("method", downloadMethod).
+		Bool("has_license_key", licenseKey != "").
+		Bool("has_download_url", downloadURL != "").
+		Msg("Geolocation settings updated in database")
+
+	return webutil.Response(c, fiber.StatusOK, "geolocation_settings", map[string]any{
+		"status": "updated",
+	})
+}
+
+// DownloadGeoLite2FromURLRequest request body for downloading GeoLite2 from URL
+type DownloadGeoLite2FromURLRequest struct {
+	URL   string `json:"url" validate:"required,url"`
+	Force bool   `json:"force,omitempty"`
+}
+
+// DownloadGeoLite2FromURL downloads GeoLite2 database from URL
+// @Summary Download GeoLite2 database from URL
+// @Description Downloads GeoLite2-City.mmdb from provided URL
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Param body body DownloadGeoLite2FromURLRequest true "Download request"
+// @Success 200 {object} map[string]any
+// @Router /api/settings/geolocation/download [post]
+func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
+	var req DownloadGeoLite2FromURLRequest
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if err := webutil.ValidateStruct(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
+	}
+
+	// Hardcoded paths (not configurable)
+	const baseDir = "./base"
+	const dbPath = "./base/GeoLite2-City.mmdb"
+
+	// Check if database already exists
+	if _, err := os.Stat(dbPath); err == nil {
+		if !req.Force {
+			return webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
+				"status":  "skipped",
+				"message": "GeoLite2 database already exists",
+				"path":    dbPath,
+			})
+		}
+	}
+
+	// Create base directory if it doesn't exist
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
+	}
+
+	// Download archive from URL
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(req.URL)
+	if err != nil {
+		log.Error().Err(err).Str("url", req.URL).Msg("Failed to download archive")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download archive", map[string]any{
+			"error": err.Error(),
+		})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Error().Int("status", resp.StatusCode).Str("url", req.URL).Msg("Failed to download archive")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download archive", map[string]any{
+			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
+		})
+	}
+
+	// Create temporary file for tar.gz
+	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create temporary file")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	// Save tar.gz to temporary file
+	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+		log.Error().Err(err).Msg("Failed to save tar.gz file")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save tar.gz file", nil)
+	}
+
+	// Extract into temp output, then atomically replace dbPath
+	tmpDBPath := dbPath + ".tmp"
+	_ = os.Remove(tmpDBPath)
+
+	// Extract GeoLite2-City.mmdb from tar.gz
+	if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+		// Fallback: some users provide GeoLite2-City.mmdb.gz (gzip-compressed mmdb, not tar.gz)
+		if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); gzErr != nil {
+			log.Error().Err(err).Msg("Failed to extract database from tar.gz")
+			log.Error().Err(gzErr).Msg("Failed to extract database from mmdb.gz")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
+				"error": fmt.Sprintf("tar.gz error: %s; gzip error: %s", err.Error(), gzErr.Error()),
+			})
+		}
+	}
+
+	if err := os.Rename(tmpDBPath, dbPath); err != nil {
+		_ = os.Remove(tmpDBPath)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
+			"error": err.Error(),
+		})
+	}
+
+	// Reload in-memory geolocation DB so changes apply immediately
+	if h.geolocationSvc != nil {
+		if err := h.geolocationSvc.Reload(); err != nil {
+			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	// Persist last update timestamp (per-account)
+	if h.accountQueries != nil {
+		if accountID, err := h.getAccountIDFromUser(c); err == nil && accountID != "" {
+			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "url")
+		}
+	}
+
+	log.Info().Str("path", dbPath).Str("url", req.URL).Msg("GeoLite2 database downloaded and extracted successfully")
+
+	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
+		"status": "success",
+		"path":   dbPath,
+	})
+}
+
+// DownloadGeoLite2FromMaxMindRequest request body for downloading GeoLite2 from MaxMind
+type DownloadGeoLite2FromMaxMindRequest struct {
+	LicenseKey string `json:"license_key,omitempty"` // Optional: use from database if not provided
+	Force      bool   `json:"force,omitempty"`
+}
+
+// DownloadGeoLite2FromMaxMind downloads GeoLite2 database from MaxMind API
+// @Summary Download GeoLite2 database from MaxMind
+// @Description Downloads GeoLite2-City.mmdb from MaxMind using license key from database or request
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Param body body DownloadGeoLite2FromMaxMindRequest false "Download request (license_key optional, uses saved key if not provided)"
+// @Success 200 {object} map[string]any
+// @Router /api/settings/geolocation/download-maxmind [post]
+func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
+	var req DownloadGeoLite2FromMaxMindRequest
+	_ = c.BodyParser(&req) // Optional body
+
+	// Get license key from request or from database
+	licenseKey := strings.TrimSpace(req.LicenseKey)
+	if licenseKey == "" {
+		// Try to get from account settings
+		accountID, err := h.getAccountIDFromUser(c)
+		if err == nil && h.accountQueries != nil && accountID != "" {
+			licenseKey, _ = h.accountQueries.GetAccountGeolocationLicenseKey(c.Context(), accountID)
+		}
+	}
+
+	if licenseKey == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "MaxMind license key is required. Please configure it in settings first.", nil)
+	}
+
+	// Hardcoded paths (not configurable)
+	const baseDir = "./base"
+	const dbPath = "./base/GeoLite2-City.mmdb"
+
+	// Check if database already exists
+	if _, err := os.Stat(dbPath); err == nil {
+		if !req.Force {
+			return webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
+				"status":  "skipped",
+				"message": "GeoLite2 database already exists",
+				"path":    dbPath,
+			})
+		}
+	}
+
+	// Create base directory if it doesn't exist
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
+	}
+
+	// Download from MaxMind API
+	downloadURL := fmt.Sprintf("https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz", licenseKey)
+	
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(downloadURL)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to download from MaxMind")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{
+			"error": err.Error(),
+		})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error().Int("status", resp.StatusCode).Bytes("body", body).Msg("MaxMind API error")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{
+			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
+		})
+	}
+
+	// Create temporary file for tar.gz
+	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create temporary file")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	// Save tar.gz to temporary file
+	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+		log.Error().Err(err).Msg("Failed to save tar.gz file")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save tar.gz file", nil)
+	}
+
+	// Extract into temp output, then atomically replace dbPath
+	tmpDBPath := dbPath + ".tmp"
+	_ = os.Remove(tmpDBPath)
+
+	// Extract GeoLite2-City.mmdb from tar.gz
+	if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+		log.Error().Err(err).Msg("Failed to extract database from tar.gz")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
+			"error": err.Error(),
+		})
+	}
+
+	if err := os.Rename(tmpDBPath, dbPath); err != nil {
+		_ = os.Remove(tmpDBPath)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
+			"error": err.Error(),
+		})
+	}
+
+	// Reload in-memory geolocation DB so changes apply immediately
+	if h.geolocationSvc != nil {
+		if err := h.geolocationSvc.Reload(); err != nil {
+			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	// Persist last update timestamp (per-account)
+	if h.accountQueries != nil {
+		if accountID, err := h.getAccountIDFromUser(c); err == nil && accountID != "" {
+			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "maxmind")
+		}
+	}
+
+	log.Info().Str("path", dbPath).Msg("GeoLite2 database downloaded from MaxMind successfully")
+
+	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
+		"status": "success",
+		"path":   dbPath,
+	})
+}
+
+// DeleteGeolocationMaxMindKey removes the saved MaxMind license key from account settings.
+func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c *fiber.Ctx) error {
+	accountID, err := h.getAccountIDFromUser(c)
+	if err != nil {
+		return err
+	}
+	if accountID == "" || h.accountQueries == nil {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	if err := h.accountQueries.DeleteAccountGeolocationMaxMindLicenseKey(c.Context(), accountID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete MaxMind license key")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to delete key", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "deleted", map[string]any{
+		"status": "deleted",
+	})
+}
+
+// extractGeoLite2FromTarGz extracts GeoLite2-City.mmdb from tar.gz archive
+func extractGeoLite2FromTarGz(tarGzPath, outputPath string) error {
+	// Open tar.gz file
+	file, err := os.Open(tarGzPath)
+	if err != nil {
+		return fmt.Errorf("failed to open tar.gz file: %w", err)
+	}
+	defer file.Close()
+
+	// Create gzip reader
+	gzReader, err := gzip.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzReader.Close()
+
+	// Create tar reader
+	tarReader := tar.NewReader(gzReader)
+
+	// Find and extract GeoLite2-City.mmdb
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar: %w", err)
+		}
+
+		// Look for GeoLite2-City.mmdb file
+		if header.Typeflag == tar.TypeReg && strings.HasSuffix(header.Name, "GeoLite2-City.mmdb") {
+			// Create output directory if needed
+			if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+				return fmt.Errorf("failed to create output directory: %w", err)
+			}
+
+			// Create output file
+			outFile, err := os.Create(outputPath)
+			if err != nil {
+				return fmt.Errorf("failed to create output file: %w", err)
+			}
+			defer outFile.Close()
+
+			// Copy file content
+			if _, err := io.Copy(outFile, tarReader); err != nil {
+				return fmt.Errorf("failed to extract file: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("GeoLite2-City.mmdb not found in archive")
+}
+
+// extractGeoLite2FromGzipMMDB extracts GeoLite2-City.mmdb from a gzip-compressed mmdb file (GeoLite2-City.mmdb.gz).
+func extractGeoLite2FromGzipMMDB(gzPath, outputPath string) error {
+	file, err := os.Open(gzPath)
+	if err != nil {
+		return fmt.Errorf("failed to open gzip file: %w", err)
+	}
+	defer file.Close()
+
+	gzReader, err := gzip.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzReader.Close()
+
+	// Create output directory if needed
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, gzReader); err != nil {
+		return fmt.Errorf("failed to extract gzip file: %w", err)
+	}
+
+	return nil
+}
+
+// getAccountIDFromUser resolves the current user's account_id via database.
+// We don't rely on middleware setting account_id (JWT middleware only sets user_id).
+func (h *SettingsHandler) getAccountIDFromUser(c *fiber.Ctx) (string, error) {
+	if h.userQueries == nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "User queries not initialized")
+	}
+
+	userID, err := GetUserID(c)
+	if err != nil {
+		return "", err
+	}
+
+	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userID)
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "Failed to resolve account")
+	}
+	if strings.TrimSpace(accountID) == "" {
+		return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found")
+	}
+
+	return accountID, nil
+}
+
 func (h *SettingsHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.Get)
 	router.Put("/email", h.UpdateEmail)
+	router.Put("/sms", h.UpdateSMS)
 	router.Put("/storage", h.UpdateStorage)
 	router.Put("/branding", h.UpdateBranding)
+	router.Put("/geolocation", h.UpdateGeolocation)
+	router.Delete("/geolocation/maxmind-key", h.DeleteGeolocationMaxMindKey)
 	router.Post("/email/test", h.TestEmail)
+	router.Post("/sms/test", h.TestSMS)
 	router.Post("/storage/test", h.TestStorage)
+	router.Post("/geolocation/download", h.DownloadGeoLite2FromURL)
+	router.Post("/geolocation/download-maxmind", h.DownloadGeoLite2FromMaxMind)
 }
 

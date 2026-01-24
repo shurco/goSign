@@ -179,7 +179,7 @@ function onPointerup(): void {
       y: newArea.value.y,
       w: newArea.value.w,
       h: newArea.value.h,
-      page: props.number,
+      page: props.number, // This is 0-based index (0 = first page, 1 = second page, etc.)
       attachment_id: ""
     };
 
@@ -187,7 +187,8 @@ function onPointerup(): void {
       area.cell_w = newArea.value.cell_w;
     }
 
-    emit("draw", area);
+    // Ensure page number is explicitly set
+    emit("draw", { ...area, page: props.number });
   }
 
   newArea.value = null;

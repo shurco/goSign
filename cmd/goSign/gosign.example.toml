@@ -52,6 +52,13 @@ enabled = "true"
 max_retries = "3"
 timeout = "30"
 
+# Geolocation configuration
+[settings.geolocation]
+# Note: base_dir and db_path are hardcoded to "./base" and "./base/GeoLite2-City.mmdb" respectively
+# These values are not configurable and are ignored if set in this file
+# MaxMind license key is stored in account.settings in database, not in this config file
+# Configure it via the web UI at /settings/general
+
 # Feature flags
 [settings.features]
 reminders_enabled = true

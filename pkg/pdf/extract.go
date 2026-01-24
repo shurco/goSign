@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/digitorus/pdf"
 )
 
 // ExtractPagesInput input data for extracting PDF information
@@ -20,7 +18,7 @@ type ExtractPagesResult struct {
 	PageCount int
 }
 
-// ExtractPages extracts number of pages from PDF
+// ExtractPages extracts number of pages from PDF using digitorus/pdf
 func ExtractPages(input ExtractPagesInput) (*ExtractPagesResult, error) {
 	// Read PDF
 	file, err := os.Open(input.PDFPath)
@@ -29,14 +27,19 @@ func ExtractPages(input ExtractPagesInput) (*ExtractPagesResult, error) {
 	}
 	defer file.Close()
 
-	// Get page count using pdfcpu
-	conf := model.NewDefaultConfiguration()
-	ctx, err := api.ReadContext(file, conf)
+	// Get file size
+	stat, err := file.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read PDF context: %w", err)
+		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	pageCount := ctx.PageCount
+	// Parse PDF using digitorus/pdf
+	pdfReader, err := pdf.NewReader(file, stat.Size())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PDF reader: %w", err)
+	}
+
+	pageCount := pdfReader.NumPage()
 	return &ExtractPagesResult{
 		PageCount: pageCount,
 	}, nil
@@ -80,16 +83,9 @@ func GeneratePreview(input GeneratePreviewInput) (*GeneratePreviewResult, error)
 		images = append(images, outputFile)
 	}
 
-	// Extract images from PDF if they exist
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("extract_%d", time.Now().UnixNano()))
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	conf := model.NewDefaultConfiguration()
-	// Try to extract embedded images
-	_ = api.ExtractImagesFile(input.PDFPath, tmpDir, nil, conf)
+	// Note: Full page rendering requires external tools (pdftoppm is used in templates.go)
+	// This function just returns placeholder paths
+	// Actual preview generation is handled by generatePagePreview in templates.go
 
 	return &GeneratePreviewResult{
 		Images: images,
@@ -119,7 +115,7 @@ type ExtractFormFieldsResult struct {
 	Fields []FormField
 }
 
-// ExtractFormFields extracts existing PDF form fields (AcroForm)
+// ExtractFormFields extracts existing PDF form fields (AcroForm) using digitorus/pdf
 func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, error) {
 	// Read PDF
 	file, err := os.Open(input.PDFPath)
@@ -128,33 +124,92 @@ func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, 
 	}
 	defer file.Close()
 
-	// Get form fields using pdfcpu
-	conf := model.NewDefaultConfiguration()
-	fields, err := api.FormFields(file, conf)
+	// Get file size
+	stat, err := file.Stat()
 	if err != nil {
-		// No form fields or error - return empty result
+		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	// Parse PDF using digitorus/pdf
+	pdfReader, err := pdf.NewReader(file, stat.Size())
+	if err != nil {
+		// If PDF parsing fails, return empty result (not error)
+		return &ExtractFormFieldsResult{Fields: []FormField{}}, nil
+	}
+
+	// Access AcroForm dictionary
+	acroForm := pdfReader.Trailer().Key("Root").Key("AcroForm")
+	if acroForm.IsNull() {
+		// No AcroForm - return empty result
+		return &ExtractFormFieldsResult{Fields: []FormField{}}, nil
+	}
+
+	// Get Fields array
+	fieldsArray := acroForm.Key("Fields")
+	if fieldsArray.IsNull() || fieldsArray.Len() == 0 {
 		return &ExtractFormFieldsResult{Fields: []FormField{}}, nil
 	}
 
 	// Convert to our format
 	var result []FormField
-	for _, field := range fields {
+	for i := 0; i < fieldsArray.Len(); i++ {
+		fieldObj := fieldsArray.Index(i)
+		
+		// Use field object directly (digitorus/pdf handles references automatically)
+		fieldValue := fieldObj
+
+		// Extract field name
+		fieldName := fieldValue.Key("T").Text()
+		if fieldName == "" {
+			continue
+		}
+
+		// Extract field type
+		fieldType := fieldValue.Key("FT").Name()
+		
+		// Extract field value
+		fieldVal := fieldValue.Key("V").Text()
+
+		// Extract Rect for coordinates (if available)
+		rect := fieldValue.Key("Rect")
+		var x, y, width, height float64
+		if !rect.IsNull() && rect.Len() >= 4 {
+			// Rect is [llx lly urx ury]
+			llx := rect.Index(0).Float64()
+			lly := rect.Index(1).Float64()
+			urx := rect.Index(2).Float64()
+			ury := rect.Index(3).Float64()
+			x = llx
+			y = lly
+			width = urx - llx
+			height = ury - lly
+		}
+
+		// Get page number (try to find from Parent chain)
+		pageNum := 1 // Default to page 1 if can't determine
+
 		formField := FormField{
-			Name:  field.Name,
-			Value: field.V,
+			Name:  fieldName,
+			Value: fieldVal,
+			X:     x,
+			Y:     y,
+			Width: width,
+			Height: height,
+			Page:  pageNum,
 		}
 
 		// Map field type
-		switch field.Typ.String() {
-		case "Tx":
+		switch fieldType {
+		case "/Tx":
 			formField.Type = "text"
-		case "Btn":
-			if field.Opts != "" {
+		case "/Btn":
+			// Check if it's a radio button (has Opts) or checkbox
+			if !fieldValue.Key("Opt").IsNull() {
 				formField.Type = "radio"
 			} else {
 				formField.Type = "checkbox"
 			}
-		case "Ch":
+		case "/Ch":
 			formField.Type = "select"
 		default:
 			formField.Type = "text"

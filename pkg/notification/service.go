@@ -16,6 +16,12 @@ type Provider interface {
 	Type() models.NotificationType
 }
 
+// enabledProvider is an optional interface providers can implement to signal
+// if they're configured/enabled at runtime.
+type enabledProvider interface {
+	Enabled() bool
+}
+
 // Repository represents an interface for working with notification database
 type Repository interface {
 	Create(notification *models.Notification) error
@@ -105,7 +111,13 @@ func (s *Service) CancelScheduled(relatedID string) error {
 
 // CanSend checks if the service can send notifications of the given type
 func (s *Service) CanSend(notificationType models.NotificationType) bool {
-	_, ok := s.providers[notificationType]
-	return ok
+	p, ok := s.providers[notificationType]
+	if !ok {
+		return false
+	}
+	if ep, ok := p.(enabledProvider); ok {
+		return ep.Enabled()
+	}
+	return true
 }
 

@@ -396,6 +396,8 @@ export interface Template {
   source?: string;
   author?: Author;
   submitters: Submitter[];
+  // Provided by list/search endpoints to avoid sending full submitters array.
+  submitter_count?: number /* int */;
   fields: Field[];
   schema: Schema[];
   documents: Document[];

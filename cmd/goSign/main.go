@@ -1,10 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-
-	"github.com/spf13/cobra"
 
 	app "github.com/shurco/gosign/internal"
 )
@@ -15,61 +14,67 @@ var (
 	buildDate = "14.12.2023"
 )
 
-var rootCmd = &cobra.Command{
-	Use:                "gosign",
-	Short:              "goSign CLI",
-	Long:               "✍️ Sign documents without stress",
-	Version:            fmt.Sprintf("goSign %s (%s) from %s", version, gitCommit, buildDate),
-	FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
-	CompletionOptions:  cobra.CompletionOptions{DisableDefaultCmd: true},
-}
-
 func main() {
-	rootCmd.SetHelpCommand(&cobra.Command{
-		Use:    "no-help",
-		Hidden: true,
-	})
+	if len(os.Args) < 2 {
+		printUsage()
+		os.Exit(1)
+	}
 
-	rootCmd.AddCommand(cmdServe())
-	rootCmd.AddCommand(cmdGen())
+	command := os.Args[1]
 
-	if err := rootCmd.Execute(); err != nil {
+	switch command {
+	case "serve":
+		handleServe()
+	case "gen":
+		handleGen()
+	case "version", "-v", "--version":
+		fmt.Printf("goSign %s (%s) from %s\n", version, gitCommit, buildDate)
+		os.Exit(0)
+	case "help", "-h", "--help":
+		printUsage()
+		os.Exit(0)
+	default:
+		fmt.Printf("Unknown command: %s\n", command)
+		printUsage()
 		os.Exit(1)
 	}
 }
 
-func cmdServe() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "serve",
-		Short: "Starts the web server (default to 0.0.0.0:8080)",
-		Run: func(serveCmd *cobra.Command, args []string) {
-			if err := app.New(); err != nil {
-				os.Exit(1)
-			}
-		},
-	}
-
-	return cmd
+func printUsage() {
+	fmt.Println("✍️ Sign documents without stress")
+	fmt.Println("\nUsage:")
+	fmt.Println("  gosign <command> [flags]")
+	fmt.Println("\nCommands:")
+	fmt.Println("  serve     Starts the web server (default to 0.0.0.0:8080)")
+	fmt.Println("  gen       Generate keys and config files")
+	fmt.Println("  version   Show version information")
+	fmt.Println("  help      Show this help message")
+	fmt.Println("\nFlags for 'gen':")
+	fmt.Println("  --config  Generate config file")
 }
 
-func cmdGen() *cobra.Command {
-	var configFile, keyJWT, keyLicense bool
-	cmd := &cobra.Command{
-		Use:   "gen [flags]",
-		Short: "Generate keys and config files",
-		Run: func(serveCmd *cobra.Command, args []string) {
-			if !configFile && !keyJWT && !keyLicense {
-				serveCmd.Help()
-			}
-			if configFile {
-				if err := app.GenConfigFile(); err != nil {
-					fmt.Print("Config file generated")
-					os.Exit(1)
-				}
-			}
-		},
+func handleServe() {
+	if err := app.New(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func handleGen() {
+	genCmd := flag.NewFlagSet("gen", flag.ExitOnError)
+	configFile := genCmd.Bool("config", false, "Generate config file")
+
+	// Parse flags from os.Args[2:]
+	genCmd.Parse(os.Args[2:])
+
+	if !*configFile {
+		fmt.Println("Usage: gosign gen --config")
+		os.Exit(1)
 	}
 
-	cmd.PersistentFlags().BoolVar(&configFile, "config", false, "config file")
-	return cmd
+	if *configFile {
+		if err := app.GenConfigFile(); err != nil {
+			fmt.Println("Config file generated")
+			os.Exit(1)
+		}
+	}
 }

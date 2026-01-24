@@ -1,12 +1,16 @@
 <template>
   <div class="field-input-wrapper">
     <FileInput
-      v-model="localValue"
+      ref="fileInputRef"
       :accept="accept"
       :required="required"
       :disabled="disabled"
+      @change="handleFileChange"
       @blur="handleBlur"
     />
+    <div v-if="selectedFileName" class="mt-2 text-sm text-gray-600">
+      {{ selectedFileName }}
+    </div>
     <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
   </div>
 </template>
@@ -41,20 +45,49 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
-const localValue = ref(props.modelValue);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const selectedFileName = ref("");
 
 const accept = props.type === "image" ? "image/*" : undefined;
 
 watch(
   () => props.modelValue,
   (newValue) => {
-    localValue.value = newValue || "";
+    if (!newValue || newValue === "") {
+      selectedFileName.value = "";
+      if (fileInputRef.value) {
+        (fileInputRef.value as HTMLInputElement).value = "";
+      }
+    }
   }
 );
 
-watch(localValue, (newValue) => {
-  emit("update:modelValue", newValue || "");
-});
+function handleFileChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  
+  if (file) {
+    selectedFileName.value = file.name;
+    
+    // For image type, convert to base64
+    if (props.type === "image") {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (result) {
+          emit("update:modelValue", result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // For file type, just store the filename as indicator that file was selected
+      emit("update:modelValue", file.name);
+    }
+  } else {
+    selectedFileName.value = "";
+    emit("update:modelValue", "");
+  }
+}
 
 function handleBlur(): void {
   emit("blur");

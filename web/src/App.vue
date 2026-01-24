@@ -1,5 +1,11 @@
 <template>
-  <component :is="layoutComponent" v-if="layoutComponent" :key="`${route.path}-${route.name}`">
+  <!--
+    Important: do NOT key the layout by route path/name.
+    Keying by path forces a full layout remount on every navigation, which causes
+    sidebar header/user blocks to flicker and re-fetch `/api/v1/users/me`.
+    We only want to remount when the layout type changes (Blank/Main/Sidebar/...).
+  -->
+  <component :is="layoutComponent" v-if="layoutComponent" :key="layoutKey">
     <RouterView :key="route.path" />
   </component>
   <div v-else class="flex h-screen items-center justify-center">
@@ -12,26 +18,18 @@
 
 <script setup lang="ts">
 import { RouterView, useRoute } from "vue-router";
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 
 const route = useRoute();
-const layoutReady = ref(false);
-
-// Watch for route changes and reset layoutReady if component is missing
-watch(
-  () => route.path,
-  () => {
-    if (!route.meta.layoutComponent) {
-      layoutReady.value = false;
-    } else {
-      layoutReady.value = true;
-    }
-  },
-  { immediate: true }
-);
 
 // Ensure layoutComponent is always available or fallback to Blank
 const layoutComponent = computed(() => {
   return route.meta.layoutComponent || null;
+});
+
+const layoutKey = computed(() => {
+  // Vue will only remount the layout when this value changes.
+  const key = route.meta.layout as string | undefined;
+  return key || "Blank";
 });
 </script>

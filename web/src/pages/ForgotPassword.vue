@@ -21,31 +21,31 @@
           <span class="block sm:inline">{{ success }}</span>
         </div>
 
-        <div class="rounded-md border border-gray-200 bg-white p-6 transition-colors">
-          <div>
-            <label for="email-address" class="sr-only">Email address</label>
-            <input
-              id="email-address"
-              v-model="email"
-              name="email"
-              type="email"
-              autocomplete="email"
-              required
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-              placeholder="Email address"
-            />
-          </div>
+        <div>
+          <label for="email-address" class="sr-only">Email address</label>
+          <input
+            id="email-address"
+            v-model="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+            placeholder="Email address"
+          />
         </div>
 
         <div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            class="w-full"
+            :loading="isLoading"
             :disabled="isLoading"
-            class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
           >
             <span v-if="isLoading">Sending...</span>
             <span v-else>Send reset link</span>
-          </button>
+          </Button>
         </div>
 
         <div class="text-center">
@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import Button from "@/components/ui/Button.vue";
 
 const email = ref("");
 const isLoading = ref(false);

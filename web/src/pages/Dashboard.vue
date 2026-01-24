@@ -10,52 +10,49 @@
 
     <!-- Stats Grid -->
     <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Stats>
-        <Stat
-          :title="$t('dashboard.totalSubmissions')"
-          :value="stats.total_submissions"
-          :description="`${stats.pending_submissions} ${$t('dashboard.pendingSubmissions').toLowerCase()}`"
-          variant="primary"
-        >
-          <template #figure>
-            <SvgIcon name="document" class="inline-block h-8 w-8 text-[var(--color-primary)]" />
-          </template>
-        </Stat>
-      </Stats>
+      <Card>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.totalSubmissions') }}</div>
+            <div class="mb-1 text-3xl font-bold text-[var(--color-primary)]">{{ stats.total_submissions }}</div>
+            <div class="text-sm text-gray-500">{{ stats.pending_submissions }} {{ $t('dashboard.pendingSubmissions').toLowerCase() }}</div>
+          </div>
+          <SvgIcon name="document" class="h-12 w-12 text-[var(--color-primary)] opacity-20" />
+        </div>
+      </Card>
 
-      <Stats>
-        <Stat
-          :title="$t('dashboard.completedSubmissions')"
-          :value="stats.completed_submissions"
-          :description="`${completionRate}% ${$t('common.complete')}`"
-          variant="success"
-        >
-          <template #figure>
-            <SvgIcon name="check-circle" class="inline-block h-8 w-8 text-[var(--color-success)]" />
-          </template>
-        </Stat>
-      </Stats>
+      <Card>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.completedSubmissions') }}</div>
+            <div class="mb-1 text-3xl font-bold text-[var(--color-success)]">{{ stats.completed_submissions }}</div>
+            <div class="text-sm text-gray-500">{{ completionRate }}% {{ $t('common.complete') }}</div>
+          </div>
+          <SvgIcon name="check-circle" class="h-12 w-12 text-[var(--color-success)] opacity-20" />
+        </div>
+      </Card>
 
-      <Stats>
-        <Stat
-          :title="$t('dashboard.totalTemplates')"
-          :value="stats.total_templates"
-          :description="`${stats.active_templates || 0} ${$t('dashboard.active')}`"
-          variant="primary"
-        >
-          <template #figure>
-            <SvgIcon name="templates" class="inline-block h-8 w-8 text-[var(--color-primary)]" />
-          </template>
-        </Stat>
-      </Stats>
+      <Card>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.totalTemplates') }}</div>
+            <div class="mb-1 text-3xl font-bold text-[var(--color-primary)]">{{ stats.total_templates }}</div>
+            <div class="text-sm text-gray-500">{{ stats.active_templates || 0 }} {{ $t('dashboard.active') }}</div>
+          </div>
+          <SvgIcon name="templates" class="h-12 w-12 text-[var(--color-primary)] opacity-20" />
+        </div>
+      </Card>
 
-      <Stats>
-        <Stat :title="$t('dashboard.submitters')" :value="stats.total_submitters" :description="$t('dashboard.thisMonth')" variant="info">
-          <template #figure>
-            <SvgIcon name="users" class="inline-block h-8 w-8 text-[var(--color-info)]" />
-          </template>
-        </Stat>
-      </Stats>
+      <Card>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.submitters') }}</div>
+            <div class="mb-1 text-3xl font-bold text-[var(--color-info)]">{{ stats.total_submitters }}</div>
+            <div class="text-sm text-gray-500">{{ $t('dashboard.thisMonth') }}</div>
+          </div>
+          <SvgIcon name="users" class="h-12 w-12 text-[var(--color-info)] opacity-20" />
+        </div>
+      </Card>
     </div>
 
     <!-- Recent Activity -->
@@ -75,10 +72,22 @@
           :empty-message="$t('submissions.title')"
           @row-click="viewSubmission"
         >
-          <template #cell-status="{ value }">
-            <Badge :variant="getStatusBadgeVariant(value)">
-              {{ value }}
-            </Badge>
+          <template #cell-title="{ value, item }">
+            <button
+              type="button"
+              class="link text-left"
+              @click.stop="openCompletedDocument(item as Submission)"
+            >
+              {{ String(value || "") }}
+            </button>
+          </template>
+
+          <template #cell-status="{ value, item }">
+            <button type="button" class="inline-flex cursor-pointer" @click.stop="openStatusHistory(item as Submission)">
+              <Badge size="sm" :variant="getBadgeVariantForSubmissionStatus(value)">
+                {{ statusLabel(value) }}
+              </Badge>
+            </button>
           </template>
         </ResourceTable>
         <template #footer>
@@ -93,19 +102,26 @@
         <template #header>
           <h2 class="text-lg font-semibold">{{ $t('dashboard.recentActivity') }}</h2>
         </template>
-        <div class="space-y-4">
-          <div v-for="event in recentEvents" :key="event.id" class="flex gap-4">
-            <div class="flex-shrink-0">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-base-200)]">
-                <span class="text-lg">{{ getEventIcon(event.type) }}</span>
+        <div class="pt-4">
+          <div v-if="recentEvents.length === 0" class="py-6 text-center text-gray-500">{{ $t('dashboard.noActivity') }}</div>
+          <div v-else class="space-y-4">
+            <div v-for="event in recentEvents" :key="event.id" class="flex items-start gap-3">
+              <div class="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-base-200)]">
+                <span class="text-base">{{ getEventIcon(event.type) }}</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div class="font-medium">{{ event.message }}</div>
+                  <span v-if="event.document_name" class="rounded-full bg-[var(--color-base-200)] px-2 py-0.5 text-xs text-gray-700">
+                    {{ event.document_name }}
+                  </span>
+                </div>
+                <div class="text-sm text-gray-500">{{ formatEventDate(event.created_at) }}</div>
+                <div v-if="event.ip" class="text-sm text-gray-500 font-mono">IP address: {{ event.ip }}</div>
+                <div v-if="event.location" class="text-sm text-gray-500">Location: {{ event.location }}</div>
               </div>
             </div>
-            <div class="flex-1">
-              <p class="font-medium">{{ event.message }}</p>
-              <p class="text-sm text-gray-500">{{ formatDate(event.created_at) }}</p>
-            </div>
           </div>
-          <div v-if="recentEvents.length === 0" class="py-8 text-center text-gray-500">{{ $t('dashboard.noActivity') }}</div>
         </div>
       </Card>
     </div>
@@ -117,13 +133,13 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import ResourceTable from "@/components/common/ResourceTable.vue";
-import Stats from "@/components/ui/Stats.vue";
-import Stat from "@/components/ui/Stat.vue";
 import Card from "@/components/ui/Card.vue";
 import Badge from "@/components/ui/Badge.vue";
 import Button from "@/components/ui/Button.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
 import { fetchWithAuth } from "@/utils/auth";
+import { getBadgeVariantForSubmissionStatus, getI18nStatusKey } from "@/utils/status";
+import { openBlobInNewTab } from "@/utils/file";
 
 interface Submission {
   id: string;
@@ -136,7 +152,10 @@ interface Event {
   id: string;
   type: string;
   message: string;
+  document_name?: string;
   created_at: string;
+  ip?: string;
+  location?: string;
 }
 
 const router = useRouter();
@@ -153,7 +172,7 @@ const stats = ref<Stats>({
 const recentSubmissions = ref<Submission[]>([]);
 const recentEvents = ref<Event[]>([]);
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const submissionColumns = computed(() => [
   { key: "title", label: t('submissions.titleField'), sortable: true },
@@ -204,17 +223,17 @@ async function loadStats(): Promise<void> {
 async function loadRecentSubmissions(): Promise<void> {
   try {
     // Token check is redundant - fetchWithAuth handles authentication
-    const response = await fetchWithAuth("/api/v1/submissions?limit=5&sort=created_at:desc");
+    const response = await fetchWithAuth("/api/v1/signing-links?page=1&page_size=5");
     if (response.ok) {
       const data = await response.json();
-      // API returns: { message: "...", data: { items: [], total: 0, ... } }
-      if (data.data && data.data.items) {
-        recentSubmissions.value = data.data.items || [];
-      } else if (Array.isArray(data.data)) {
-        recentSubmissions.value = data.data;
-      } else {
-        recentSubmissions.value = [];
-      }
+      const payload = data.data || data;
+      const items = (payload.items || []) as any[];
+      recentSubmissions.value = items.map((s) => ({
+        id: s.submission_id,
+        title: s.template_name,
+        status: s.status,
+        created_at: s.created_at
+      }));
     } else if (response.status === 401) {
       // Redirect to login is handled by fetchWithAuth
       return;
@@ -230,7 +249,7 @@ async function loadRecentSubmissions(): Promise<void> {
 async function loadRecentEvents(): Promise<void> {
   try {
     // Token check is redundant - fetchWithAuth handles authentication
-    const response = await fetchWithAuth("/api/v1/events?limit=10&sort=created_at:desc");
+    const response = await fetchWithAuth("/api/v1/events?limit=6&sort=created_at:desc");
     if (response.ok) {
       const data = await response.json();
       // API returns: { message: "...", data: { items: [], total: 0, ... } }
@@ -240,6 +259,10 @@ async function loadRecentEvents(): Promise<void> {
         recentEvents.value = data.data;
       } else {
         recentEvents.value = [];
+      }
+      // Debug: log events data to check location
+      if (recentEvents.value.length > 0) {
+        console.log("Events data:", recentEvents.value);
       }
     } else if (response.status === 401) {
       // Redirect to login is handled by fetchWithAuth
@@ -253,16 +276,9 @@ async function loadRecentEvents(): Promise<void> {
   }
 }
 
-function getStatusBadgeVariant(status: string): "ghost" | "primary" | "success" | "warning" | "error" | "info" {
-  const variants: Record<string, "ghost" | "primary" | "success" | "warning" | "error" | "info"> = {
-    draft: "ghost",
-    pending: "warning",
-    in_progress: "info",
-    completed: "success",
-    expired: "error",
-    cancelled: "ghost"
-  };
-  return variants[status] || "ghost";
+function statusLabel(status: unknown): string {
+  const key = getI18nStatusKey(status);
+  return te(key) ? t(key) : String(status || "");
 }
 
 function getEventIcon(type: string): string {
@@ -302,8 +318,55 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString();
 }
 
+function formatEventDate(value: unknown): string {
+  const s = String(value || "");
+  if (!s) {
+    return "—";
+  }
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) {
+    return s;
+  }
+  return d.toLocaleString();
+}
+
 function viewSubmission(submission: Submission): void {
-  router.push(`/submissions/${submission.id}`);
+  openStatusHistory(submission);
+}
+
+function openStatusHistory(submission: Submission): void {
+  const id = String(submission?.id || "");
+  if (!id) {
+    return;
+  }
+  router.push(`/submissions/${encodeURIComponent(id)}/status`);
+}
+
+async function openCompletedDocument(submission: Submission): Promise<void> {
+  const id = String(submission?.id || "");
+  if (!id) {
+    return;
+  }
+  try {
+    const res = await fetchWithAuth(`/api/v1/signing-links/${encodeURIComponent(id)}/document`, { method: "GET" });
+    if (res.status === 409) {
+      alert("Document is not completed yet.");
+      return;
+    }
+    if (res.status === 404 || res.status === 403) {
+      alert("Only the owner can view the completed document.");
+      return;
+    }
+    if (!res.ok) {
+      alert("Failed to load completed document.");
+      return;
+    }
+    const buf = await res.arrayBuffer();
+    openBlobInNewTab(new Blob([buf], { type: "application/pdf" }));
+  } catch (e) {
+    console.error("Failed to open completed document:", e);
+    alert("Failed to load completed document.");
+  }
 }
 </script>
 

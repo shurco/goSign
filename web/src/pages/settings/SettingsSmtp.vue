@@ -49,12 +49,14 @@ import { fetchWithAuth } from "@/utils/auth";
 const { t } = useI18n();
 
 const smtpSettings = ref({
-  host: "",
-  port: 587,
+  smtp_host: "",
+  smtp_port: "587",
   encryption: "tls",
-  username: "",
-  password: "",
-  from_email: ""
+  smtp_user: "",
+  smtp_pass: "",
+  from_email: "",
+  from_name: "goSign",
+  provider: "smtp"
 });
 
 onMounted(async () => {
@@ -69,12 +71,14 @@ async function loadSettings(): Promise<void> {
       const settings = data.data || data;
       if (settings.email) {
         smtpSettings.value = {
-          host: settings.email.smtp_host || "",
-          port: settings.email.smtp_port || 587,
+          provider: settings.email.provider || "smtp",
+          smtp_host: settings.email.smtp_host || "",
+          smtp_port: String(settings.email.smtp_port || "587"),
           encryption: "tls",
-          username: settings.email.smtp_user || "",
-          password: "",
-          from_email: settings.email.from_email || ""
+          smtp_user: settings.email.smtp_user || "",
+          smtp_pass: "",
+          from_email: settings.email.from_email || "",
+          from_name: settings.email.from_name || "goSign"
         };
       }
     }

@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -22,18 +24,15 @@ import (
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services/field"
 	"github.com/shurco/gosign/internal/services/formula"
-	"github.com/gen2brain/go-fitz"
-	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/shurco/gosign/pkg/pdf"
 	"github.com/shurco/gosign/pkg/utils/webutil"
+	"github.com/signintech/gopdf"
 )
-
 
 // TemplateHandler handles requests to templates
 type TemplateHandler struct {
 	*ResourceHandler[models.Template] // embed generic CRUD
-	templateQueries *queries.TemplateQueries
+	templateQueries                   *queries.TemplateQueries
 }
 
 // NewTemplateHandler creates new handler
@@ -94,7 +93,7 @@ func (h *TemplateHandler) CreateEmptyTemplate(c *fiber.Ctx) error {
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
-	
+
 	// Set category if provided
 	if req.Category != nil && *req.Category != "" {
 		template.Category = *req.Category
@@ -162,13 +161,105 @@ func (h *TemplateHandler) Clone(c *fiber.Ctx) error {
 
 // CreateFromTypeRequest request body for creating template from file
 type CreateFromTypeRequest struct {
-	Name        string                 `json:"name" validate:"required"`
-	Type        string                 `json:"type" validate:"required,oneof=pdf html docx"`
-	FileBase64  string                 `json:"file_base64,omitempty"`
-	FileURL     string                 `json:"file_url,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Category    *string                `json:"category,omitempty"`
+	Name        string         `json:"name" validate:"required"`
+	Type        string         `json:"type" validate:"required,oneof=pdf html docx"`
+	FileBase64  string         `json:"file_base64,omitempty"`
+	FileURL     string         `json:"file_url,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Category    *string        `json:"category,omitempty"`
 	Settings    map[string]any `json:"settings,omitempty"`
+}
+
+// AttachFileToTemplateRequest request body for attaching a file to an existing template
+type AttachFileToTemplateRequest struct {
+	Type       string `json:"type" validate:"required,oneof=pdf"`
+	FileBase64 string `json:"file_base64" validate:"required"`
+	Append     bool   `json:"append,omitempty"`
+}
+
+// AttachFileToTemplate attaches a file to an existing template (e.g., import PDF pages).
+// Intended for:
+// - "empty template" flow (append=false): set initial pages
+// - "add pages" flow (append=true): append new pages to existing schema
+//
+// @Summary Attach file to template
+// @Description Attaches a PDF file to an existing template and updates its schema/documents
+// @Tags templates
+// @Accept json
+// @Produce json
+// @Param template_id path string true "Template ID"
+// @Param body body AttachFileToTemplateRequest true "Attach file request"
+// @Success 200 {object} models.Template
+// @Failure 400 {object} map[string]any
+// @Failure 404 {object} map[string]any
+// @Router /api/templates/{template_id}/from-file [post]
+func (h *TemplateHandler) AttachFileToTemplate(c *fiber.Ctx) error {
+	templateID := c.Params("template_id")
+	if templateID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
+	}
+
+	var req AttachFileToTemplateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if req.Type == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "type is required", nil)
+	}
+	if req.Type != "pdf" {
+		return webutil.Response(c, fiber.StatusBadRequest, "Unsupported file type", nil)
+	}
+	if req.FileBase64 == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "file_base64 is required", nil)
+	}
+
+	// Decode file
+	fileData, err := base64.StdEncoding.DecodeString(req.FileBase64)
+	if err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid base64 data", nil)
+	}
+	if len(fileData) == 0 {
+		return webutil.Response(c, fiber.StatusBadRequest, "file data is empty", nil)
+	}
+
+	// Ensure template exists (and get current name)
+	existing, err := h.repository.Get(templateID)
+	if err != nil || existing == nil {
+		return webutil.Response(c, fiber.StatusNotFound, "Template not found", nil)
+	}
+
+	// Get organization ID from context (used by storage paths/providers in future)
+	organizationID := ""
+	if orgID := c.Locals("organization_id"); orgID != nil {
+		if orgIDStr, ok := orgID.(string); ok {
+			organizationID = orgIDStr
+		}
+	}
+
+	// Determine base schema (append mode keeps existing pages)
+	var baseSchema []models.Schema
+	if req.Append {
+		// Make a copy to avoid mutating the original slice reference
+		baseSchema = append([]models.Schema{}, existing.Schema...)
+	}
+
+	// Save PDF pages + previews and update schema
+	if err := h.savePDFToStorageWithBaseSchema(c.Context(), templateID, existing.Name, fileData, organizationID, baseSchema); err != nil {
+		log.Error().Err(err).Str("template_id", templateID).Msg("Failed to attach PDF to template")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to attach file to template", map[string]any{
+			"error": err.Error(),
+		})
+	}
+
+	// Return updated template with documents populated
+	updated, err := h.templateQueries.Template(c.Context(), templateID)
+	if err != nil {
+		log.Error().Err(err).Str("template_id", templateID).Msg("Failed to load updated template after attach")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to load updated template", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "template", updated)
 }
 
 // CreateFromType creates template from file of specific type
@@ -330,7 +421,7 @@ func (h *TemplateHandler) processPDF(ctx context.Context, name, description stri
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
-	
+
 	// Set category if provided
 	if category != nil && *category != "" {
 		template.Category = *category
@@ -363,60 +454,94 @@ func (h *TemplateHandler) processPDF(ctx context.Context, name, description stri
 // - lc_pages/{attachment_id}/p/0.jpg - the thumbnail preview image
 // It also creates storage_attachment and storage_blob records in the database.
 func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID, name string, fileData []byte, organizationID string) error {
+	return h.savePDFToStorageWithBaseSchema(ctx, templateID, name, fileData, organizationID, nil)
+}
+
+// savePDFToStorageWithBaseSchema stores pages and sets schema to baseSchema + newPagesSchema.
+// If baseSchema is empty/nil, it behaves like "replace schema" for initial upload.
+func (h *TemplateHandler) savePDFToStorageWithBaseSchema(
+	ctx context.Context,
+	templateID, name string,
+	fileData []byte,
+	organizationID string,
+	baseSchema []models.Schema,
+) error {
+	newSchemaItems, err := h.storePDFPagesToStorage(ctx, templateID, name, fileData, organizationID)
+	if err != nil {
+		return err
+	}
+
+	combined := append([]models.Schema{}, baseSchema...)
+	combined = append(combined, newSchemaItems...)
+
+	if err := h.templateQueries.UpdateTemplateSchema(ctx, templateID, combined); err != nil {
+		return fmt.Errorf("failed to update template schema: %w", err)
+	}
+
+	return nil
+}
+
+// storePDFPagesToStorage splits the PDF into pages, writes them to lc_pages, creates storage records,
+// and returns schema items for the newly-added pages (does NOT update template.schema).
+func (h *TemplateHandler) storePDFPagesToStorage(ctx context.Context, templateID, name string, fileData []byte, organizationID string) ([]models.Schema, error) {
 	// Save PDF to temporary location
 	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("template_%s_%d.pdf", templateID, time.Now().UnixNano()))
 	defer os.Remove(tmpFile)
 
 	if err := os.WriteFile(tmpFile, fileData, 0644); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
+		return nil, fmt.Errorf("failed to write temp file: %w", err)
 	}
 
 	// Ensure lc_pages directory exists (same path as in app.go)
 	lcPagesDir := "./lc_pages"
 	if err := os.MkdirAll(lcPagesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create lc_pages directory: %w", err)
+		return nil, fmt.Errorf("failed to create lc_pages directory: %w", err)
 	}
 
 	var schema []models.Schema
-	conf := model.NewDefaultConfiguration()
 
-	// Extract all pages to temporary directory first
+	// Get page count first
+	pageResult, err := pdf.ExtractPages(pdf.ExtractPagesInput{PDFPath: tmpFile})
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract page count: %w", err)
+	}
+	pageCount := pageResult.PageCount
+	if pageCount == 0 {
+		return nil, fmt.Errorf("PDF has no pages")
+	}
+
+	// Extract all pages to temporary directory using gopdf
 	tmpPagesDir := filepath.Join(os.TempDir(), fmt.Sprintf("pages_%s_%d", templateID, time.Now().UnixNano()))
 	defer os.RemoveAll(tmpPagesDir)
 	if err := os.MkdirAll(tmpPagesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create temp pages dir: %w", err)
+		return nil, fmt.Errorf("failed to create temp pages dir: %w", err)
 	}
 
-	// Extract all pages at once (pdfcpu creates separate files for each page)
-	if err := api.ExtractPagesFile(tmpFile, tmpPagesDir, []string{"1-"}, conf); err != nil {
-		log.Error().Err(err).Str("tmp_file", tmpFile).Str("tmp_pages_dir", tmpPagesDir).Msg("ExtractPagesFile failed")
-		return fmt.Errorf("failed to extract pages: %w", err)
-	}
-	
-	// List extracted files and count PDF pages
-	files, err := os.ReadDir(tmpPagesDir)
-	if err != nil {
-		return fmt.Errorf("failed to read temp pages dir: %w", err)
-	}
-	
-	var pdfFiles []string
-	for _, file := range files {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".pdf" {
-			pdfFiles = append(pdfFiles, file.Name())
+	// Extract each page as a separate PDF file using gopdf
+	for pageNum := 1; pageNum <= pageCount; pageNum++ {
+		// Create new PDF for this single page
+		pagePdf := gopdf.GoPdf{}
+		pagePdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+		pagePdf.AddPage()
+
+		// Import the specific page from source PDF
+		tpl := pagePdf.ImportPage(tmpFile, pageNum, "/MediaBox")
+		pagePdf.UseImportedTemplate(tpl, 0, 0, 0, 0)
+
+		// Save to temporary file
+		pageFileName := fmt.Sprintf("page_%d.pdf", pageNum)
+		pageFilePath := filepath.Join(tmpPagesDir, pageFileName)
+		if err := pagePdf.WritePdf(pageFilePath); err != nil {
+			log.Error().Err(err).Int("page", pageNum).Msg("Failed to extract page")
+			return nil, fmt.Errorf("failed to extract page %d: %w", pageNum, err)
 		}
 	}
-	
-	pageCount := len(pdfFiles)
-	if pageCount == 0 {
-		return fmt.Errorf("no PDF pages extracted")
-	}
-	
 
 	// Preview images will be generated per-page from extracted PDFs
 	previewDir := filepath.Join(os.TempDir(), fmt.Sprintf("previews_%s_%d", templateID, time.Now().UnixNano()))
 	defer os.RemoveAll(previewDir)
 	if err := os.MkdirAll(previewDir, 0755); err != nil {
-		return fmt.Errorf("failed to create preview dir: %w", err)
+		return nil, fmt.Errorf("failed to create preview dir: %w", err)
 	}
 
 	// Process each extracted page
@@ -424,38 +549,34 @@ func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID, name
 		attachmentID := uuid.New().String()
 		pageDir := filepath.Join(lcPagesDir, attachmentID)
 		if err := os.MkdirAll(pageDir, 0755); err != nil {
-			return fmt.Errorf("failed to create page directory: %w", err)
+			return nil, fmt.Errorf("failed to create page directory: %w", err)
 		}
 
-		// Use PDF file from the list we already collected
-		if pageNum > len(pdfFiles) {
-			return fmt.Errorf("page number %d exceeds extracted pages count %d", pageNum, len(pdfFiles))
-		}
-		extractedPagePath := filepath.Join(tmpPagesDir, pdfFiles[pageNum-1])
+		// Use extracted page PDF file
+		extractedPagePath := filepath.Join(tmpPagesDir, fmt.Sprintf("page_%d.pdf", pageNum))
 
 		// Copy extracted page to lc_pages/{attachment_id}/0.pdf
 		pageData, err := os.ReadFile(extractedPagePath)
 		if err != nil {
-			return fmt.Errorf("failed to read extracted page: %w", err)
+			return nil, fmt.Errorf("failed to read extracted page: %w", err)
 		}
 
 		pagePDFPath := filepath.Join(pageDir, "0.pdf")
 		if err := os.WriteFile(pagePDFPath, pageData, 0644); err != nil {
 			absPath, _ := filepath.Abs(pagePDFPath)
 			log.Error().Err(err).Str("path", pagePDFPath).Str("abs_path", absPath).Msg("Failed to save page PDF")
-			return fmt.Errorf("failed to save page PDF to %s: %w", pagePDFPath, err)
+			return nil, fmt.Errorf("failed to save page PDF to %s: %w", pagePDFPath, err)
 		}
-		
 
 		// Generate preview image for this page from extracted PDF
 		previewImagePath := filepath.Join(previewDir, fmt.Sprintf("%d.jpg", pageNum-1))
 		var previewBlobID string
-		
+
 		// Generate preview from extracted page PDF
 		if err := h.generatePagePreview(extractedPagePath, previewImagePath); err != nil {
 			log.Warn().Err(err).Str("page_pdf", extractedPagePath).Int("page", pageNum).Msg("Failed to generate preview, continuing without preview")
 		}
-		
+
 		if previewData, err := os.ReadFile(previewImagePath); err == nil {
 			// Save full preview as 0.jpg
 			previewPath := filepath.Join(pageDir, "0.jpg")
@@ -481,7 +602,7 @@ func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID, name
 		// Create storage_attachment using preview blob (as in existing template)
 		if previewBlobID != "" {
 			if err := h.templateQueries.CreateStorageAttachment(ctx, attachmentID, previewBlobID, "Template", templateID, "documents", "disk"); err != nil {
-				return fmt.Errorf("failed to create storage_attachment: %w", err)
+				return nil, fmt.Errorf("failed to create storage_attachment: %w", err)
 			}
 		}
 
@@ -492,46 +613,78 @@ func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID, name
 		})
 	}
 
-	// Update template schema
-	if err := h.templateQueries.UpdateTemplateSchema(ctx, templateID, schema); err != nil {
-		return fmt.Errorf("failed to update template schema: %w", err)
-	}
-
-	return nil
+	return schema, nil
 }
 
-// generatePagePreview generates a preview image from a PDF page using go-fitz (MuPDF).
+// generatePagePreview generates a preview image from a PDF page using pdftoppm.
 // It renders the first page of the PDF at 150 DPI and saves it as a JPEG image.
 // The output image is saved to the specified outputPath.
+// Requires pdftoppm utility from poppler-utils package to be installed.
 func (h *TemplateHandler) generatePagePreview(pdfPath, outputPath string) error {
-	// Open PDF document using go-fitz
-	doc, err := fitz.New(pdfPath)
-	if err != nil {
-		return fmt.Errorf("failed to open PDF with fitz: %w", err)
+	// Check if pdftoppm is available
+	if _, err := exec.LookPath("pdftoppm"); err != nil {
+		return fmt.Errorf("pdftoppm not found: %w (install poppler-utils package)", err)
 	}
-	defer doc.Close()
-	
-	// Get first page (page 0 in fitz)
-	if doc.NumPage() < 1 {
+
+	// Get page count using digitorus/pdf
+	pageResult, err := pdf.ExtractPages(pdf.ExtractPagesInput{PDFPath: pdfPath})
+	if err != nil {
+		return fmt.Errorf("failed to get page count: %w", err)
+	}
+	if pageResult.PageCount < 1 {
 		return fmt.Errorf("PDF has no pages")
 	}
-	
-	// Render page to image with 150 DPI (matches existing preview quality)
-	img, err := doc.ImageDPI(0, 150)
-	if err != nil {
-		return fmt.Errorf("failed to render page to image: %w", err)
+
+	// Create temporary directory for pdftoppm output
+	tmpDir := filepath.Dir(outputPath)
+	tmpPrefix := filepath.Join(tmpDir, fmt.Sprintf("preview_%d", time.Now().UnixNano()))
+
+	// Use pdftoppm to convert first page to JPEG at 150 DPI
+	// pdftoppm -jpeg -r 150 -f 1 -l 1 -singlefile input.pdf output_prefix
+	// With -singlefile and single page, creates output_prefix.jpg (without page number)
+	cmd := exec.Command("pdftoppm",
+		"-jpeg",     // Output format: JPEG
+		"-r", "150", // Resolution: 150 DPI
+		"-f", "1", // First page: 1
+		"-l", "1", // Last page: 1 (only first page)
+		"-singlefile", // Output single file without page number suffix
+		pdfPath,       // Input PDF
+		tmpPrefix,     // Output prefix (will create tmpPrefix.jpg)
+	)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run pdftoppm: %w (stderr: %s)", err, stderr.String())
 	}
-	
-	// Save as JPEG
-	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
-		return fmt.Errorf("failed to encode image: %w", err)
+
+	// pdftoppm with -singlefile creates output with .jpg extension (no page number)
+	generatedFile := tmpPrefix + ".jpg"
+
+	// Check if file was created
+	if _, err := os.Stat(generatedFile); os.IsNotExist(err) {
+		// Try alternative naming (some versions might use -1.jpg even with -singlefile)
+		altFile := tmpPrefix + "-1.jpg"
+		if _, altErr := os.Stat(altFile); altErr == nil {
+			generatedFile = altFile
+		} else {
+			return fmt.Errorf("pdftoppm did not create output file (tried: %s, %s)", generatedFile, altFile)
+		}
 	}
-	
-	if err := os.WriteFile(outputPath, buf.Bytes(), 0644); err != nil {
-		return fmt.Errorf("failed to write preview file: %w", err)
+
+	// Move/rename to final output path
+	if err := os.Rename(generatedFile, outputPath); err != nil {
+		// If rename fails (different filesystems), try copy and remove
+		data, readErr := os.ReadFile(generatedFile)
+		if readErr != nil {
+			return fmt.Errorf("failed to read generated file: %w (rename error: %v)", readErr, err)
+		}
+		if writeErr := os.WriteFile(outputPath, data, 0644); writeErr != nil {
+			return fmt.Errorf("failed to write output file: %w (rename error: %v)", writeErr, err)
+		}
+		os.Remove(generatedFile) // Clean up temp file
 	}
-	
+
 	return nil
 }
 
@@ -546,7 +699,7 @@ func createThumbnail(imageData []byte) ([]byte, error) {
 	srcBounds := img.Bounds()
 	srcWidth := srcBounds.Dx()
 	srcHeight := srcBounds.Dy()
-	
+
 	maxWidth := 200
 	thumbnailWidth := maxWidth
 	thumbnailHeight := (srcHeight * maxWidth) / srcWidth
@@ -598,12 +751,12 @@ func (h *TemplateHandler) SearchTemplates(c *fiber.Ctx) error {
 
 	// Parse query parameters
 	req := queries.TemplateSearchRequest{
-		Query:         c.Query("query"),
-		Category:      c.Query("category"),
+		Query:          c.Query("query"),
+		Category:       c.Query("category"),
 		OrganizationID: organizationID,
-		UserID:        userID,
-		SortBy:        c.Query("sort_by"),
-		SortOrder:     c.Query("sort_order"),
+		UserID:         userID,
+		SortBy:         c.Query("sort_by"),
+		SortOrder:      c.Query("sort_order"),
 	}
 
 	// Parse tags (comma-separated)
@@ -971,7 +1124,6 @@ func (h *TemplateHandler) MoveTemplate(c *fiber.Ctx) error {
 	})
 }
 
-
 // ValidateConditionsRequest request body for validating conditions
 type ValidateConditionsRequest struct {
 	Fields []models.Field `json:"fields" validate:"required"`
@@ -992,11 +1144,11 @@ func (h *TemplateHandler) ValidateConditions(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
-	
+
 	if err := field.ValidateConditions(req.Fields); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
-	
+
 	return webutil.Response(c, fiber.StatusOK, "Conditions valid", nil)
 }
 
@@ -1021,19 +1173,120 @@ func (h *TemplateHandler) ValidateFormula(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
-	
+
 	if err := formula.ValidateFormula(req.Formula, req.Fields); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
-	
+
 	return webutil.Response(c, fiber.StatusOK, "Formula valid", nil)
+}
+
+// UpdateTemplate handles partial updates for template editor.
+// This endpoint exists because the generic CRUD update cannot distinguish
+// between "field not provided" and "provided empty/null", which is required
+// to safely persist editor changes (schema/fields/submitters) without wiping
+// other columns unintentionally.
+func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
+	templateID := c.Params("id")
+	if templateID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
+	}
+
+	if h.templateQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Template queries not initialized", nil)
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(c.Body(), &raw); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	patch := queries.TemplateUpdatePatch{}
+
+	// name (optional)
+	if b, ok := raw["name"]; ok {
+		// allow empty string names? editor shouldn't send it, but keep validation in DB constraints
+		var name string
+		if err := json.Unmarshal(b, &name); err != nil {
+			return webutil.Response(c, fiber.StatusBadRequest, "Invalid name", nil)
+		}
+		patch.Name = &name
+	}
+
+	// category (optional, supports null)
+	if b, ok := raw["category"]; ok {
+		patch.CategoryProvided = true
+		if string(b) == "null" {
+			patch.Category = nil
+		} else {
+			var category string
+			if err := json.Unmarshal(b, &category); err != nil {
+				return webutil.Response(c, fiber.StatusBadRequest, "Invalid category", nil)
+			}
+			// Empty string treated as NULL (clear)
+			if category == "" {
+				patch.Category = nil
+			} else {
+				patch.Category = &category
+			}
+		}
+	}
+
+	// schema (optional)
+	if b, ok := raw["schema"]; ok {
+		if string(b) == "null" {
+			empty := []models.Schema{}
+			patch.Schema = &empty
+		} else {
+			var schema []models.Schema
+			if err := json.Unmarshal(b, &schema); err != nil {
+				return webutil.Response(c, fiber.StatusBadRequest, "Invalid schema", nil)
+			}
+			patch.Schema = &schema
+		}
+	}
+
+	// fields (optional)
+	if b, ok := raw["fields"]; ok {
+		if string(b) == "null" {
+			empty := []models.Field{}
+			patch.Fields = &empty
+		} else {
+			var fields []models.Field
+			if err := json.Unmarshal(b, &fields); err != nil {
+				return webutil.Response(c, fiber.StatusBadRequest, "Invalid fields", nil)
+			}
+			patch.Fields = &fields
+		}
+	}
+
+	// submitters (optional)
+	if b, ok := raw["submitters"]; ok {
+		if string(b) == "null" {
+			empty := []models.Submitter{}
+			patch.Submitters = &empty
+		} else {
+			var submitters []models.Submitter
+			if err := json.Unmarshal(b, &submitters); err != nil {
+				return webutil.Response(c, fiber.StatusBadRequest, "Invalid submitters", nil)
+			}
+			patch.Submitters = &submitters
+		}
+	}
+
+	if err := h.templateQueries.UpdateTemplatePatch(c.Context(), templateID, patch); err != nil {
+		log.Error().Err(err).Str("template_id", templateID).Msg("Failed to update template")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update template", nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "template", map[string]any{"id": templateID})
 }
 
 // RegisterRoutes registers all routes for templates
 func (h *TemplateHandler) RegisterRoutes(router fiber.Router) {
 	// IMPORTANT: Register specific routes BEFORE generic CRUD routes
 	// Otherwise, routes like /search will be matched by /:id pattern
-	
+
 	// Library operations (must be before /:id)
 	router.Get("/search", h.SearchTemplates)
 	router.Get("/favorites", h.GetUserFavorites)
@@ -1050,17 +1303,24 @@ func (h *TemplateHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/empty", h.CreateEmptyTemplate)
 	router.Post("/clone", h.Clone)
 	router.Post("/from-file", h.CreateFromType)
+	router.Post("/:template_id/from-file", h.AttachFileToTemplate)
 
 	// Condition validation (must be before /:id)
 	router.Post("/:template_id/conditions/validate", h.ValidateConditions)
-	
+
 	// Formula validation (public endpoint, no template ID needed)
 	router.Post("/formulas/validate", h.ValidateFormula)
 
 	// Template movement (specific pattern before /:id)
 	router.Put("/:template_id/move", h.MoveTemplate)
 
-	// Generic CRUD routes (register LAST, as they use catch-all /:id pattern)
-	h.ResourceHandler.RegisterRoutes(router)
-}
+	// Generic CRUD routes:
+	// Register explicitly to avoid duplicate PUT /:id (we override update for editor safety).
+	router.Get("/", h.ResourceHandler.List)
+	router.Get("/:id", h.ResourceHandler.Get)
+	router.Post("/", h.ResourceHandler.Create)
+	router.Delete("/:id", h.ResourceHandler.Delete)
 
+	// Editor update (must be registered and must not be shadowed).
+	router.Put("/:id", h.UpdateTemplate)
+}

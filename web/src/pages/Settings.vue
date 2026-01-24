@@ -19,13 +19,13 @@
         </div>
 
     <!-- Content Area -->
-    <router-view />
+    <RouterView />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, provide, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, RouterView } from "vue-router";
 import { useI18n } from "vue-i18n";
 import Button from "@/components/ui/Button.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
@@ -42,9 +42,17 @@ const pageInfo = computed(() => {
       title: t('settings.generalSettings'),
       description: t('settings.generalDescription')
     },
+    "settings-geolocation": {
+      title: t('settings.geolocation'),
+      description: t('settings.geolocationSectionDescription')
+    },
     "settings-smtp": {
       title: t('settings.smtpConfiguration'),
       description: t('settings.smtpDescription')
+    },
+    "settings-sms": {
+      title: t('settings.smsConfiguration'),
+      description: t('settings.smsDescription')
     },
     "settings-storage": {
       title: t('settings.storageConfiguration'),

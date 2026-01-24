@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	
+
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 )

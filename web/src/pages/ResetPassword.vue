@@ -24,7 +24,7 @@
           </div>
         </div>
 
-        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
+        <div class="space-y-4">
           <div>
             <label for="password" class="sr-only">New password</label>
             <input
@@ -35,7 +35,7 @@
               autocomplete="new-password"
               required
               minlength="8"
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="New password (min. 8 characters)"
             />
           </div>
@@ -49,22 +49,24 @@
               type="password"
               autocomplete="new-password"
               required
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="Confirm password"
             />
           </div>
         </div>
 
         <div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            class="w-full"
+            :loading="isLoading"
             :disabled="isLoading || !token"
-            class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
           >
             <span v-if="isLoading">Resetting password...</span>
             <span v-else-if="!token">Invalid reset link</span>
             <span v-else>Reset password</span>
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -74,6 +76,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import Button from "@/components/ui/Button.vue";
 
 const route = useRoute();
 

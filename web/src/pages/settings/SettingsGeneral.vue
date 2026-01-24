@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-6">
     <FormControl :label="$t('settings.language')">
       <div class="flex flex-wrap gap-2">
         <button
@@ -24,10 +24,9 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { SUPPORTED_LOCALES } from '@/i18n';
-import { apiPut } from '@/services/api';
 import FormControl from "@/components/ui/FormControl.vue";
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const locales = SUPPORTED_LOCALES;
 
 const currentLocale = computed(() => locale.value as string);

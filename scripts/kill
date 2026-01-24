@@ -6,6 +6,35 @@ ROOT_PATH="$(git rev-parse --show-toplevel)"
 source ${ROOT_PATH}/scripts/_helper
 
 kill_backend() {
+  is_pid_in_project() {
+    local pid="$1"
+    if [[ -z "$pid" ]]; then
+      return 1
+    fi
+
+    # Prefer /proc when available (Linux). Fallback to ps for limited environments.
+    local cwd exe_file args
+    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ')
+    exe_file=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
+    args=$(ps -p "$pid" -o args= 2>/dev/null || echo "")
+
+    # Strong signals the process belongs to THIS repo:
+    # - CWD is inside repo root
+    # - Executable is inside repo root (e.g. built binary under ROOT_PATH/bin)
+    # - Command line contains the repo root (go run with absolute paths, etc.)
+    if [[ -n "$cwd" && "$cwd" == "$ROOT_PATH"* ]]; then
+      return 0
+    fi
+    if [[ -n "$exe_file" && "$exe_file" == "$ROOT_PATH"* ]]; then
+      return 0
+    fi
+    if [[ -n "$args" && "$args" == *"$ROOT_PATH"* ]]; then
+      return 0
+    fi
+
+    return 1
+  }
+
   # First, try to find processes by name patterns
   arr_backend=("goSign" "__debug_bin" "cmd/goSign/main.go serve")
   for process_name in "${arr_backend[@]}"; do
@@ -14,9 +43,7 @@ kill_backend() {
       if [ -z "$pid" ]; then
         continue
       fi
-      # Get current working directory of the process
-      cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
-      if [[ -n $cwd && $cwd == "$ROOT_PATH"* ]]; then
+      if is_pid_in_project "$pid"; then
         print_header "Killed backend process ${pid}"
         kill -9 $pid 2>/dev/null
         print_answer "SUCCESS" green
@@ -30,32 +57,20 @@ kill_backend() {
     if [ -z "$pid" ]; then
       continue
     fi
-    # Get process info
-    exe_path=$(ps -p $pid -o args= 2>/dev/null)
-    exe_file=$(readlink -f /proc/$pid/exe 2>/dev/null || echo "")
-    cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
+    # Kill only if we can attribute the PID to THIS repo.
+    if is_pid_in_project "$pid"; then
+      print_header "Killed backend process ${pid} (port 8088)"
+      kill -9 $pid 2>/dev/null
+      print_answer "SUCCESS" green
+      continue
+    fi
+
+    # Secondary heuristic: if the listener itself isn't attributable, but its parent
+    # is a go-run process started from THIS repo, treat it as ours.
     ppid=$(ps -p $pid -o ppid= 2>/dev/null | tr -d ' ')
     parent_cmd=$(ps -p $ppid -o args= 2>/dev/null || echo "")
     parent_cwd=$(readlink -f /proc/$ppid/cwd 2>/dev/null || ps -p $ppid -o cwd= 2>/dev/null | tr -d ' ' || echo "")
-    
-    # Check if process is related to this project
-    # Check by command arguments
-    if [[ -n $exe_path && ($exe_path == *"$ROOT_PATH"* || $exe_path == *"cmd/goSign"* || $exe_path == *"goSign"*) ]]; then
-      print_header "Killed backend process ${pid} (port 8088)"
-      kill -9 $pid 2>/dev/null
-      print_answer "SUCCESS" green
-    # Check by executable file location
-    elif [[ -n $exe_file && ($exe_file == *"$ROOT_PATH"* || $exe_file == *"/bin/goSign"*) ]]; then
-      print_header "Killed backend process ${pid} (port 8088)"
-      kill -9 $pid 2>/dev/null
-      print_answer "SUCCESS" green
-    # Check by working directory
-    elif [[ -n $cwd && $cwd == "$ROOT_PATH"* ]]; then
-      print_header "Killed backend process ${pid} (port 8088)"
-      kill -9 $pid 2>/dev/null
-      print_answer "SUCCESS" green
-    # Check by parent process (go run) - if parent was started from project directory
-    elif [[ -n $parent_cmd && $parent_cmd == *"go run"* && ($parent_cmd == *"main.go serve"* || $parent_cmd == *"cmd/goSign"*) ]]; then
+    if [[ -n $parent_cmd && $parent_cmd == *"go run"* && ($parent_cmd == *"main.go serve"* || $parent_cmd == *"cmd/goSign"*) ]]; then
       if [[ -n $parent_cwd && ($parent_cwd == "$ROOT_PATH"* || $parent_cwd == "$ROOT_PATH/cmd/goSign"*) ]]; then
         print_header "Killed backend process ${pid} (port 8088)"
         kill -9 $pid 2>/dev/null

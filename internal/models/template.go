@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // TemplateSettings contains template settings
 type TemplateSettings struct {
@@ -30,6 +35,9 @@ type Template struct {
 	Source         string                 `json:"source,omitempty"`
 	Author         *Author                `json:"author,omitempty"`
 	Submitters     []Submitter            `json:"submitters"`
+	// SubmitterCount is a computed field used by list/search endpoints to avoid
+	// sending full submitters array when only the count is needed.
+	SubmitterCount int                    `json:"submitter_count,omitempty"`
 	Fields         []Field                `json:"fields"`
 	Schema         []Schema               `json:"schema"`
 	Documents      []Document             `json:"documents"`
@@ -158,13 +166,53 @@ type Field struct {
 	Type            FieldType            `json:"type"`
 	Required        bool                 `json:"required"`
 	DefaultValue    string               `json:"default_value,omitempty"`
-	Options         []string             `json:"options,omitempty"` // for select, radio
+	Options         FieldOptions         `json:"options,omitempty"` // for select, radio, multiple
 	Validation      string               `json:"validation,omitempty"`
 	Translations    map[string]string    `json:"translations,omitempty"` // locale -> translated label
 	ConditionGroups []FieldConditionGroup `json:"condition_groups,omitempty"`
 	Formula         string               `json:"formula,omitempty"`         // e.g., "field_1 + field_2 * 0.2"
 	CalculationType string               `json:"calculation_type,omitempty"` // "number", "currency"
 	Areas           []*Areas             `json:"areas,omitempty"`
+}
+
+// FieldOption represents a selectable option for select/radio/multiple fields.
+type FieldOption struct {
+	ID    string `json:"id"`
+	Value string `json:"value"`
+}
+
+// FieldOptions is a slice with backward-compatible JSON parsing.
+// Historically, options were stored as []string. The editor uses []{id,value}.
+type FieldOptions []FieldOption
+
+func (o *FieldOptions) UnmarshalJSON(b []byte) error {
+	// Accept null
+	if string(b) == "null" {
+		*o = nil
+		return nil
+	}
+
+	// Preferred: array of objects
+	var objs []FieldOption
+	if err := json.Unmarshal(b, &objs); err == nil {
+		*o = objs
+		return nil
+	}
+
+	// Backward: array of strings
+	var strs []string
+	if err := json.Unmarshal(b, &strs); err == nil {
+		out := make([]FieldOption, 0, len(strs))
+		for _, s := range strs {
+			// Stable ID derived from value to avoid changing IDs between loads.
+			id := uuid.NewSHA1(uuid.NameSpaceOID, []byte(s)).String()
+			out = append(out, FieldOption{ID: id, Value: s})
+		}
+		*o = out
+		return nil
+	}
+
+	return json.Unmarshal(b, &objs) // return original error context
 }
 
 // Areas is ...
@@ -174,7 +222,40 @@ type Areas struct {
 	X            float64 `json:"x"`
 	Y            float64 `json:"y"`
 	W            float64 `json:"w"`
-	H            float64 `json:"z"`
+	H            float64 `json:"h"`
+}
+
+// UnmarshalJSON accepts both `h` (current) and legacy `z` (height).
+func (a *Areas) UnmarshalJSON(b []byte) error {
+	type payload struct {
+		AttachmentID string   `json:"attachment_id"`
+		Page         int      `json:"page"`
+		X            float64  `json:"x"`
+		Y            float64  `json:"y"`
+		W            float64  `json:"w"`
+		H            *float64 `json:"h"`
+		Z            *float64 `json:"z"`
+		CellW        *float64 `json:"cell_w,omitempty"`
+		OptionID     *string  `json:"option_id,omitempty"`
+	}
+
+	var p payload
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+
+	a.AttachmentID = p.AttachmentID
+	a.Page = p.Page
+	a.X = p.X
+	a.Y = p.Y
+	a.W = p.W
+	if p.H != nil {
+		a.H = *p.H
+	} else if p.Z != nil {
+		a.H = *p.Z
+	}
+
+	return nil
 }
 
 // Schema is ...
@@ -214,7 +295,37 @@ type Annotations struct {
 	X     float64 `json:"x"`
 	Y     float64 `json:"y"`
 	W     float64 `json:"w"`
-	H     float64 `json:"z"`
+	H     float64 `json:"h"`
+}
+
+// UnmarshalJSON accepts both `h` (current) and legacy `z` (height).
+func (a *Annotations) UnmarshalJSON(b []byte) error {
+	type payload struct {
+		Type  string   `json:"type"`
+		Value string   `json:"value"`
+		Page  int      `json:"page"`
+		X     float64  `json:"x"`
+		Y     float64  `json:"y"`
+		W     float64  `json:"w"`
+		H     *float64 `json:"h"`
+		Z     *float64 `json:"z"`
+	}
+	var p payload
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+	a.Type = p.Type
+	a.Value = p.Value
+	a.Page = p.Page
+	a.X = p.X
+	a.Y = p.Y
+	a.W = p.W
+	if p.H != nil {
+		a.H = *p.H
+	} else if p.Z != nil {
+		a.H = *p.Z
+	}
+	return nil
 }
 
 // PreviewImages is ...

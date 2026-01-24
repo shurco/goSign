@@ -16,7 +16,7 @@
           <span class="block sm:inline">{{ error }}</span>
         </div>
 
-        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
+        <div class="space-y-4">
           <div>
             <label for="email-address" class="sr-only">Email address</label>
             <input
@@ -27,7 +27,7 @@
               autocomplete="email"
               required
               :disabled="requires2FA"
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:opacity-50 sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:opacity-50 sm:text-sm"
               :placeholder="$t('auth.email')"
             />
           </div>
@@ -42,7 +42,7 @@
               autocomplete="current-password"
               required
               :disabled="requires2FA"
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:opacity-50 sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-100 disabled:opacity-50 sm:text-sm"
               placeholder="Password"
             />
           </div>
@@ -58,7 +58,7 @@
               pattern="[0-9]*"
               maxlength="6"
               required
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-center text-2xl tracking-widest text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-center text-2xl tracking-widest text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="000000"
             />
             <p class="mt-2 text-center text-sm text-gray-500">Enter the 6-digit code from your authenticator app</p>
@@ -74,14 +74,15 @@
         </div>
 
         <div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            class="w-full"
+            :loading="isLoading"
             :disabled="isLoading"
-            class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
           >
-            <span v-if="isLoading">{{ $t('common.loading') }}</span>
-            <span v-else>{{ $t('auth.signin') }}</span>
-          </button>
+            {{ $t('auth.signin') }}
+          </Button>
         </div>
 
         <div v-if="!requires2FA" class="flex items-center justify-center">
@@ -91,20 +92,12 @@
         </div>
 
         <div v-if="!requires2FA" class="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
-            @click="handleGoogleSignIn"
-          >
+          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn">
             Google
-          </button>
-          <button
-            type="button"
-            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
-            @click="handleGitHubSignIn"
-          >
+          </Button>
+          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn">
             GitHub
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -114,6 +107,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import Button from "@/components/ui/Button.vue";
 
 const router = useRouter();
 const route = useRoute();

@@ -15,17 +15,12 @@ import (
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
-// Validator interface for request validation
-type Validator interface {
-	Validate() error
-}
-
 // parseAndValidate parses request body and validates it
-func parseAndValidate(c *fiber.Ctx, v Validator) error {
+func parseAndValidate(c *fiber.Ctx, v interface{}) error {
 	if err := c.BodyParser(v); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
-	if err := v.Validate(); err != nil {
+	if err := webutil.ValidateStruct(v); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	return nil

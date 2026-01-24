@@ -1,5 +1,30 @@
 <template>
-  <div v-if="template" class="-my-5 flex h-screen pt-5">
+  <div v-if="loading" class="mx-auto max-w-2xl p-6">
+    <div class="rounded-lg border border-gray-200 bg-white p-4 text-gray-900">
+      <p class="font-medium">Loading…</p>
+      <p class="mt-1 text-sm text-gray-600">Fetching template data.</p>
+    </div>
+  </div>
+
+  <div v-else-if="missingTemplateId" class="mx-auto max-w-2xl p-6">
+    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+      <p class="font-medium">Nothing to show</p>
+      <p class="mt-1 text-sm">
+        This page requires a template id. Open
+        <code class="rounded bg-amber-100 px-1 py-0.5">/templates/&lt;id&gt;/view</code>
+        .
+      </p>
+    </div>
+  </div>
+
+  <div v-else-if="error" class="mx-auto max-w-2xl p-6">
+    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-900">
+      <p class="font-medium">Unable to load template view</p>
+      <p class="mt-1 text-sm">{{ error }}</p>
+    </div>
+  </div>
+
+  <div v-else-if="template" class="-my-5 flex h-screen pt-5">
     <div class="w-full overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
       <div ref="documents" class="pr-3.5 pl-0.5">
         <template v-for="document in sortedDocuments" :key="document.id">
@@ -63,6 +88,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, provide, ref } from "vue";
+import { useRoute } from "vue-router";
 import Document from "@/components/template/Document.vue";
 import Fields from "@/components/field/List.vue";
 import type { Template } from "@/models";
@@ -70,7 +96,13 @@ import { apiGet } from "@/services/api";
 import { fetchWithAuth } from "@/utils/auth";
 import { v4 } from "uuid";
 
+const route = useRoute();
+
+// This page reuses legacy builder logic which is not strictly typed yet.
+// Keep `template` loosely typed to avoid TS friction in the editor UI code.
 const template: any = ref();
+const loading = ref(false);
+const error = ref<string | null>(null);
 const undoStack: any = ref([]);
 const redoStack: any = ref([]);
 const lastRedoData: any = ref();
@@ -87,8 +119,8 @@ const autosave = ref(false); // or whatever the initial value should be
 
 const onSave = ref();
 
-const defaultSubmitters = ref([]);
-const defaultFields = ref(["text", "signature", "initials", "date"]);
+const defaultSubmitters = ref<any[]>([]);
+const defaultFields = ref<any[]>(["text", "signature", "initials", "date"]);
 const onlyDefinedFields = ref(false);
 
 const fetchOptions = { headers: {} };
@@ -98,16 +130,53 @@ provide("save", save);
 provide("baseFetch", baseFetch);
 provide("selectedAreaRef", selectedAreaRef); // computed(() => selectedAreaRef.value),
 
-onMounted(async () => {
-  apiGet(`/api/templates`).then((res) => {
-    if (res.success) {
-      template.value = res.data as Template;
-      selectedSubmitter.value = template.value.submitters[0];
-    }
-  });
+const templateId = computed(() => {
+  // Support both:
+  // - /templates/:id/view
+  // - /templates/:id/view?template_id=... (or ?id=...)
+  const fromParams = (route.params?.id as string | undefined) || "";
+  const fromQuery =
+    (route.query?.template_id as string | undefined) || (route.query?.id as string | undefined) || "";
+  return (fromParams || fromQuery || "").trim();
+});
 
-  undoStack.value = [JSON.stringify(template.value)];
-  redoStack.value = [];
+const missingTemplateId = computed(() => templateId.value === "");
+
+onMounted(async () => {
+  if (!templateId.value) {
+    return;
+  }
+
+  loading.value = true;
+  error.value = null;
+  try {
+    // Load specific template by ID (same approach as Edit page)
+    const res: any = await apiGet<Template>(`/api/v1/templates/${templateId.value}`);
+    if (res && res.data) {
+      template.value = res.data as Template;
+
+      // Ensure at least one submitter exists (some flows create empty submitters array)
+      if (!template.value.submitters || template.value.submitters.length === 0) {
+        (template.value as any).submitters = [
+          {
+            id: v4(),
+            name: "Signer 1",
+            colorIndex: 0
+          }
+        ];
+      }
+      selectedSubmitter.value = (template.value as any)?.submitters?.[0];
+
+      undoStack.value = [JSON.stringify(template.value)];
+      redoStack.value = [];
+    } else {
+      error.value = "Template not found.";
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : "Failed to load template data.";
+  } finally {
+    loading.value = false;
+  }
 
   await nextTick();
   document.addEventListener("keyup", onKeyUp);
@@ -120,18 +189,29 @@ onUnmounted(() => {
 });
 
 const selectedField = computed(() => {
-  return template.value.fields.find((f: any) => f.areas?.includes(selectedAreaRef.value));
+  if (!template.value || !(template.value as any).fields) {
+    return null;
+  }
+  return (template.value as any).fields.find((f: any) => f.areas?.includes(selectedAreaRef.value));
 });
 
 const sortedDocuments = computed(() => {
-  return template.value.schema.map((item: any) => {
-    return template.value.documents.find((doc: any) => doc.id === item.attachment_id);
-  });
+  if (!template.value || !(template.value as any).schema || !(template.value as any).documents) {
+    return [];
+  }
+  return (template.value as any).schema
+    .map((item: any) => {
+      return (template.value as any).documents.find((doc: any) => doc.id === item.attachment_id);
+    })
+    .filter(Boolean);
 });
 
 const fieldAreasIndex = computed(() => {
+  if (!template.value || !(template.value as any).fields) {
+    return {};
+  }
   const areas: any = {};
-  template.value.fields.forEach((f: any) => {
+  (template.value as any).fields.forEach((f: any) => {
     (f.areas || []).forEach((a: any) => {
       areas[a.attachment_id] ||= {};
       const acc = (areas[a.attachment_id][a.page] ||= []);
@@ -148,6 +228,9 @@ function undo(): void {
     const currentStringData = JSON.stringify(template.value);
 
     if (stringData && stringData !== currentStringData) {
+      if (!template.value) {
+        return;
+      }
       redoStack.value.push(currentStringData);
       Object.assign(template.value, JSON.parse(stringData));
       save();
@@ -161,6 +244,9 @@ function redo(): void {
   const currentStringData: any = JSON.stringify(template.value);
 
   if (stringData && stringData !== currentStringData) {
+    if (!template.value) {
+      return;
+    }
     if (undoStack.value[undoStack.value.length - 1] !== currentStringData) {
       undoStack.value.push(currentStringData);
     }
@@ -177,6 +263,9 @@ function setDocumentRefs(el: any): void {
 
 function clearDrawField(): void {
   if (drawField.value && !drawOption.value && drawField.value.areas.length === 0) {
+    if (!template.value) {
+      return;
+    }
     const fieldIndex = template.value.fields.indexOf(drawField.value);
 
     if (fieldIndex !== -1) {
@@ -216,17 +305,17 @@ function onKeyDown(event: KeyboardEvent): void {
 }
 
 function removeArea(area: any): void {
-  const field = template.value.fields.find((f: any) => f.areas?.includes(area));
+  const field = (template.value as any).fields.find((f: any) => f.areas?.includes(area));
   field.areas.splice(field.areas.indexOf(area), 1);
 
   if (!field.areas.length) {
-    template.value.fields.splice(template.value.fields.indexOf(field), 1);
+    (template.value as any).fields.splice((template.value as any).fields.indexOf(field), 1);
   }
   save();
 }
 
 function handleSelectSubmitter(submitterId: string): void {
-  const submitter = template.value.submitters.find((s: any) => s.id === submitterId);
+  const submitter = (template.value as any).submitters.find((s: any) => s.id === submitterId);
   if (submitter) {
     selectedSubmitter.value = submitter;
   }
@@ -387,7 +476,7 @@ function onDropfield(area: any): void {
   };
 
   const previousField = [...template.value.fields].reverse().find((f: any) => f.type === field.type);
-  let baseArea;
+  let baseArea: any;
   if (selectedField.value?.type === field.type) {
     baseArea = selectedAreaRef.value;
   } else if (previousField?.areas?.length) {
@@ -423,7 +512,21 @@ function onDropfield(area: any): void {
 
   fieldArea.w = baseArea.w;
   fieldArea.h = baseArea.h;
-  fieldArea.y = fieldArea.y - baseArea.h / 2;
+  // If baseArea.h is missing, calculate a reasonable default based on field type
+  if (!fieldArea.h) {
+    if (["checkbox"].includes(field.type)) {
+      fieldArea.h = (area.maskW / 30 / area.maskW) * (area.maskW / area.maskH);
+    } else if (field.type === "image") {
+      fieldArea.h = (area.maskW / 5 / area.maskW) * (area.maskW / area.maskH);
+    } else if (field.type === "signature" || field.type === "stamp") {
+      fieldArea.h = ((area.maskW / 5 / area.maskW) * (area.maskW / area.maskH)) / 2;
+    } else if (field.type === "initials") {
+      fieldArea.h = area.maskW / 35 / area.maskW;
+    } else {
+      fieldArea.h = area.maskW / 35 / area.maskW;
+    }
+  }
+  fieldArea.y = fieldArea.y - fieldArea.h / 2;
 
   if (field.type === "cells") {
     fieldArea.cell_w = baseArea.cell_w || baseArea.w / 5;
@@ -462,6 +565,9 @@ async function save({ force } = { force: false }): Promise<object> {
   if (!autosave.value && !force) {
     return Promise.resolve({});
   }
+  if (!template.value) {
+    return Promise.resolve({});
+  }
 
   nextTick(() => {
     const templateBuilder = document.querySelector("template-builder") as HTMLElement;
@@ -472,14 +578,14 @@ async function save({ force } = { force: false }): Promise<object> {
 
   pushUndo();
 
-  await baseFetch(`/api/templates/${template.value.id}`, {
+  await baseFetch(`/api/templates/${(template.value as any).id}`, {
     method: "PUT",
     body: JSON.stringify({
       template: {
-        name: template.value.name,
-        schema: template.value.schema,
-        submitters: template.value.submitters,
-        fields: template.value.fields
+        name: (template.value as any).name,
+        schema: (template.value as any).schema,
+        submitters: (template.value as any).submitters,
+        fields: (template.value as any).fields
       }
     }),
     headers: { "Content-Type": "application/json" }
@@ -487,5 +593,7 @@ async function save({ force } = { force: false }): Promise<object> {
   if (onSave.value) {
     onSave.value(template.value);
   }
+
+  return {};
 }
 </script>

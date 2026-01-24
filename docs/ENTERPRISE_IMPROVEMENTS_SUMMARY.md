@@ -97,7 +97,7 @@ This document summarizes the implementation of Enterprise-grade improvements for
 - `internal/models/template.go` - Added Formula and CalculationType to Field
 - `internal/handlers/api/templates.go` - Added ValidateFormula endpoint
 - `web/src/components/common/FieldInput.vue` - Added calculated field support
-- `go.mod` - Added github.com/antonmedv/expr
+- `go.mod` - Added github.com/expr-lang/expr
 - `web/package.json` - Added expr-eval
 
 ### Phase 4: Enhanced White-Label - ✅ COMPLETE

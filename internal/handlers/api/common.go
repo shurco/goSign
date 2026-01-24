@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -49,5 +51,28 @@ func GetAccountID(c *fiber.Ctx) (string, error) {
 	// This requires UserQueries, so we'll handle it in the handler
 	// For now, return error - middleware should set account_id
 	return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found in context")
+}
+
+// GetClientIP extracts the real client IP address from the request
+// It checks X-Forwarded-For, X-Real-IP headers first, then falls back to c.IP()
+func GetClientIP(c *fiber.Ctx) string {
+	// Check X-Forwarded-For header (first IP in the chain)
+	forwardedFor := c.Get("X-Forwarded-For")
+	if forwardedFor != "" {
+		// X-Forwarded-For can contain multiple IPs, take the first one
+		ips := strings.Split(forwardedFor, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP header
+	realIP := c.Get("X-Real-IP")
+	if realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
+
+	// Fallback to Fiber's IP() method
+	return c.IP()
 }
 

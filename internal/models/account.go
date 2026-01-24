@@ -4,10 +4,18 @@ import "time"
 
 // AccountSettings contains account settings
 type AccountSettings struct {
-	Email    EmailSettings    `json:"email"`
-	Storage  StorageSettings  `json:"storage"`
-	Webhook  WebhookSettings  `json:"webhook"`
-	Branding BrandingSettings `json:"branding"`
+	Email       EmailSettings       `json:"email"`
+	Storage     StorageSettings     `json:"storage"`
+	Webhook     WebhookSettings     `json:"webhook"`
+	Branding    BrandingSettings    `json:"branding"`
+	Geolocation GeolocationSettings `json:"geolocation,omitempty"`
+}
+
+// GeolocationSettings geolocation configuration
+type GeolocationSettings struct {
+	MaxMindLicenseKey string `json:"maxmind_license_key,omitempty"` // MaxMind license key for automatic database download
+	DownloadURL       string `json:"download_url,omitempty"`         // Alternative: URL to download database archive
+	DownloadMethod   string `json:"download_method,omitempty"`      // "maxmind" or "url"
 }
 
 // EmailSettings email configuration

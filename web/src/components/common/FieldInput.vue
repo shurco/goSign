@@ -61,6 +61,29 @@
     @update:modelValue="handleUpdate"
     @blur="$emit('blur')"
     />
+  <SignatureInput
+    v-else-if="isSignatureType"
+    v-model="localValue"
+    :mode="type === 'initials' ? 'initials' : 'signature'"
+    :placeholder="placeholder"
+    :required="required"
+    :disabled="disabled"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
+  />
+  <CellsInput
+    v-else-if="type === 'cells'"
+    v-model="localValue"
+    :cell-count="cellCount"
+    :placeholder="placeholder"
+    :required="required"
+    :readonly="readonly"
+    :disabled="disabled"
+    :error="error"
+    @update:modelValue="handleUpdate"
+    @blur="$emit('blur')"
+  />
   <div v-else class="field-input-wrapper">
     <div class="text-sm text-gray-500">Field type "{{ type }}" not yet implemented</div>
   </div>
@@ -72,6 +95,8 @@ import TextInput from "@/components/field/inputs/TextInput.vue";
 import DateInput from "@/components/field/inputs/DateInput.vue";
 import SelectInput from "@/components/field/inputs/SelectInput.vue";
 import FileInput from "@/components/field/inputs/FileInput.vue";
+import SignatureInput from "@/components/field/inputs/SignatureInput.vue";
+import CellsInput from "@/components/field/inputs/CellsInput.vue";
 
 interface Option {
   id?: string;
@@ -92,6 +117,7 @@ interface Props {
   formula?: string;
   calculationType?: 'number' | 'currency';
   calculatedValue?: number;
+  cellCount?: number;
 }
 
 interface Emits {
@@ -107,7 +133,8 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   disabled: false,
   options: () => [],
-  error: ""
+  error: "",
+  cellCount: 6
 });
 
 const emit = defineEmits<Emits>();
@@ -118,11 +145,15 @@ const isTextType = computed(() => {
 });
 
 const isSelectType = computed(() => {
-  return ["select", "radio", "checkbox", "multiple"].includes(props.type);
+  return ["select", "radio", "checkbox", "multiple", "multi_select"].includes(props.type);
 });
 
 const isCalculated = computed(() => {
   return !!props.formula;
+});
+
+const isSignatureType = computed(() => {
+  return ["signature", "initials"].includes(props.type);
 });
 
 function formatCalculated(value: number | undefined): string {

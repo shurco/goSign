@@ -26,7 +26,9 @@ func VerifyPDF(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
-	if fileHeader.Header["Content-Type"][0] != "application/pdf" {
+	// Be defensive: Content-Type may be missing or include parameters (e.g. "application/pdf; charset=binary").
+	contentType := strings.ToLower(strings.TrimSpace(fileHeader.Header.Get("Content-Type")))
+	if !strings.HasPrefix(contentType, "application/pdf") {
 		response.Error = "File format not supported"
 		return webutil.Response(c, fiber.StatusOK, "Verify", response)
 	}
@@ -37,9 +39,15 @@ func VerifyPDF(c *fiber.Ctx) error {
 	}
 	defer file.Close()
 
-	tempFile, err := os.CreateTemp("./lc_tmp", "tempfile-*.tmp")
+	// Use a dedicated temp directory. Ensure it exists so the endpoint works regardless of current working directory.
+	const tmpDir = "./lc_tmp"
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
+	}
+
+	tempFile, err := os.CreateTemp(tmpDir, "verify-*.pdf")
 	if err != nil {
-		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 	defer func() {
 		tempFile.Close()

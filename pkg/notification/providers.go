@@ -4,9 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/shurco/gosign/internal/models"
-	mail "gopkg.in/mail.v2"
+	"github.com/wneessen/go-mail"
 )
 
 // SMTPConfig contains SMTP settings
@@ -33,31 +37,45 @@ func NewEmailProvider(config SMTPConfig) *EmailProvider {
 
 // Send sends email
 func (p *EmailProvider) Send(ctx context.Context, notification *models.Notification) error {
-	m := mail.NewMessage()
-	m.SetHeader("From", fmt.Sprintf("%s <%s>", p.config.FromName, p.config.FromEmail))
-	m.SetHeader("To", notification.Recipient)
-	m.SetHeader("Subject", notification.Subject)
+	m := mail.NewMsg()
+	if err := m.FromFormat(p.config.FromName, p.config.FromEmail); err != nil {
+		return fmt.Errorf("failed to set from address: %w", err)
+	}
+	if err := m.To(notification.Recipient); err != nil {
+		return fmt.Errorf("failed to set to address: %w", err)
+	}
+	m.Subject(notification.Subject)
 
 	// If HTML body exists
 	if notification.Context["html"] != nil {
 		htmlBody, ok := notification.Context["html"].(string)
 		if ok && htmlBody != "" {
-			m.SetBody("text/html", htmlBody)
+			m.SetBodyString(mail.TypeTextHTML, htmlBody)
 			// Alternative text format
 			if notification.Body != "" {
-				m.AddAlternative("text/plain", notification.Body)
+				m.AddAlternativeString(mail.TypeTextPlain, notification.Body)
 			}
 		} else {
-			m.SetBody("text/plain", notification.Body)
+			m.SetBodyString(mail.TypeTextPlain, notification.Body)
 		}
 	} else {
-		m.SetBody("text/plain", notification.Body)
+		m.SetBodyString(mail.TypeTextPlain, notification.Body)
 	}
 
-	d := mail.NewDialer(p.config.Host, p.config.Port, p.config.User, p.config.Password)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: false}
+	c, err := mail.NewClient(
+		p.config.Host,
+		mail.WithPort(p.config.Port),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithUsername(p.config.User),
+		mail.WithPassword(p.config.Password),
+		mail.WithTLSPolicy(mail.TLSMandatory),
+		mail.WithTLSConfig(&tls.Config{InsecureSkipVerify: false}),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create mail client: %w", err)
+	}
 
-	if err := d.DialAndSend(m); err != nil {
+	if err := c.DialAndSend(m); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
@@ -67,6 +85,11 @@ func (p *EmailProvider) Send(ctx context.Context, notification *models.Notificat
 // Type returns provider type
 func (p *EmailProvider) Type() models.NotificationType {
 	return models.NotificationTypeEmail
+}
+
+// Enabled reports whether this provider is usable (configured).
+func (p *EmailProvider) Enabled() bool {
+	return p.config.Host != "" && p.config.Port > 0 && p.config.FromEmail != ""
 }
 
 // TwilioConfig contains Twilio API configuration
@@ -101,22 +124,47 @@ func (p *SMSProvider) Send(ctx context.Context, notification *models.Notificatio
 		return fmt.Errorf("recipient phone number is required")
 	}
 
-	// TODO: Implement actual Twilio API call when credentials are provided
-	// For now: log and return success message indicating SMS would be sent
-	// This is a correct stub that can be easily extended later
-	
-	// When implementing:
-	// 1. Use Twilio REST API: https://api.twilio.com/2010-04-01/Accounts/{AccountSID}/Messages.json
-	// 2. POST with Body, From, To parameters
-	// 3. Use Basic Auth with AccountSID and AuthToken
-	// 4. Handle Twilio error responses
-	
-	return fmt.Errorf("SMS sending not fully implemented - would send to %s via Twilio (AccountSID: %s)", 
-		notification.Recipient, p.config.AccountSID[:8]+"...")
+	if p.config.FromNumber == "" {
+		return fmt.Errorf("Twilio from number is required")
+	}
+	if strings.TrimSpace(notification.Body) == "" {
+		return fmt.Errorf("SMS body is required")
+	}
+
+	endpoint := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", p.config.AccountSID)
+	form := url.Values{}
+	form.Set("From", p.config.FromNumber)
+	form.Set("To", notification.Recipient)
+	form.Set("Body", notification.Body)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed to create Twilio request: %w", err)
+	}
+	req.SetBasicAuth(p.config.AccountSID, p.config.AuthToken)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send SMS via Twilio: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("twilio returned %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	}
+
+	return nil
 }
 
 // Type returns provider type
 func (p *SMSProvider) Type() models.NotificationType {
 	return models.NotificationTypeSMS
+}
+
+// Enabled reports whether this provider is usable (configured + enabled).
+func (p *SMSProvider) Enabled() bool {
+	return p.config.Enabled && p.config.AccountSID != "" && p.config.AuthToken != "" && p.config.FromNumber != ""
 }
 

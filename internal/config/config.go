@@ -19,10 +19,11 @@ var cfg *Config
 
 // Settings represents additional application settings
 type Settings struct {
-	Email    map[string]string `toml:"email" comment:"Email settings (provider, smtp_host, smtp_port, smtp_user, smtp_pass, from_email, from_name)"`
-	Storage  map[string]string `toml:"storage" comment:"Storage settings (provider: local/s3/gcs/azure, bucket, region, endpoint, base_path)"`
-	Webhook  map[string]string `toml:"webhook" comment:"Webhook settings (enabled, max_retries, timeout)"`
-	Features map[string]bool   `toml:"features" comment:"Feature flags (reminders_enabled, sms_verification, embedded_signing, bulk_operations)"`
+	Email      map[string]string `toml:"email" comment:"Email settings (provider, smtp_host, smtp_port, smtp_user, smtp_pass, from_email, from_name)"`
+	Storage    map[string]string `toml:"storage" comment:"Storage settings (provider: local/s3/gcs/azure, bucket, region, endpoint, base_path)"`
+	Webhook    map[string]string `toml:"webhook" comment:"Webhook settings (enabled, max_retries, timeout)"`
+	Geolocation map[string]string `toml:"geolocation" comment:"Geolocation settings (db_path: path to GeoLite2-City.mmdb file, base_dir: directory for database storage, default ./base)"`
+	Features   map[string]bool   `toml:"features" comment:"Feature flags (reminders_enabled, sms_verification, embedded_signing, bulk_operations)"`
 }
 
 // Config is ...
@@ -67,6 +68,11 @@ func Default() *Config {
 				"enabled":     "true",
 				"max_retries": "3",
 				"timeout":     "30", 
+			},
+			Geolocation: map[string]string{
+				"base_dir": "./base",
+				"db_path":  "./base/GeoLite2-City.mmdb",
+				// Note: maxmind_license_key is now stored in account.settings, not in config file
 			},
 			Features: map[string]bool{
 				"reminders_enabled":   true,

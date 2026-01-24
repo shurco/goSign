@@ -33,7 +33,7 @@ goSign is a complete document signing solution that combines powerful backend se
 
 ### Advanced Features
 - 📁 **Template System**: Reusable document templates with 14 field types (PDF file import supported)
-- 🗄️ **Flexible Storage**: Local, S3, GCS, or Azure Blob storage
+- 🗄️ **Flexible Storage**: Local, S3 (GCS, Azure planned)
 - ⚡ **Rate Limiting**: Configurable API rate limits
 - 🔍 **Event Logging**: Comprehensive audit trail
 - 🎯 **Generic CRUD API**: Consistent REST API design
@@ -45,21 +45,26 @@ goSign is a complete document signing solution that combines powerful backend se
 - 📋 **Team Collaboration**: Invite members, manage permissions
 - 🗂️ **Organization Templates**: Templates scoped to organizations
 - 📊 **Team Analytics**: Organization-level statistics and insights
+- 🌐 **Multilingual (i18n)**: 7 UI languages, 14 signing portal languages, RTL support
+- 📝 **Conditional Fields**: Show/hide fields based on dynamic conditions
+- 📐 **Formula Engine**: Dynamic field calculations with formula builder
+- 🎨 **White-Label Branding**: Custom logos, colors, fonts, signing themes
+- 📧 **Email Templates**: Customizable templates with locale support
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Language**: Go 1.22+
+- **Language**: Go 1.25+
 - **Framework**: Fiber v2 (HTTP server)
 - **Database**: PostgreSQL 14+ with JSONB
 - **Cache**: Redis 6+
 - **Authentication**: JWT + API Keys
 - **Email**: SMTP/SendGrid support
-- **Storage**: Local, S3, GCS, Azure
+- **Storage**: Local, S3 (GCS, Azure planned)
 - **PDF Processing**: 
-  - digitorus/pdf - Digital signing
-  - pdfcpu - Document manipulation and generation
-- **Task Scheduling**: robfig/cron v3
+  - digitorus/pdf - PDF reading and digital signing
+  - signintech/gopdf - PDF creation and manipulation
+- **Task Scheduling**: Built-in Go scheduler
 - **Logging**: zerolog
 - **API Docs**: Swagger/OpenAPI
 
@@ -84,13 +89,11 @@ goSign/
 │   ├── goSign/              # Main application
 │   ├── cert/                # Certificate utilities
 │   ├── pdf/                 # PDF utilities
-│   └── pdf-cert/            # PDF certificate examples
 ├── internal/                 # Private application code
 │   ├── config/              # Configuration management
 │   ├── handlers/
 │   │   ├── api/            # REST API v1 handlers
-│   │   ├── public/         # Public endpoints
-│   │   └── private/        # Protected admin endpoints
+│   │   └── public/         # Public and auth endpoints
 │   ├── middleware/          # JWT, rate limiting, CORS
 │   ├── models/              # Data models (14 models)
 │   ├── queries/             # Database repositories
@@ -109,11 +112,9 @@ goSign/
 │   │   └── revocation/     # CRL management
 │   ├── notification/        # Email/SMS service
 │   ├── webhook/             # Webhook dispatcher
-│   ├── storage/             # Multi-provider storage
+│   ├── storage/             # Blob storage
 │   │   ├── local/          # Local filesystem
-│   │   ├── s3/             # AWS S3/MinIO
-│   │   ├── postgres/       # Database
-│   │   └── redis/          # Cache
+│   │   └── s3/             # AWS S3/MinIO
 │   ├── security/
 │   │   ├── cert/           # Certificate operations
 │   │   └── password/       # Hashing and validation
@@ -125,10 +126,10 @@ goSign/
 │   │   │   ├── common/      # Generic components (FieldInput, FormModal, ResourceTable)
 │   │   │   ├── field/       # Field-specific components
 │   │   │   └── template/    # Document template components
-│   │   ├── composables/     # Vue composables
-│   │   ├── layouts/         # Page layouts (Profile, Sidebar)
+│   │   ├── composables/     # Vue composables (conditions, formulas, i18n)
+│   │   ├── layouts/         # Page layouts (Main, Profile, Settings)
 │   │   ├── models/          # TypeScript models
-│   │   ├── pages/           # Application pages (9 pages)
+│   │   ├── pages/           # Application pages (Dashboard, Sign, Verify, Settings, etc.)
 │   │   ├── stores/          # Pinia stores
 │   │   └── utils/           # Frontend utilities
 ├── migrations/               # Database migrations
@@ -140,11 +141,20 @@ goSign/
 ## Installation
 
 ### Prerequisites
-- Go 1.22 or higher
+- Go 1.25 or higher
 - PostgreSQL 14+
 - Redis 6+
 - Bun (for frontend development)
 - Node.js 18+ (alternative to Bun)
+- **PDF→JPG (preview generation)**: `pdftoppm` from **poppler-utils** (required for template previews when creating templates from PDF)
+
+  | OS | Package | Install |
+  |----|---------|---------|
+  | Debian / Ubuntu | `poppler-utils` | `sudo apt install poppler-utils` |
+  | RHEL / Fedora / CentOS | `poppler-utils` | `sudo dnf install poppler-utils` |
+  | Alpine | `poppler-utils` | `apk add poppler-utils` |
+  | Arch | `poppler` | `pacman -S poppler` |
+  | macOS (Homebrew) | `poppler` | `brew install poppler` |
 
 ### Backend Setup
 
@@ -159,12 +169,13 @@ cd gosign
 go mod download
 ```
 
-3. Generate configuration file:
+3. Generate or copy configuration (creates `gosign.toml` in project root):
 ```bash
 go run cmd/goSign/main.go gen --config
+# or: cp cmd/goSign/gosign.example.toml ./gosign.toml
 ```
 
-4. Configure database connection in the generated config file
+4. Edit `gosign.toml`: set Postgres URL, Redis, and SMTP
 
 5. Run database migrations:
 ```bash
@@ -213,10 +224,10 @@ Run the main application:
 go run cmd/goSign/main.go serve
 ```
 
-The application will start on `http://localhost:8080` (default) with three interfaces:
-- **Public UI**: `http://localhost:8080/` - Document signing and verification
-- **Admin UI**: `http://localhost:8080/_/` - Administration panel
-- **API**: `http://localhost:8080/api/` - REST API endpoints
+The application will start on `http://localhost:8088` (default) with three interfaces:
+- **Public UI**: `http://localhost:8088/` - Document signing and verification
+- **Admin UI**: `http://localhost:8088/_/` - Administration panel
+- **API**: `http://localhost:8088/api/` - REST API endpoints
 
 ### CLI Commands
 
@@ -319,6 +330,11 @@ go run cmd/cert/main.go [options]
 - `PUT /api/v1/settings/storage` - Update storage config
 - `PUT /api/v1/settings/branding` - Update branding
 
+**Branding, i18n, Email Templates**
+- `GET /api/v1/branding`, `PUT /api/v1/branding` - White-label branding
+- `GET /api/v1/i18n/locales` - Available locales
+- `GET /api/v1/email-templates`, `POST /api/v1/email-templates`, `PUT /api/v1/email-templates/:id` - Email templates
+
 **📚 Complete API Reference:**
 - **Interactive Docs**: [Swagger UI](http://localhost:8088/swagger/index.html)
 - **Full Endpoint List**: [docs/SWAGGER.md](docs/SWAGGER.md)
@@ -326,13 +342,13 @@ go run cmd/cert/main.go [options]
 
 ## Configuration
 
-Configuration is managed through a TOML file (`cmd/goSign/gosign.toml`).
+Configuration is managed through a TOML file (`gosign.toml` in project root).
 
 ### Quick Setup
 
-1. **Copy example configuration:**
+1. **Copy example configuration to project root:**
    ```bash
-   cp cmd/goSign/gosign.example.toml cmd/goSign/gosign.toml
+   cp cmd/goSign/gosign.example.toml ./gosign.toml
    ```
 
 2. **Update required values in `gosign.toml`:**
@@ -342,7 +358,7 @@ Configuration is managed through a TOML file (`cmd/goSign/gosign.toml`).
 
 ### Key Configuration Sections
 
-- **HTTPAddr**: Server address (default: `0.0.0.0:8088`)
+- **http-addr**: Server address (default: `0.0.0.0:8088`)
 - **DevMode**: Development mode flag
 - **Postgres**: Database connection settings
 - **Redis**: Session storage and caching
@@ -411,7 +427,7 @@ docker-compose -f docker/docker-compose.yaml up -d
 - Email verification system
 - Password reset with secure tokens
 - Secure certificate storage
-- Input validation with ozzo-validation
+- Input validation with go-playground/validator
 
 ## Scripts
 
@@ -472,7 +488,17 @@ goSign v2.1 adds enterprise team collaboration features:
 - ✅ **Team Templates**: Templates shared within organizations
 - ✅ **Organization Isolation**: Data separation between organizations
 
-See [IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md) for full details.
+## 🌐 What's New in v2.4
+
+goSign v2.4 adds advanced enterprise features:
+
+- ✅ **Multilingual (i18n)**: 7 UI and 14 signing portal languages, RTL support
+- ✅ **Conditional Fields**: Show/hide fields based on conditions
+- ✅ **Formula Engine**: Dynamic calculations with formula builder
+- ✅ **White-Label Branding**: Custom logos, colors, fonts, signing themes
+- ✅ **Email Templates**: Customizable templates with locale support
+
+See [IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md) and [docs/README.md](docs/README.md) for full details.
 
 ## 📖 Documentation
 
@@ -483,6 +509,10 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[Embedded Signing](docs/EMBEDDED_SIGNING.md)** - JavaScript SDK integration
 - **[Frontend Components](docs/FRONTEND_COMPONENTS.md)** - Component architecture and UI library
 - **[Swagger Guide](docs/SWAGGER.md)** - API documentation generation
+- **[Multilingual](docs/MULTILINGUAL.md)** - i18n and signing portal languages
+- **[Conditional Fields](docs/CONDITIONAL_FIELDS.md)** - Dynamic show/hide logic
+- **[Formulas](docs/FORMULAS.md)** - Formula engine and builder
+- **[White-Label](docs/WHITE_LABEL.md)** - Branding and themes
 
 **Quick Links:**
 - Swagger UI: http://localhost:8088/swagger/index.html
@@ -498,15 +528,20 @@ Comprehensive documentation is available in the `docs/` directory:
 - [x] Bulk operations
 - [x] Webhook system
 - [x] Swagger documentation
+- [x] Organizations and role-based access
+- [x] Multilingual support (i18n)
+- [x] Conditional fields
+- [x] Formula engine
+- [x] White-label branding
+- [x] Custom email templates
 
 ### Planned
-- [ ] Multi-language support
+- [ ] GCS and Azure blob storage
 - [ ] Advanced analytics dashboard
 - [ ] External CA integration
 - [ ] Mobile application
 - [ ] E-signature standards (eIDAS)
 - [ ] Advanced PDF form automation
-- [ ] Split monolith into microservices
 
 ---
 

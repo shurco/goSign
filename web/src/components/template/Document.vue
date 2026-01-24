@@ -135,7 +135,12 @@ function handleDraw(event: any): void {
   if (!props.document) {
     return;
   }
-  emit("draw", { ...event, attachment_id: props.document.id });
+  // Preserve page number from the event and add attachment_id
+  emit("draw", { 
+    ...event, 
+    attachment_id: props.document.id,
+    page: event.page !== undefined ? event.page : 0 // Ensure page is preserved
+  });
 }
 
 defineExpose({

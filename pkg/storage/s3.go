@@ -2,21 +2,17 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // S3Storage implements AWS S3 storage
 type S3Storage struct {
-	client *s3.Client
+	client *minio.Client
 	bucket string
 }
 
@@ -27,42 +23,37 @@ type S3Config struct {
 	Region          string
 	Bucket          string
 	Endpoint        string // for MinIO and other S3-compatible storages
+	UseSSL          bool   // use SSL/TLS for connection
 }
 
 // NewS3Storage creates new S3 storage
 func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
-	// Create AWS config
-	var opts []func(*config.LoadOptions) error
-
-	// Region
-	if cfg.Region != "" {
-		opts = append(opts, config.WithRegion(cfg.Region))
+	// Determine endpoint
+	endpoint := cfg.Endpoint
+	if endpoint == "" {
+		// Default AWS S3 endpoint based on region
+		if cfg.Region == "" {
+			cfg.Region = "us-east-1"
+		}
+		endpoint = fmt.Sprintf("s3.%s.amazonaws.com", cfg.Region)
 	}
 
-	// Credentials
-	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
-		opts = append(opts, config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
-		))
+	// Determine SSL usage - default to true for AWS S3, false for custom endpoints (like MinIO)
+	useSSL := cfg.UseSSL
+	if !cfg.UseSSL && cfg.Endpoint == "" {
+		// Default to SSL for AWS S3 when endpoint is not specified
+		useSSL = true
 	}
 
-	awsCfg, err := config.LoadDefaultConfig(ctx, opts...)
+	// Create MinIO client
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+		Secure: useSSL,
+		Region: cfg.Region,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
 	}
-
-	// Create S3 client
-	clientOpts := []func(*s3.Options){}
-
-	// Custom endpoint (for MinIO)
-	if cfg.Endpoint != "" {
-		clientOpts = append(clientOpts, func(o *s3.Options) {
-			o.BaseEndpoint = aws.String(cfg.Endpoint)
-			o.UsePathStyle = true // for MinIO
-		})
-	}
-
-	client := s3.NewFromConfig(awsCfg, clientOpts...)
 
 	return &S3Storage{
 		client: client,
@@ -72,17 +63,13 @@ func NewS3Storage(ctx context.Context, cfg S3Config) (*S3Storage, error) {
 
 // Upload uploads file to S3
 func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader, metadata *BlobMetadata) error {
-	input := &s3.PutObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-		Body:   reader,
-	}
+	opts := minio.PutObjectOptions{}
 
 	if metadata != nil && metadata.ContentType != "" {
-		input.ContentType = aws.String(metadata.ContentType)
+		opts.ContentType = metadata.ContentType
 	}
 
-	_, err := s.client.PutObject(ctx, input)
+	_, err := s.client.PutObject(ctx, s.bucket, key, reader, -1, opts)
 	if err != nil {
 		return fmt.Errorf("failed to upload to S3: %w", err)
 	}
@@ -92,23 +79,18 @@ func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader, me
 
 // Download downloads file from S3
 func (s *S3Storage) Download(ctx context.Context, key string) (io.ReadCloser, error) {
-	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	})
+	// MinIO GetObject returns object immediately, errors occur on first read
+	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to download from S3: %w", err)
 	}
 
-	return result.Body, nil
+	return obj, nil
 }
 
 // Delete deletes file from S3
 func (s *S3Storage) Delete(ctx context.Context, key string) error {
-	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	})
+	err := s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete from S3: %w", err)
 	}
@@ -118,41 +100,28 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 
 // GetURL returns presigned URL for file access
 func (s *S3Storage) GetURL(ctx context.Context, key string, expiration time.Duration) (string, error) {
-	presignClient := s3.NewPresignClient(s.client)
-
-	request, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	}, func(opts *s3.PresignOptions) {
-		opts.Expires = expiration
-	})
+	url, err := s.client.PresignedGetObject(ctx, s.bucket, key, expiration, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
 
-	return request.URL, nil
+	return url.String(), nil
 }
 
 // List returns list of files with prefix
 func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 	var files []string
 
-	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(prefix),
+	objectCh := s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
 	})
 
-	for paginator.HasMorePages() {
-		page, err := paginator.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list S3 objects: %w", err)
+	for obj := range objectCh {
+		if obj.Err != nil {
+			return nil, fmt.Errorf("failed to list S3 objects: %w", obj.Err)
 		}
-
-		for _, obj := range page.Contents {
-			if obj.Key != nil {
-				files = append(files, *obj.Key)
-			}
-		}
+		files = append(files, obj.Key)
 	}
 
 	return files, nil
@@ -160,14 +129,11 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 
 // Exists checks if file exists
 func (s *S3Storage) Exists(ctx context.Context, key string) (bool, error) {
-	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	})
+	_, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
 	if err != nil {
 		// Check if error is "not found"
-		var notFound *types.NotFound
-		if errors.As(err, &notFound) {
+		errResp := minio.ToErrorResponse(err)
+		if errResp.Code == "NoSuchKey" || errResp.Code == "NotFound" {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to check S3 object: %w", err)
@@ -178,28 +144,16 @@ func (s *S3Storage) Exists(ctx context.Context, key string) (bool, error) {
 
 // GetMetadata returns file metadata
 func (s *S3Storage) GetMetadata(ctx context.Context, key string) (*BlobMetadata, error) {
-	result, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(key),
-	})
+	objInfo, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 metadata: %w", err)
 	}
 
 	metadata := &BlobMetadata{
-		Size: *result.ContentLength,
-	}
-
-	if result.ContentType != nil {
-		metadata.ContentType = *result.ContentType
-	}
-
-	if result.LastModified != nil {
-		metadata.Modified = *result.LastModified
-	}
-
-	if result.ETag != nil {
-		metadata.ETag = *result.ETag
+		Size:        objInfo.Size,
+		ContentType: objInfo.ContentType,
+		Modified:    objInfo.LastModified,
+		ETag:        objInfo.ETag,
 	}
 
 	return metadata, nil

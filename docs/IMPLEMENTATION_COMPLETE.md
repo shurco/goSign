@@ -333,7 +333,7 @@ GET    /embed/sign              (Embedded signing URL)
 
 ### Backend
 ```go
-gopkg.in/mail.v2         // Email sending
+github.com/wneessen/go-mail // Email sending
 github.com/robfig/cron/v3 // Background worker scheduling
 ```
 

@@ -1,10 +1,39 @@
 package pdf
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/signintech/gopdf"
 )
+
+func makePDFBytes(t *testing.T, pages int) []byte {
+	t.Helper()
+	if pages <= 0 {
+		pages = 1
+	}
+	pdf := gopdf.GoPdf{}
+	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+	fonts := addStandardFonts(&pdf, "")
+	if !fonts.NormalOK {
+		t.Skip("no TTF fonts available for gopdf")
+	}
+	for i := 0; i < pages; i++ {
+		pdf.AddPage()
+		if err := pdf.SetFont(fonts.NormalName, "", 10); err != nil {
+			t.Fatalf("failed to set font: %v", err)
+		}
+		pdf.SetXY(50, 50)
+		pdf.Cell(nil, "test")
+	}
+	var buf bytes.Buffer
+	if err := pdf.Write(&buf); err != nil {
+		t.Fatalf("failed to build test PDF: %v", err)
+	}
+	return buf.Bytes()
+}
 
 func TestFillFields(t *testing.T) {
 	tests := []struct {
@@ -87,7 +116,7 @@ func TestMergeSignatures(t *testing.T) {
 		{
 			name: "empty signatures returns original PDF",
 			input: MergeSignaturesInput{
-				BasePDF:    []byte("%PDF-1.4\n"),
+				BasePDF:    makePDFBytes(t, 1),
 				Signatures: []SignatureInfo{},
 			},
 			wantErr: false,
@@ -98,7 +127,7 @@ func TestMergeSignatures(t *testing.T) {
 		{
 			name: "merge single signature",
 			input: MergeSignaturesInput{
-				BasePDF: []byte("%PDF-1.4\n"),
+				BasePDF: makePDFBytes(t, 1),
 				Signatures: []SignatureInfo{
 					{
 						ImageData: sampleSignature,
@@ -136,8 +165,7 @@ func TestMergeSignatures(t *testing.T) {
 }
 
 func TestAppendAuditTrail(t *testing.T) {
-	// Minimal valid PDF content
-	minimalPDF := []byte("%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Count 0\n/Kids []\n>>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<<\n/Size 3\n/Root 1 0 R\n>>\nstartxref\n109\n%%EOF\n")
+	minimalPDF := makePDFBytes(t, 1)
 
 	tests := []struct {
 		name        string
@@ -197,8 +225,21 @@ func TestMain(m *testing.M) {
 	// Create a minimal test PDF if it doesn't exist
 	testPDFPath := filepath.Join(testDataDir, "sample.pdf")
 	if _, err := os.Stat(testPDFPath); os.IsNotExist(err) {
-		minimalPDF := []byte("%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Count 1\n/Kids [3 0 R]\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n189\n%%EOF\n")
-		if err := os.WriteFile(testPDFPath, minimalPDF, 0644); err != nil {
+		pdf := gopdf.GoPdf{}
+		pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
+		pdf.AddPage()
+		fonts := addStandardFonts(&pdf, "")
+		if fonts.NormalOK {
+			_ = pdf.SetFont(fonts.NormalName, "", 10)
+		}
+		pdf.SetXY(50, 50)
+		pdf.Cell(nil, "test")
+		var buf bytes.Buffer
+		if err := pdf.Write(&buf); err != nil {
+			panic(err)
+		}
+		pdfBytes := buf.Bytes()
+		if err := os.WriteFile(testPDFPath, pdfBytes, 0644); err != nil {
 			panic(err)
 		}
 	}

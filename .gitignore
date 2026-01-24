@@ -39,11 +39,12 @@ fixtures/testfiles/*_signed.pdf
 fixtures/testfiles/failed/*
 cmd/cert/ca/*
 cmd/pdf/*.pdf
-cmd/pdf-cert/*.pdf
 fixtures/migration/*_private.sql
 docker/core/
 __debug_bin*
 cmd/goSign/lc_*
+cmd/goSign/assets/*
+cmd/goSign/base/*
 
 .eslintcache
 
@@ -52,3 +53,4 @@ web/public/fixtures
 gosign.toml
 .cursor/*
 bin/*goSign
+.playwright-mcp/*

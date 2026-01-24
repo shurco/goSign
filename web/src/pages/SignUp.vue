@@ -24,7 +24,7 @@
           <span class="block sm:inline">{{ success }}</span>
         </div>
 
-        <div class="space-y-4 rounded-md border border-gray-200 bg-white p-6 transition-colors">
+        <div class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="first-name" class="sr-only">First name</label>
@@ -35,7 +35,7 @@
                 type="text"
                 autocomplete="given-name"
                 required
-                class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+                class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
                 placeholder="First name"
               />
             </div>
@@ -48,7 +48,7 @@
                 type="text"
                 autocomplete="family-name"
                 required
-                class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+                class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
                 placeholder="Last name"
               />
             </div>
@@ -63,7 +63,7 @@
               type="email"
               autocomplete="email"
               required
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="Email address"
             />
           </div>
@@ -78,7 +78,7 @@
               autocomplete="new-password"
               required
               minlength="8"
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="Password (min. 8 characters)"
             />
           </div>
@@ -92,21 +92,23 @@
               type="password"
               autocomplete="new-password"
               required
-              class="relative block w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+              class="relative block w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
               placeholder="Confirm password"
             />
           </div>
         </div>
 
         <div>
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            class="w-full"
+            :loading="isLoading"
             :disabled="isLoading"
-            class="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
           >
             <span v-if="isLoading">Creating account...</span>
             <span v-else>Sign up</span>
-          </button>
+          </Button>
         </div>
 
         <div class="flex items-center justify-center">
@@ -116,20 +118,12 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
-            @click="handleGoogleSignIn"
-          >
+          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn">
             Google
-          </button>
-          <button
-            type="button"
-            class="inline-flex w-full justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50"
-            @click="handleGitHubSignIn"
-          >
+          </Button>
+          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn">
             GitHub
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -138,6 +132,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import Button from "@/components/ui/Button.vue";
 // import { useRouter } from "vue-router";
 
 // const router = useRouter();

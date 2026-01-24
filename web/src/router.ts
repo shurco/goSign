@@ -53,11 +53,17 @@ const router = createRouter({
       component: () => import("@/pages/Submissions.vue")
     },
     {
+      path: "/submissions/:submission_id/status",
+      name: "submission-status",
+      meta: { layout: "Sidebar", requiresAuth: true },
+      component: () => import("@/pages/SubmissionStatus.vue")
+    },
+    {
       path: "/settings",
       name: "settings",
       meta: { layout: "SettingsSidebar", requiresAuth: true },
       component: () => import("@/pages/Settings.vue"),
-      redirect: { name: "settings-general" },
+      redirect: "/settings/general",
       children: [
         {
           path: "general",
@@ -65,9 +71,19 @@ const router = createRouter({
           component: () => import("@/pages/settings/SettingsGeneral.vue")
         },
         {
+          path: "geolocation",
+          name: "settings-geolocation",
+          component: () => import("@/pages/settings/SettingsGeolocation.vue")
+        },
+        {
           path: "email/smtp",
           name: "settings-smtp",
           component: () => import("@/pages/settings/SettingsSmtp.vue")
+        },
+        {
+          path: "sms",
+          name: "settings-sms",
+          component: () => import("@/pages/settings/SettingsSms.vue")
         },
         {
           path: "storage",
@@ -115,22 +131,10 @@ const router = createRouter({
       component: () => import("@/pages/TemplateLibrary.vue")
     },
     {
-      path: "/view",
-      name: "view",
-      meta: { layout: "Main" },
+      path: "/templates/:id/view",
+      name: "template-view",
+      meta: { layout: "Main", requiresAuth: true },
       component: () => import("@/pages/View.vue")
-    },
-    {
-      path: "/uploads",
-      name: "uploads",
-      meta: { layout: "Sidebar", requiresAuth: true },
-      component: () => import("@/pages/Uploads.vue")
-    },
-    {
-      path: "/sign",
-      name: "sign",
-      meta: { layout: "Main" },
-      component: () => import("@/pages/Sign.vue")
     },
     {
       path: "/s/:slug",

@@ -210,8 +210,20 @@ function createUnauthorizedResponse(): Response {
  * Fetch with automatic token refresh on 401
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const isAPIv1 = url.startsWith("/api/v1");
-  const isLegacyAPI = url.startsWith("/api/") && !url.startsWith("/api/v1");
+  // Determine whether this request requires auth.
+  // NOTE: `url` can be relative ("/api/v1/...") or absolute ("http(s)://host/api/v1/...").
+  let pathForAuthCheck = url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    try {
+      pathForAuthCheck = new URL(url).pathname;
+    } catch {
+      // If parsing fails, fall back to the original string.
+      pathForAuthCheck = url;
+    }
+  }
+
+  const isAPIv1 = pathForAuthCheck.startsWith("/api/v1");
+  const isLegacyAPI = pathForAuthCheck.startsWith("/api/") && !pathForAuthCheck.startsWith("/api/v1");
   const requiresAuth = isAPIv1 || isLegacyAPI;
 
   if (requiresAuth && isAuthPage()) {

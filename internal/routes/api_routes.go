@@ -12,6 +12,7 @@ import (
 type APIHandlers struct {
 	Submissions     *api.SubmissionHandler
 	Submitters      *api.SubmitterHandler
+	SigningLinks    *api.SigningLinkHandler
 	Templates       *api.TemplateHandler
 	Webhooks        *api.WebhookHandler
 	Settings        *api.SettingsHandler
@@ -25,6 +26,7 @@ type APIHandlers struct {
 	I18n            *api.I18nHandler
 	Branding        *api.BrandingHandler
 	EmailTemplates  *api.EmailTemplateHandler
+	PublicSigning   *public.PublicSigningHandler
 }
 
 // ApiRoutes configures all API routes
@@ -66,11 +68,14 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	sign := c.Group("/sign")
 	sign.Post("/", public.SignPDF)
 
+	// Public signer-facing API (no authentication)
+	if handlers.PublicSigning != nil {
+		publicAPI := c.Group("/public")
+		handlers.PublicSigning.RegisterRoutes(publicAPI)
+	}
+
 	// API v1 (protected routes with rate limiting)
 	apiV1 := c.Group("/api/v1", middleware.Protected(), middleware.APIRateLimiter())
-	
-	// Upload endpoint (protected)
-	apiV1.Post("/upload", public.Upload)
 
 	// Invitations (public routes for accepting invitations)
 	if handlers.Invitations != nil {
@@ -82,6 +87,16 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	if handlers.Submissions != nil {
 		submissions := apiV1.Group("/submissions")
 		handlers.Submissions.RegisterRoutes(submissions)
+	}
+
+	// Direct signing links (protected; creates submission without email sending)
+	if handlers.SigningLinks != nil {
+		signingLinks := apiV1.Group("/signing-links")
+		signingLinks.Get("/", handlers.SigningLinks.List)
+		signingLinks.Get("/:submission_id/document", handlers.SigningLinks.DownloadCompletedDocument)
+		signingLinks.Get("/:submission_id", handlers.SigningLinks.Get)
+		signingLinks.Post("/", handlers.SigningLinks.Create)
+		signingLinks.Post("/submitters/:id/reset", handlers.SigningLinks.ResetSubmitter)
 	}
 
 	// Submitters API

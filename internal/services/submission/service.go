@@ -431,6 +431,11 @@ func (s *Service) handleSequentialCompletion(ctx context.Context, submitterID st
 
 // logEvent logs an event to the database
 func (s *Service) logEvent(ctx context.Context, eventType, actorID, resourceType, resourceID string, metadata map[string]any) error {
+	return s.logEventWithIP(ctx, eventType, actorID, resourceType, resourceID, metadata, "")
+}
+
+// logEventWithIP logs an event to the database with IP address
+func (s *Service) logEventWithIP(ctx context.Context, eventType, actorID, resourceType, resourceID string, metadata map[string]any, ip string) error {
 	event := &models.Event{
 		ID:           uuid.New().String(),
 		Type:         eventType,
@@ -438,6 +443,7 @@ func (s *Service) logEvent(ctx context.Context, eventType, actorID, resourceType
 		ResourceType: resourceType,
 		ResourceID:   resourceID,
 		Metadata:     metadata,
+		IP:           ip,
 		CreatedAt:    time.Now(),
 	}
 
