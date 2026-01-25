@@ -41,10 +41,6 @@ const pageInfo = computed(() => {
     "admin-settings-geolocation": {
       title: t('settings.geolocation'),
       description: t('settings.geolocationSectionDescription')
-    },
-    "admin-settings-email-templates": {
-      title: t('settings.emailTemplates'),
-      description: t('settings.emailTemplatesDescription')
     }
   };
 

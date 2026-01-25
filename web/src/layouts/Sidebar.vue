@@ -22,43 +22,6 @@
       <!-- Navigation Menu -->
       <nav class="flex-1 overflow-hidden px-2 py-3">
         <ul class="space-y-0.5">
-          <!-- Organization Selector -->
-          <li v-if="!isCollapsed" class="mb-4">
-            <div class="px-2.5">
-              <label class="mb-1 block text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
-                {{ $t('navigation.organization') }}
-              </label>
-              <Select
-                :model-value="currentOrganizationId"
-                @update:model-value="handleOrganizationChange"
-                size="sm"
-                class="text-[13px]"
-              >
-                <option value="">{{ $t('navigation.noOrganization') }}</option>
-                <option
-                  v-for="org in organizations"
-                  :key="org.id"
-                  :value="org.id"
-                >
-                  {{ org.name }}
-                </option>
-              </Select>
-            </div>
-          </li>
-          <li v-else class="mb-4 flex justify-center">
-            <div
-              class="group relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              :title="currentOrganizationName || $t('navigation.noOrganization')"
-            >
-              <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
-              <span
-                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100 whitespace-nowrap"
-              >
-                {{ currentOrganizationName || $t('navigation.noOrganization') }}
-              </span>
-            </div>
-          </li>
-
           <li>
             <RouterLink
               to="/dashboard"
@@ -115,27 +78,6 @@
 
           <li>
             <RouterLink
-              to="/organizations"
-              class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[
-                { 'bg-gray-100 text-gray-900': isActive('/organizations') },
-                isCollapsed ? 'justify-center' : ''
-              ]"
-              :title="isCollapsed ? $t('navigation.organizations') : ''"
-            >
-              <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.organizations') }}</span>
-              <span
-                v-if="isCollapsed"
-                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
-              >
-                {{ $t('navigation.organizations') }}
-              </span>
-            </RouterLink>
-          </li>
-
-          <li>
-            <RouterLink
               to="/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
               :class="[{ 'bg-gray-100 text-gray-900': isActive('/settings') && !isActive('/admin/settings') }, isCollapsed ? 'justify-center' : '']"
@@ -161,6 +103,25 @@
               {{ $t('navigation.administrator') }}
             </div>
             <div v-if="isCollapsed" class="mb-1.5 border-t border-gray-200"></div>
+          </li>
+          <li v-show="isAdmin">
+            <RouterLink
+              to="/admin/organizations"
+              class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              :class="[{ 'bg-gray-100 text-gray-900': isActive('/admin/organizations') }, isCollapsed ? 'justify-center' : '']"
+              :title="isCollapsed ? $t('navigation.organizations') : ''"
+            >
+              <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.organizations') }}</span>
+              <span
+                v-if="isCollapsed"
+                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
+              >
+                {{ $t('navigation.organizations') }}
+              </span>
+            </RouterLink>
+          </li>
+          <li v-show="isAdmin">
             <RouterLink
               to="/admin/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"

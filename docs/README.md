@@ -93,10 +93,12 @@
 Authentication:
   POST /auth/signin             - User login
 
-Organizations:
-  GET    /api/v1/organizations  - List organizations
-  POST   /api/v1/organizations  - Create organization
-  POST   /api/v1/organizations/:id/switch - Switch context
+Organizations (admin only):
+  GET    /api/v1/organizations           - List organizations
+  POST   /api/v1/organizations           - Create organization
+  POST   /api/v1/organizations/:id/switch - Switch context (administrators only)
+  POST   /api/v1/organizations/switch    - Exit organization (administrators only)
+  UI:    /admin/organizations            - Manage organizations (admin only)
 
 Members:
   GET    /api/v1/organizations/:id/members - List members
@@ -127,10 +129,11 @@ i18n:
   GET    /api/v1/i18n/locales   - List available locales
   PUT    /api/v1/account/locale - Update account locale
 
-Email Templates:
-  GET    /api/v1/email-templates - List email templates
-  POST   /api/v1/email-templates - Create email template
-  PUT    /api/v1/email-templates/:id - Update email template
+Email Templates (per-organization, scoped by JWT):
+  GET    /api/v1/email-templates         - List email templates (current org or account)
+  POST   /api/v1/email-templates         - Create email template
+  PUT    /api/v1/email-templates/:id     - Update email template
+  UI:    /settings/email/templates       - Configure templates (Settings, after General)
 
 Public:
   GET    /s/:slug               - Submitter signing portal
@@ -186,12 +189,13 @@ All documentation follows these standards:
 - **Reminders**: Scheduled notifications for pending signatures
 
 ### Enterprise Features
-- **Organizations & Teams**: Multi-tenant organization management with role-based access
+- **Organizations & Teams**: Multi-tenant organization management; UI under Admin section (`/admin/organizations`), access and switch/exit restricted to administrators
 - **Organization Roles**: Owner, Admin, Member, Viewer with granular permissions
 - **Team Invitations**: Email-based member invitation system with token expiration
-- **Organization Context**: JWT tokens include organization_id for multi-tenant isolation
+- **Organization Context**: JWT tokens include organization_id for multi-tenant isolation; only admins can switch organization context via API
 - **Organization Templates**: Templates can be shared within organizations
 - **Team Collaboration**: Members can collaborate on templates and submissions
+- **Email Templates in Settings**: Per-organization email templates configured under Settings → Email templates (after General); scoped by current organization or account
 - **Multilingual Support**: 7 UI languages and 14 signing portal languages with RTL support
 - **Conditional Fields**: Show/hide fields based on dynamic conditions
 - **Formula Engine**: Dynamic field calculations with formula builder
@@ -223,7 +227,7 @@ All documentation follows these standards:
 
 **Status**: ✅ Complete  
 **Total Documents**: 13  
-**Version**: 2.5.0
+**Version**: 2.6.0
 
 ## 🆕 Enterprise Features
 
@@ -260,12 +264,17 @@ goSign v2.4 adds comprehensive enterprise-grade improvements:
 - Template variables and placeholders
 - Rich HTML email support
 
+### v2.6.0 - Admin-Only Organizations and Settings Email Templates
+- **Organizations**: Moved to Administrator section (`/admin/organizations`). Only administrators can access the page and switch or exit organization context (API returns 403 for non-admins). Organization dropdown removed from sidebar.
+- **Email Templates**: Moved from Admin settings to user Settings (`/settings/email/templates`). Each organization can have its own templates; scope is determined by JWT (organization_id or account). Settings tab order: General, Email templates, Webhooks, API keys, Branding.
+- **Database**: `email_template` table extended with `organization_id` for per-organization templates (migration `20260125000001_email_template_organization.sql`).
+
 ### v2.3.0 - Organization Management
 goSign v2.3 adds comprehensive organization and team management:
 
 #### Organizations
-- Create and manage organizations
-- Switch between personal and organization contexts
+- Create and manage organizations (admin UI at `/admin/organizations`)
+- Switch between personal and organization contexts (administrators only)
 - Organization-scoped data isolation
 
 #### Team Management

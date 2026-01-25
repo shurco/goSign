@@ -4,9 +4,10 @@ import "time"
 
 // EmailTemplate represents an email template stored in the database
 type EmailTemplate struct {
-	ID        string     `json:"id"`
-	AccountID *string    `json:"account_id,omitempty"` // NULL for system templates
-	Name      string     `json:"name"`                 // 'base', 'invitation', 'reminder', 'completed'
+	ID             string  `json:"id"`
+	AccountID      *string `json:"account_id,omitempty"`      // NULL for system and organization templates
+	OrganizationID *string `json:"organization_id,omitempty"` // NULL for system and account-level templates
+	Name           string  `json:"name"`                     // 'base', 'invitation', 'reminder', 'completed'
 	Locale    string     `json:"locale"`               // Language code (en, ru, es, fr, de, it, pt)
 	Subject   string     `json:"subject,omitempty"`     // Email subject (for content templates)
 	Content   string     `json:"content"`              // HTML template content

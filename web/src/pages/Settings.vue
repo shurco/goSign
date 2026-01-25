@@ -53,6 +53,10 @@ const pageInfo = computed(() => {
     "settings-branding": {
       title: t('branding.title'),
       description: t('branding.description')
+    },
+    "settings-email-templates": {
+      title: t('settings.emailTemplates'),
+      description: t('settings.emailTemplatesDescription')
     }
   };
 

@@ -171,7 +171,7 @@ const loadOrganizations = async () => {
       const is401Error = error?.status === 401 || error?.message?.includes("Unauthorized");
 
       // Only log if not redirecting and not a 401 error (401 will be handled by redirect)
-      if (!isRedirecting && !is401Error && window.location.pathname.includes("/organizations")) {
+      if (!isRedirecting && !is401Error && window.location.pathname.includes("/admin/organizations")) {
         console.error("Failed to load organizations:", error);
       }
 
@@ -181,7 +181,7 @@ const loadOrganizations = async () => {
       }
 
       // If auth failed, redirect will happen automatically
-      if (!window.location.pathname.includes("/organizations")) {
+      if (!window.location.pathname.includes("/admin/organizations")) {
         loading.value = false;
         return;
       }
@@ -282,7 +282,7 @@ const onOrganizationUpdated = (updatedOrg: Organization) => {
 };
 
 const manageMembers = (org: Organization) => {
-  router.push(`/organizations/${org.id}/members`);
+  router.push(`/admin/organizations/${org.id}/members`);
 };
 
 const formatDate = (dateString: string | undefined) => {
@@ -315,7 +315,7 @@ onMounted(() => {
 // Reload organizations when component is activated (reused by router)
 // Only reload if we haven't loaded yet or data might be stale
 onActivated(() => {
-  if (route.path === "/organizations" && (!hasLoadedOnce || organizations.value.length === 0)) {
+  if (route.path === "/admin/organizations" && (!hasLoadedOnce || organizations.value.length === 0)) {
     loadOrganizations().then(() => {
       hasLoadedOnce = true;
     });
@@ -328,7 +328,7 @@ watch(
   () => route.path,
   (newPath, oldPath) => {
     // Only reload if navigating TO this page (not from it) and we need fresh data
-    if (newPath === "/organizations" && oldPath !== newPath) {
+    if (newPath === "/admin/organizations" && oldPath !== newPath) {
       // Only reload if data is empty or component was reused
       if (organizations.value.length === 0 || !hasLoadedOnce) {
         setTimeout(() => {

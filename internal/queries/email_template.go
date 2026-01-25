@@ -18,32 +18,45 @@ type EmailTemplateQueries struct {
 	*pgxpool.Pool
 }
 
-// GetEmailTemplate retrieves an email template by name, locale, and account ID
-// If accountID is nil, retrieves system template
-// If template for specified locale is not found, falls back to 'en' locale
-// If account-specific template is not found, falls back to system template
-func (q *EmailTemplateQueries) GetEmailTemplate(ctx context.Context, name string, locale string, accountID *string) (*models.EmailTemplate, error) {
+// GetEmailTemplate retrieves an email template by name, locale, and scope (organization or account).
+// If organizationID is set, tries org template then system. If accountID is set, tries account then system.
+func (q *EmailTemplateQueries) GetEmailTemplate(ctx context.Context, name string, locale string, accountID *string, organizationID *string) (*models.EmailTemplate, error) {
 	if locale == "" {
 		locale = "en"
 	}
 
-	// Try account-specific template first if accountID is provided
+	if organizationID != nil && *organizationID != "" {
+		if template, err := q.getTemplateByOrg(ctx, name, locale, *organizationID); err == nil {
+			return template, nil
+		}
+		return q.GetEmailTemplate(ctx, name, locale, nil, nil) // fallback to system
+	}
+
 	if accountID != nil && *accountID != "" {
 		if template, err := q.getTemplateByQuery(ctx, name, locale, *accountID); err == nil {
 			return template, nil
 		}
 	}
 
-	// Fall back to system template
 	template, err := q.getTemplateByQuery(ctx, name, locale, nil)
 	if err != nil {
 		if err == sql.ErrNoRows && locale != "en" {
-			return q.GetEmailTemplate(ctx, name, "en", nil)
+			return q.GetEmailTemplate(ctx, name, "en", nil, nil)
 		}
 		return nil, err
 	}
-
 	return template, nil
+}
+
+// getTemplateByOrg retrieves a template by organization_id
+func (q *EmailTemplateQueries) getTemplateByOrg(ctx context.Context, name, locale, organizationID string) (*models.EmailTemplate, error) {
+	query := `
+		SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
+		FROM email_template
+		WHERE name = $1 AND locale = $2 AND organization_id = $3
+		LIMIT 1
+	`
+	return q.scanTemplateRow(ctx, query, name, locale, organizationID)
 }
 
 // getTemplateByQuery retrieves a template with a specific account_id (nil for system templates)
@@ -53,15 +66,15 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 
 	if accountID == nil {
 		query = `
-			SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+			SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 			FROM email_template
-			WHERE name = $1 AND locale = $2 AND account_id IS NULL
+			WHERE name = $1 AND locale = $2 AND account_id IS NULL AND organization_id IS NULL
 			LIMIT 1
 		`
 		args = []interface{}{name, locale}
 	} else {
 		query = `
-			SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+			SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 			FROM email_template
 			WHERE name = $1 AND locale = $2 AND account_id = $3
 			LIMIT 1
@@ -70,12 +83,12 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 	}
 
 	var template models.EmailTemplate
-	var accountIDScan sql.NullString
+	var accountIDScan, orgIDScan sql.NullString
 	var subjectNull sql.NullString
-
 	err := q.QueryRow(ctx, query, args...).Scan(
 		&template.ID,
 		&accountIDScan,
+		&orgIDScan,
 		&template.Name,
 		&template.Locale,
 		&subjectNull,
@@ -84,63 +97,109 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 		&template.CreatedAt,
 		&template.UpdatedAt,
 	)
-
 	if err != nil {
 		return nil, err
 	}
-
 	if accountIDScan.Valid {
 		template.AccountID = &accountIDScan.String
+	}
+	if orgIDScan.Valid {
+		template.OrganizationID = &orgIDScan.String
 	}
 	if subjectNull.Valid {
 		template.Subject = subjectNull.String
 	}
-
 	return &template, nil
 }
 
-// GetAllEmailTemplates retrieves all email templates for an account (or system templates if accountID is nil)
-// Optionally filters by locale
-func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, accountID *string, locale *string) ([]models.EmailTemplate, error) {
+// scanTemplateRow runs query with args and scans one row into EmailTemplate (query must return id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at)
+func (q *EmailTemplateQueries) scanTemplateRow(ctx context.Context, query string, args ...interface{}) (*models.EmailTemplate, error) {
+	var template models.EmailTemplate
+	var accountIDScan, orgIDScan sql.NullString
+	var subjectNull sql.NullString
+	err := q.QueryRow(ctx, query, args...).Scan(
+		&template.ID,
+		&accountIDScan,
+		&orgIDScan,
+		&template.Name,
+		&template.Locale,
+		&subjectNull,
+		&template.Content,
+		&template.IsSystem,
+		&template.CreatedAt,
+		&template.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if accountIDScan.Valid {
+		template.AccountID = &accountIDScan.String
+	}
+	if orgIDScan.Valid {
+		template.OrganizationID = &orgIDScan.String
+	}
+	if subjectNull.Valid {
+		template.Subject = subjectNull.String
+	}
+	return &template, nil
+}
+
+// GetAllEmailTemplates retrieves all email templates for the given scope (organization, account, or system).
+// When organizationID is set, returns org templates + system. When accountID is set, returns account + system.
+func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, accountID *string, organizationID *string, locale *string) ([]models.EmailTemplate, error) {
 	var query string
 	var args []interface{}
 
-	if accountID != nil {
+	if organizationID != nil && *organizationID != "" {
 		if locale != nil {
-			// Get account-specific templates and system templates for specific locale
 			query = `
-				SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 				FROM email_template
-				WHERE locale = $1 AND (account_id = $2 OR account_id IS NULL)
+				WHERE locale = $1 AND (organization_id = $2 OR (organization_id IS NULL AND account_id IS NULL))
+				ORDER BY name, locale, organization_id NULLS LAST, account_id NULLS LAST
+			`
+			args = []interface{}{*locale, *organizationID}
+		} else {
+			query = `
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
+				FROM email_template
+				WHERE organization_id = $1 OR (organization_id IS NULL AND account_id IS NULL)
+				ORDER BY name, locale, organization_id NULLS LAST, account_id NULLS LAST
+			`
+			args = []interface{}{*organizationID}
+		}
+	} else if accountID != nil {
+		if locale != nil {
+			query = `
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
+				FROM email_template
+				WHERE locale = $1 AND (account_id = $2 OR (account_id IS NULL AND organization_id IS NULL))
 				ORDER BY name, locale, account_id NULLS LAST
 			`
 			args = []interface{}{*locale, *accountID}
 		} else {
-			// Get all templates for account
 			query = `
-				SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 				FROM email_template
-				WHERE account_id = $1 OR account_id IS NULL
+				WHERE account_id = $1 OR (account_id IS NULL AND organization_id IS NULL)
 				ORDER BY name, locale, account_id NULLS LAST
 			`
 			args = []interface{}{*accountID}
 		}
 	} else {
 		if locale != nil {
-			// Get only system templates for specific locale
 			query = `
-				SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 				FROM email_template
-				WHERE account_id IS NULL AND locale = $1
+				WHERE account_id IS NULL AND organization_id IS NULL AND locale = $1
 				ORDER BY name, locale
 			`
 			args = []interface{}{*locale}
 		} else {
-			// Get all system templates
 			query = `
-				SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 				FROM email_template
-				WHERE account_id IS NULL
+				WHERE account_id IS NULL AND organization_id IS NULL
 				ORDER BY name, locale
 			`
 			args = []interface{}{}
@@ -160,12 +219,12 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 	var templates []models.EmailTemplate
 	for rows.Next() {
 		var template models.EmailTemplate
-		var accountIDNull sql.NullString
+		var accountIDNull, orgIDNull sql.NullString
 		var subjectNull sql.NullString
-
 		err := rows.Scan(
 			&template.ID,
 			&accountIDNull,
+			&orgIDNull,
 			&template.Name,
 			&template.Locale,
 			&subjectNull,
@@ -177,30 +236,30 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 		if err != nil {
 			return nil, err
 		}
-
 		if accountIDNull.Valid {
 			template.AccountID = &accountIDNull.String
 		}
-
+		if orgIDNull.Valid {
+			template.OrganizationID = &orgIDNull.String
+		}
 		if subjectNull.Valid {
 			template.Subject = subjectNull.String
 		}
-
 		templates = append(templates, template)
 	}
 
 	return templates, nil
 }
 
-// CreateEmailTemplate creates a new email template
-func (q *EmailTemplateQueries) CreateEmailTemplate(ctx context.Context, accountID *string, template *models.EmailTemplate) error {
+// CreateEmailTemplate creates a new email template (scoped by organization or account).
+func (q *EmailTemplateQueries) CreateEmailTemplate(ctx context.Context, accountID *string, organizationID *string, template *models.EmailTemplate) error {
 	if template.Locale == "" {
-		template.Locale = "en" // Default to English
+		template.Locale = "en"
 	}
 
 	query := `
-		INSERT INTO email_template (id, account_id, name, locale, subject, content, is_system, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO email_template (id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	template.ID = uuid.New().String()
@@ -212,14 +271,17 @@ func (q *EmailTemplateQueries) CreateEmailTemplate(ctx context.Context, accountI
 		template.UpdatedAt = now
 	}
 
-	var accountIDNull sql.NullString
-	if accountID != nil {
+	var accountIDNull, orgIDNull sql.NullString
+	if organizationID != nil && *organizationID != "" {
+		orgIDNull = sql.NullString{String: *organizationID, Valid: true}
+	} else if accountID != nil {
 		accountIDNull = sql.NullString{String: *accountID, Valid: true}
 	}
 
 	_, err := q.Exec(ctx, query,
 		template.ID,
 		accountIDNull,
+		orgIDNull,
 		template.Name,
 		template.Locale,
 		template.Subject,
@@ -289,17 +351,18 @@ func (q *EmailTemplateQueries) DeleteEmailTemplate(ctx context.Context, id strin
 // GetEmailTemplateByID retrieves an email template by ID
 func (q *EmailTemplateQueries) GetEmailTemplateByID(ctx context.Context, id string) (*models.EmailTemplate, error) {
 	query := `
-		SELECT id, account_id, name, locale, subject, content, is_system, created_at, updated_at
+		SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
 		FROM email_template
 		WHERE id = $1
 	`
 
 	var template models.EmailTemplate
-	var accountIDNull sql.NullString
+	var accountIDNull, orgIDNull sql.NullString
 	var subjectNull sql.NullString
 	err := q.QueryRow(ctx, query, id).Scan(
 		&template.ID,
 		&accountIDNull,
+		&orgIDNull,
 		&template.Name,
 		&template.Locale,
 		&subjectNull,
@@ -316,7 +379,9 @@ func (q *EmailTemplateQueries) GetEmailTemplateByID(ctx context.Context, id stri
 	if accountIDNull.Valid {
 		template.AccountID = &accountIDNull.String
 	}
-
+	if orgIDNull.Valid {
+		template.OrganizationID = &orgIDNull.String
+	}
 	if subjectNull.Valid {
 		template.Subject = subjectNull.String
 	}

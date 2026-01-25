@@ -41,13 +41,13 @@ func (s *EmailTemplateService) RenderTemplate(ctx context.Context, templateName 
 	}
 
 	// Get base template
-	baseTemplate, err := s.emailTemplateQueries.GetEmailTemplate(ctx, "base", locale, accountID)
+	baseTemplate, err := s.emailTemplateQueries.GetEmailTemplate(ctx, "base", locale, accountID, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get base template: %w", err)
 	}
 
 	// Get content template
-	contentTemplate, err := s.emailTemplateQueries.GetEmailTemplate(ctx, templateName, locale, accountID)
+	contentTemplate, err := s.emailTemplateQueries.GetEmailTemplate(ctx, templateName, locale, accountID, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get content template %s: %w", templateName, err)
 	}

@@ -59,6 +59,10 @@ const router = createRouter({
       component: () => import("@/pages/SubmissionStatus.vue")
     },
     {
+      path: "/admin/settings/email/templates",
+      redirect: "/settings/email/templates"
+    },
+    {
       path: "/admin/settings",
       name: "admin-settings",
       meta: { layout: "SettingsSidebar", requiresAuth: true, requiresAdmin: true },
@@ -84,11 +88,6 @@ const router = createRouter({
           path: "geolocation",
           name: "admin-settings-geolocation",
           component: () => import("@/pages/settings/SettingsGeolocation.vue")
-        },
-        {
-          path: "email/templates",
-          name: "admin-settings-email-templates",
-          component: () => import("@/pages/settings/SettingsEmailTemplates.vue")
         }
       ]
     },
@@ -118,6 +117,11 @@ const router = createRouter({
           path: "branding",
           name: "settings-branding",
           component: () => import("@/pages/settings/SettingsBranding.vue")
+        },
+        {
+          path: "email/templates",
+          name: "settings-email-templates",
+          component: () => import("@/pages/settings/SettingsEmailTemplates.vue")
         }
       ]
     },
@@ -158,16 +162,24 @@ const router = createRouter({
       component: () => import("@/pages/Verify.vue")
     },
     {
-      path: "/organizations",
+      path: "/admin/organizations",
       name: "organizations",
-      meta: { layout: "Sidebar", requiresAuth: true },
+      meta: { layout: "Sidebar", requiresAuth: true, requiresAdmin: true },
       component: () => import("@/pages/Organizations.vue")
     },
     {
-      path: "/organizations/:organization_id/members",
+      path: "/admin/organizations/:organization_id/members",
       name: "organization-members",
-      meta: { layout: "Sidebar", requiresAuth: true },
+      meta: { layout: "Sidebar", requiresAuth: true, requiresAdmin: true },
       component: () => import("@/pages/OrganizationMembers.vue")
+    },
+    {
+      path: "/organizations",
+      redirect: { name: "organizations" }
+    },
+    {
+      path: "/organizations/:organization_id/members",
+      redirect: (to) => ({ name: "organization-members", params: { organization_id: to.params.organization_id } })
     },
     {
       path: "/:pathMatch(.*)*",

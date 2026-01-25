@@ -340,9 +340,9 @@ func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Organization deleted successfully", nil)
 }
 
-// SwitchOrganization switches the current user's context to a different organization
+// SwitchOrganization switches the current user's context to a different organization. Admin only.
 // @Summary Switch organization context
-// @Description Switch to a different organization and get new access tokens
+// @Description Switch to a different organization and get new access tokens (administrators only)
 // @Tags organizations
 // @Produce json
 // @Param organization_id path string true "Organization ID"
@@ -353,14 +353,22 @@ func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/switch [post]
 func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
-	orgID := c.Params("organization_id")
-	if orgID == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
-	}
-
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
+	}
+
+	userRecord, err := h.userQueries.GetUserByID(c.Context(), userIDStr)
+	if err != nil || userRecord == nil {
+		return webutil.Response(c, fiber.StatusUnauthorized, "User not found", nil)
+	}
+	if userRecord.Role != int(models.UserRoleAdmin) {
+		return webutil.Response(c, fiber.StatusForbidden, "Only administrators can switch organization", nil)
+	}
+
+	orgID := c.Params("organization_id")
+	if orgID == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
 	}
 
 	// Get account_id from user_id
@@ -390,17 +398,6 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 
 	if org == nil {
 		return webutil.Response(c, fiber.StatusNotFound, "Organization not found", nil)
-	}
-
-	// Get user record for token creation
-	userRecord, err := queries.DB.GetUserByID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user record")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user data", nil)
-	}
-
-	if userRecord == nil {
-		return webutil.Response(c, fiber.StatusNotFound, "User not found", nil)
 	}
 
 	// Create new tokens with organization context
@@ -442,13 +439,14 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 	})
 }
 
-// ExitOrganization switches the current user's context to personal account (no organization)
+// ExitOrganization switches the current user's context to personal account (no organization). Admin only.
 // @Summary Exit organization context
-// @Description Switch to personal account and get new access tokens without organization context
+// @Description Switch to personal account and get new access tokens (administrators only)
 // @Tags organizations
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
+// @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/switch [post]
 func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
@@ -457,15 +455,12 @@ func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Get user record for token creation
-	userRecord, err := queries.DB.GetUserByID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user record")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user data", nil)
+	userRecord, err := h.userQueries.GetUserByID(c.Context(), userIDStr)
+	if err != nil || userRecord == nil {
+		return webutil.Response(c, fiber.StatusUnauthorized, "User not found", nil)
 	}
-
-	if userRecord == nil {
-		return webutil.Response(c, fiber.StatusNotFound, "User not found", nil)
+	if userRecord.Role != int(models.UserRoleAdmin) {
+		return webutil.Response(c, fiber.StatusForbidden, "Only administrators can exit organization", nil)
 	}
 
 	// Create new tokens without organization context (personal account)
