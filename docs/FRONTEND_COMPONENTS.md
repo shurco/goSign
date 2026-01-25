@@ -166,6 +166,7 @@ Components specific to document field management:
 - **Submitter** - Submitter assignment
 - **List** - Field list with grouping
 - **Contenteditable** - Inline text editing
+- **SigningModeSelector** - Signing mode (Parallel / Sequential) with i18n. Always visible (no collapse). Optional `hideOrderList` to control order via parent (e.g. draggable signer cards on Submissions page).
 
 ### Template Components (`web/src/components/template/`)
 
@@ -236,6 +237,8 @@ Components for document template editing and viewing:
 ```
 
 ### Submissions Page
+Create-submission modal uses FormModal with FormControl (template select, signers), SigningModeSelector (`hideOrderList` + draggable signer cards in Sequential mode with drop indicator), and Save button. All copy is i18n (e.g. `signingMode.*`, `submissions.*`, `common.save`).
+
 ```vue
 <ResourceTable
   :data="submissions"

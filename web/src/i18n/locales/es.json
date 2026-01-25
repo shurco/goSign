@@ -187,6 +187,18 @@
     "copyAllLinks": "Copiar todos los enlaces",
     "sendEachLinkHint": "Envíe cada enlace al firmante correspondiente por cualquier canal."
   },
+  "signingMode": {
+    "title": "Modo de firma",
+    "parallel": "Paralelo",
+    "parallelTitle": "Firma paralela",
+    "parallelDescription": "Todos los firmantes reciben la invitación a la vez y pueden firmar en cualquier orden.",
+    "sequential": "Secuencial",
+    "sequentialTitle": "Firma secuencial",
+    "sequentialDescription": "Los firmantes firman uno tras otro. Cada persona recibe la invitación solo después de que la anterior haya firmado.",
+    "orderTitle": "Orden de firma secuencial",
+    "orderHint": "Los firmantes firmarán en el orden mostrado. Arrastre para reordenar.",
+    "signingOrder": "Orden de firma"
+  },
   "submissions": {
     "title": "Envíos",
     "description": "Gestione y rastree todos sus envíos de documentos",

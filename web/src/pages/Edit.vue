@@ -142,13 +142,10 @@
           :default-submitters="defaultSubmitters"
           :default-fields="defaultFields"
           :only-defined-fields="onlyDefinedFields"
-          :signing-mode="signingMode"
           :editable="editable"
           @set-draw="[(drawField = $event.field), (drawOption = $event.option)]"
           @set-drag="dragField = $event"
           @change-submitter="selectedSubmitter = $event"
-          @update-signing-mode="signingMode = $event"
-          @update-submitter-order="template.submitters = $event"
           @drag-end="dragField = null"
           @scroll-to-area="scrollToArea"
         />
@@ -289,7 +286,6 @@ import { fileToBase64Payload } from "@/utils/file";
 import { v4 } from "uuid";
 
 const template: any = ref(null);
-const signingMode: any = ref("sequential");
 const undoStack: any = ref([]);
 const redoStack: any = ref([]);
 const lastRedoData: any = ref();
@@ -356,7 +352,6 @@ function applyLoadedTemplate(tpl: any): void {
   if (template.value.submitters && template.value.submitters.length > 0) {
     selectedSubmitter.value = template.value.submitters[0];
   }
-  signingMode.value = template.value.signing_mode || "sequential";
 
   // Reset save state when template is loaded
   isDirty.value = false;

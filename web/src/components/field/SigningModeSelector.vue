@@ -1,20 +1,7 @@
 <template>
-  <div class="mb-4 rounded-lg bg-[#faf7f5] p-4">
-    <button
-      type="button"
-      class="mb-3 flex w-full items-center justify-between text-sm font-medium text-gray-700 hover:text-gray-900"
-      @click="isCollapsed = !isCollapsed"
-    >
-      <span>Signing Mode</span>
-      <SvgIcon
-        :name="isCollapsed ? 'chevron-down' : 'chevron-up'"
-        width="16"
-        height="16"
-        class="text-gray-500 transition-transform"
-      />
-    </button>
-
-    <div v-if="!isCollapsed" class="space-y-3">
+  <div>
+    <h3 class="mb-3 text-sm font-medium text-gray-700">{{ $t('signingMode.title') }}</h3>
+    <div class="space-y-3">
       <!-- Mode Selection -->
       <ButtonGroup
         :model-value="signingMode"
@@ -29,21 +16,21 @@
         <p>{{ currentMode.description }}</p>
       </div>
 
-      <!-- Sequential Order Management -->
-      <div v-if="signingMode === 'sequential' && submitters.length > 1" class="space-y-3">
+      <!-- Sequential Order Management (hidden when order is handled by parent, e.g. draggable signer cards) -->
+      <div v-if="!hideOrderList && signingMode === 'sequential' && submitters.length > 1" class="space-y-3">
         <div class="rounded-md bg-amber-50 p-3">
           <div class="flex items-start gap-2">
             <SvgIcon name="info" width="16" height="16" class="mt-0.5 text-amber-600" />
             <div class="text-sm text-amber-800">
-              <p class="mb-1 font-medium">Sequential Signing Order</p>
-              <p>Submitters will sign in the order shown below. Drag and drop to reorder.</p>
+              <p class="mb-1 font-medium">{{ $t('signingMode.orderTitle') }}</p>
+              <p>{{ $t('signingMode.orderHint') }}</p>
             </div>
           </div>
         </div>
 
         <!-- Draggable Submitter Order List -->
         <div class="space-y-2">
-          <h4 class="text-sm font-medium text-gray-700">Signing Order</h4>
+          <h4 class="text-sm font-medium text-gray-700">{{ $t('signingMode.signingOrder') }}</h4>
           <div ref="submittersList" class="space-y-2" @dragover.prevent="onDragOver" @drop="onDrop">
             <div
               v-for="(submitter, index) in orderedSubmitters"
@@ -77,14 +64,19 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import type { SigningMode } from "@/models";
 import ButtonGroup from "@/components/ui/ButtonGroup.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
+
+const { t } = useI18n();
 
 interface Props {
   signingMode: SigningMode;
   submitters: any[];
   editable: boolean;
+  /** When true, hide the "Signing Order" drag list; order is controlled by parent (e.g. by dragging signer fields). */
+  hideOrderList?: boolean;
 }
 
 interface Emits {
@@ -92,11 +84,8 @@ interface Emits {
   "update:submitter-order": [orderedSubmitters: any[]];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { hideOrderList: false });
 const emit = defineEmits<Emits>();
-
-// Collapse state - default to collapsed
-const isCollapsed = ref(true);
 
 // Drag state
 const draggedSubmitter = ref<string | null>(null);
@@ -119,26 +108,26 @@ const orderedSubmitters = computed(() => {
   return [...props.submitters].sort((a, b) => (a.order || 0) - (b.order || 0));
 });
 
-const signingModes = [
-  {
-    value: "sequential" as SigningMode,
-    label: "Sequential",
-    icon: "arrow-right",
-    title: "Sequential Signing",
-    description:
-      "Submitters sign one after another in order. Each person receives an invitation only after the previous person has signed."
-  },
+// Parallel first (default), then Sequential — labels/titles/descriptions from i18n
+const signingModes = computed(() => [
   {
     value: "parallel" as SigningMode,
-    label: "Parallel",
+    label: t("signingMode.parallel"),
     icon: "arrows-right-left",
-    title: "Parallel Signing",
-    description: "All submitters receive signing invitations simultaneously. They can sign in any order."
+    title: t("signingMode.parallelTitle"),
+    description: t("signingMode.parallelDescription")
+  },
+  {
+    value: "sequential" as SigningMode,
+    label: t("signingMode.sequential"),
+    icon: "arrow-right",
+    title: t("signingMode.sequentialTitle"),
+    description: t("signingMode.sequentialDescription")
   }
-];
+]);
 
 const currentMode = computed(() => {
-  return signingModes.find((mode) => mode.value === props.signingMode) || signingModes[0];
+  return signingModes.value.find((mode) => mode.value === props.signingMode) || signingModes.value[0];
 });
 
 const updateSigningMode = (mode: string | number) => {

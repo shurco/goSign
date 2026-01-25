@@ -181,6 +181,18 @@
     "resetStatus": "Reimposta stato",
     "resetStatusConfirm": "Reimpostare questo firmatario su \"in attesa\"? Potrà firmare di nuovo usando lo stesso link."
   },
+  "signingMode": {
+    "title": "Modalità di firma",
+    "parallel": "Parallelo",
+    "parallelTitle": "Firma parallela",
+    "parallelDescription": "Tutti i firmatari ricevono l'invito contemporaneamente e possono firmare in qualsiasi ordine.",
+    "sequential": "Sequenziale",
+    "sequentialTitle": "Firma sequenziale",
+    "sequentialDescription": "I firmatari firmano uno dopo l'altro. Ogni persona riceve l'invito solo dopo la firma della precedente.",
+    "orderTitle": "Ordine di firma sequenziale",
+    "orderHint": "I firmatari firmeranno nell'ordine mostrato sotto. Trascina per riordinare.",
+    "signingOrder": "Ordine di firma"
+  },
   "submissions": {
     "title": "Invii",
     "description": "Gestisci e monitora tutti i tuoi invii di documenti",

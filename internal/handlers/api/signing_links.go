@@ -42,6 +42,9 @@ type CreateSigningLinkRequest struct {
 	// Submitters count must match template submitters count.
 	Submitters []SubmitterInput `json:"submitters" validate:"required,min=1"`
 
+	// SigningMode: "sequential" or "parallel". Default "sequential".
+	SigningMode string `json:"signing_mode,omitempty"`
+
 	// Optional locale for the submission (used by i18n).
 	Locale string `json:"locale,omitempty"`
 }
@@ -139,18 +142,24 @@ func (h *SigningLinkHandler) Create(c *fiber.Ctx) error {
 	submittersOrder := "0"
 	source := "direct_link"
 
+	signingMode := req.SigningMode
+	if signingMode != "sequential" && signingMode != "parallel" {
+		signingMode = "sequential"
+	}
+	preferencesJSON := fmt.Sprintf(`{"signing_mode": %q}`, signingMode)
+
 	// Note: DB schema uses created_by_user_id and requires slug/source/submitters_order.
-	// Template snapshotting is not stored; template is joined by template_id.
+	// Signing mode is stored in preferences for use by sequential/parallel flows.
 	if req.Locale != "" {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO submission (id, template_id, created_by_user_id, slug, source, submitters_order, locale)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-		`, submissionID, req.TemplateID, userID, submissionSlug, source, submittersOrder, req.Locale)
+			INSERT INTO submission (id, template_id, created_by_user_id, slug, source, submitters_order, locale, preferences)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+		`, submissionID, req.TemplateID, userID, submissionSlug, source, submittersOrder, req.Locale, preferencesJSON)
 	} else {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO submission (id, template_id, created_by_user_id, slug, source, submitters_order)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, submissionID, req.TemplateID, userID, submissionSlug, source, submittersOrder)
+			INSERT INTO submission (id, template_id, created_by_user_id, slug, source, submitters_order, preferences)
+			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+		`, submissionID, req.TemplateID, userID, submissionSlug, source, submittersOrder, preferencesJSON)
 	}
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, fmt.Sprintf("Failed to create submission: %v", err), nil)

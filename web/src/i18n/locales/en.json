@@ -190,10 +190,24 @@
     "copyAllLinks": "Copy all links",
     "sendEachLinkHint": "Send each link to the corresponding signer via any channel."
   },
+  "signingMode": {
+    "title": "Signing Mode",
+    "parallel": "Parallel",
+    "parallelTitle": "Parallel Signing",
+    "parallelDescription": "All submitters receive signing invitations simultaneously. They can sign in any order.",
+    "sequential": "Sequential",
+    "sequentialTitle": "Sequential Signing",
+    "sequentialDescription": "Submitters sign one after another in order. Each person receives an invitation only after the previous person has signed.",
+    "orderTitle": "Sequential Signing Order",
+    "orderHint": "Submitters will sign in the order shown below. Drag and drop to reorder.",
+    "signingOrder": "Signing Order"
+  },
   "submissions": {
     "title": "Submissions",
     "description": "Manage and track all your document submissions",
     "create": "Create Submission",
+    "createDescription": "Choose a template and enter signer details to create signing links.",
+    "createLinks": "Create links",
     "edit": "Edit Submission",
     "delete": "Delete Submission",
     "send": "Send",
@@ -215,7 +229,13 @@
     "selectTemplateRequired": "Please select a template",
     "invalidTemplateSubmitters": "Template submitters are not configured correctly",
     "saveFailed": "Failed to save submission",
-    "placeholder": "Contract for John Doe"
+    "placeholder": "Contract for John Doe",
+    "signers": "Signers",
+    "signerName": "Name",
+    "signerEmail": "Email",
+    "signerPhone": "Phone",
+    "signersHint": "Signers count is enforced by the selected template.",
+    "signersOrderDragHint": "In sequential mode you can drag the signer cards to set the signing order."
   },
   "dashboard": {
     "title": "Dashboard",

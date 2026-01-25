@@ -181,6 +181,18 @@
     "resetStatus": "Réinitialiser le statut",
     "resetStatusConfirm": "Réinitialiser ce signataire à « en attente » ? Il pourra signer à nouveau via le même lien."
   },
+  "signingMode": {
+    "title": "Mode de signature",
+    "parallel": "Parallèle",
+    "parallelTitle": "Signature parallèle",
+    "parallelDescription": "Tous les signataires reçoivent l'invitation en même temps et peuvent signer dans n'importe quel ordre.",
+    "sequential": "Séquentiel",
+    "sequentialTitle": "Signature séquentielle",
+    "sequentialDescription": "Les signataires signent un par un. Chacun reçoit l'invitation uniquement après la signature de la personne précédente.",
+    "orderTitle": "Ordre de signature séquentielle",
+    "orderHint": "Les signataires signeront dans l'ordre indiqué ci-dessous. Glissez-déposez pour réordonner.",
+    "signingOrder": "Ordre de signature"
+  },
   "submissions": {
     "title": "Soumissions",
     "create": "Créer une soumission",

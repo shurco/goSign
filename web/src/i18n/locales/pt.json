@@ -181,6 +181,18 @@
     "resetStatus": "Redefinir status",
     "resetStatusConfirm": "Redefinir este signatário para \"pendente\"? Ele poderá assinar novamente usando o mesmo link."
   },
+  "signingMode": {
+    "title": "Modo de assinatura",
+    "parallel": "Paralelo",
+    "parallelTitle": "Assinatura paralela",
+    "parallelDescription": "Todos os signatários recebem o convite ao mesmo tempo e podem assinar em qualquer ordem.",
+    "sequential": "Sequencial",
+    "sequentialTitle": "Assinatura sequencial",
+    "sequentialDescription": "Os signatários assinam um após o outro. Cada pessoa recebe o convite apenas após a assinatura da anterior.",
+    "orderTitle": "Ordem de assinatura sequencial",
+    "orderHint": "Os signatários assinarão na ordem mostrada abaixo. Arraste para reordenar.",
+    "signingOrder": "Ordem de assinatura"
+  },
   "submissions": {
     "title": "Envios",
     "create": "Criar envio",

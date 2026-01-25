@@ -187,6 +187,18 @@
     "copyAllLinks": "Alle Links kopieren",
     "sendEachLinkHint": "Senden Sie jeden Link über einen beliebigen Kanal an den jeweiligen Unterzeichner."
   },
+  "signingMode": {
+    "title": "Unterschriftsmodus",
+    "parallel": "Parallel",
+    "parallelTitle": "Parallele Unterzeichnung",
+    "parallelDescription": "Alle Unterzeichner erhalten gleichzeitig eine Einladung und können in beliebiger Reihenfolge unterschreiben.",
+    "sequential": "Sequenziell",
+    "sequentialTitle": "Sequenzielle Unterzeichnung",
+    "sequentialDescription": "Unterzeichner unterschreiben nacheinander. Jede Person erhält die Einladung erst nach der Unterzeichnung durch die vorherige Person.",
+    "orderTitle": "Reihenfolge der sequenziellen Unterzeichnung",
+    "orderHint": "Unterzeichner unterschreiben in der unten angezeigten Reihenfolge. Zum Ändern per Drag & Drop ziehen.",
+    "signingOrder": "Unterzeichnungsreihenfolge"
+  },
   "submissions": {
     "title": "Einreichungen",
     "description": "Verwalten und verfolgen Sie alle Ihre Dokumenteneinreichungen",
