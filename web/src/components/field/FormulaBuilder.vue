@@ -1,74 +1,100 @@
 <template>
-  <div class="formula-builder">
-    <h3 class="mb-4 text-lg font-semibold">{{ $t('fields.formula.title') }}</h3>
-    
-    <!-- Formula input -->
-    <div class="formula-editor mb-4">
+  <div class="formula-builder space-y-5">
+    <p class="text-sm text-gray-600">
+      {{ $t('fields.formula.description') || 'Use field IDs and operators to compute a value. Click fields and functions below to insert.' }}
+    </p>
+
+    <!-- Formula editor -->
+    <div class="formula-editor">
+      <label class="mb-1.5 block text-sm font-medium text-gray-700">
+        {{ $t('fields.formula.expression') || 'Formula' }}
+      </label>
       <textarea
-        v-model="formula"
+        :value="displayFormula"
         :placeholder="$t('fields.formula.placeholder')"
-        class="formula-input w-full rounded border border-gray-300 p-2 font-mono text-sm"
-        rows="3"
-        @input="validateFormula"
+        :class="[
+          'formula-input w-full rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed transition-colors focus:outline-none focus:ring-2',
+          validationError
+            ? 'border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-red-200'
+            : 'border-gray-300 bg-white focus:border-indigo-400 focus:ring-indigo-200'
+        ]"
+        rows="4"
+        spellcheck="false"
+        @input="onFormulaDisplayInput"
       />
-      
-      <!-- Validation error -->
-      <div v-if="validationError" class="mt-2 text-sm text-red-600">
-        {{ validationError }}
+      <div v-if="validationError" class="mt-2 flex items-center gap-2 text-sm text-red-600">
+        <span aria-hidden="true">⊗</span>
+        <span>{{ validationError }}</span>
       </div>
-      
-      <!-- Preview result -->
-      <div v-if="previewResult !== null && !validationError" class="mt-2 text-sm text-green-600">
-        {{ $t('fields.formula.preview') }}: {{ previewResult }}
+      <div
+        v-else-if="previewResult !== null"
+        class="mt-2 flex items-center gap-2 text-sm text-emerald-600"
+      >
+        <span aria-hidden="true">✓</span>
+        <span>{{ $t('fields.formula.preview') }}: <strong>{{ previewResult }}</strong></span>
       </div>
     </div>
-    
-    <!-- Field reference buttons -->
-    <div class="mb-4">
-      <h4 class="mb-2 text-sm font-medium">{{ $t('fields.formula.insertField') }}</h4>
+
+    <!-- Insert field -->
+    <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {{ $t('fields.formula.insertField') }}
+      </h4>
       <div class="flex flex-wrap gap-2">
         <button
-          v-for="field in availableFields"
-          :key="field.id"
-          class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50"
-          @click="insertField(field.id)"
+          v-for="f in availableFields"
+          :key="f.id"
+          type="button"
+          class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+          @click="insertField(f.id)"
         >
-          {{ field.name }}
+          {{ f.displayName ?? f.name ?? f.id }}
         </button>
       </div>
-    </div>
-    
-    <!-- Function buttons -->
-    <div class="mb-4">
-      <h4 class="mb-2 text-sm font-medium">{{ $t('fields.formula.functions') }}</h4>
+      <p v-if="!availableFields.length" class="text-sm text-gray-500">
+        {{ $t('fields.formula.noFields') || 'No number/text fields available.' }}
+      </p>
+    </section>
+
+    <!-- Functions -->
+    <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {{ $t('fields.formula.functions') }}
+      </h4>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="func in availableFunctions"
           :key="func.name"
-          class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50"
-          @click="insertFunction(func.syntax)"
+          type="button"
+          class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
           :title="func.description"
+          @click="insertFunction(func.syntax)"
         >
           {{ func.name }}
         </button>
       </div>
-    </div>
-    
+    </section>
+
     <!-- Examples -->
-    <div>
-      <h4 class="mb-2 text-sm font-medium">{{ $t('fields.formula.examples') }}</h4>
-      <div class="space-y-1">
-        <div
+    <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {{ $t('fields.formula.examples') }}
+      </h4>
+      <div class="space-y-1.5">
+        <button
           v-for="example in examples"
           :key="example.label"
-          class="cursor-pointer rounded p-2 text-sm hover:bg-gray-100"
-          @click="formula = example.formula"
+          type="button"
+          class="flex w-full items-start gap-3 rounded-lg border border-transparent p-2.5 text-left text-sm transition-colors hover:border-gray-200 hover:bg-white"
+          @click="applyExample(example.formula)"
         >
-          <code class="text-blue-600">{{ example.formula }}</code>
-          <span class="ml-2 text-gray-600">- {{ example.label }}</span>
-        </div>
+          <code class="shrink-0 rounded bg-gray-200 px-2 py-0.5 font-mono text-xs text-indigo-600">
+            {{ exampleDisplayFormula(example.formula) }}
+          </code>
+          <span class="text-gray-600">{{ example.label }}</span>
+        </button>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -78,9 +104,13 @@ import { useFormulas } from '@/composables/useFormulas'
 import type { Field } from '@/models/template'
 import { apiPost } from '@/services/api'
 
+interface FieldWithDisplayName extends Field {
+  displayName?: string
+}
+
 interface Props {
   field: Field
-  availableFields: Field[]
+  availableFields: FieldWithDisplayName[]
 }
 
 const props = defineProps<Props>()
@@ -89,8 +119,40 @@ const emit = defineEmits<{
   'update:formula': [formula: string]
 }>()
 
-const formula = ref(props.field.formula || '')
+const formula = ref(props.field.preferences?.formula ?? (props.field as any).formula ?? '')
 const validationError = ref<string | null>(null)
+
+// Convert formula (field IDs) to display string ([[field name]])
+function formulaToDisplay(formulaStr: string): string {
+  let out = formulaStr
+  const byId = props.availableFields
+  const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const sorted = [...byId].sort((a, b) => b.id.length - a.id.length)
+  for (const f of sorted) {
+    const name = f.displayName ?? f.name ?? f.id
+    const re = new RegExp(escapeRe(f.id), 'g')
+    out = out.replace(re, `[[${name}]]`)
+  }
+  return out
+}
+
+// Parse display string ([[field name]]) back to formula (field IDs)
+function displayToFormula(displayStr: string): string {
+  const re = /\[\[([^\]]*?)\]\]/g
+  return displayStr.replace(re, (_, name) => {
+    const f = props.availableFields.find(
+      (x) => (x.displayName ?? x.name ?? x.id) === name
+    )
+    return f ? f.id : `[[${name}]]`
+  })
+}
+
+const displayFormula = computed(() => formulaToDisplay(formula.value))
+
+function onFormulaDisplayInput(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  formula.value = displayToFormula(target.value)
+}
 
 const availableFunctions = [
   { name: 'SUM', syntax: 'SUM(field_1, field_2)', description: 'Sum of multiple fields' },
@@ -132,6 +194,15 @@ const previewResult = computed(() => {
 function insertField(fieldId: string) {
   formula.value += fieldId
   validateFormula()
+}
+
+function applyExample(exampleFormula: string) {
+  formula.value = exampleFormula
+  validateFormula()
+}
+
+function exampleDisplayFormula(exampleFormula: string): string {
+  return formulaToDisplay(exampleFormula)
 }
 
 function insertFunction(syntax: string) {

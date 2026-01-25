@@ -95,6 +95,11 @@
     "validation": "Validierung",
     "conditions": {
       "title": "Bedingte Logik",
+      "description": "Legen Sie fest, wann dieses Feld je nach anderen Feldern angezeigt, ausgeblendet, erforderlich oder deaktiviert wird.",
+      "empty": "Noch keine Regeln.",
+      "rule": "Regel",
+      "then": "dann",
+      "thisField": "dieses Feld",
       "and": "UND",
       "or": "ODER",
       "equals": "Gleich",
@@ -116,11 +121,14 @@
     },
     "formula": {
       "title": "Formel",
+      "description": "Nutzen Sie Feld-IDs und Operatoren für die Berechnung. Klicken Sie auf Felder und Funktionen unten zum Einfügen.",
+      "expression": "Formel",
       "placeholder": "Formel eingeben (z.B. field_1 + field_2)",
       "preview": "Vorschau",
       "insertField": "Feld einfügen",
       "functions": "Funktionen",
-      "examples": "Beispiele"
+      "examples": "Beispiele",
+      "noFields": "Keine Zahl- oder Textfelder verfügbar."
     }
   },
   "signing": {

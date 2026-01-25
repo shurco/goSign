@@ -140,11 +140,11 @@
                 <div class="space-y-1">
                   <label class="label text-xs py-0"><span>Signature format</span></label>
                   <select
-                    v-model="field.preferences.format"
+                    v-model="signatureFormat"
                     class="select select-xs w-full"
                     @change="[ensurePreferences(), save()]"
                   >
-                    <option value="">Any</option>
+                    <option value="any">Any</option>
                     <option value="drawn">Drawn</option>
                     <option value="typed">Typed</option>
                     <option value="drawn_or_typed">Drawn or typed</option>
@@ -263,13 +263,13 @@
                   </template>
                 </div>
               </li>
-              <li v-if="field.type != 'phone'" @click.stop>
+              <li v-if="field.type != 'phone'" class="px-2" @click.stop>
                 <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.required" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Required</span>
                 </label>
               </li>
-              <li v-if="(field.type === 'text' || field.type === 'stamp') && !defaultField" @click.stop>
+              <li v-if="(field.type === 'text' || field.type === 'stamp') && !defaultField" class="px-2" @click.stop>
                 <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.readonly" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Read only</span>
@@ -307,10 +307,7 @@
                 <a
                   href="#"
                   class="px-2 py-1 text-sm"
-                  @click.prevent="
-                    showConditionBuilder = true;
-                    closeDropdown();
-                  "
+                  @click.prevent="openConditionBuilder"
                 >
                   <SvgIcon name="settings" width="18" height="18" />
                   Conditional Logic
@@ -320,10 +317,7 @@
                 <a
                   href="#"
                   class="px-2 py-1 text-sm"
-                  @click.prevent="
-                    showFormulaBuilder = true;
-                    closeDropdown();
-                  "
+                  @click.prevent="openFormulaBuilder"
                 >
                   <SvgIcon name="settings" width="18" height="18" />
                   Formula
@@ -413,7 +407,7 @@
       <template #default>
         <ConditionBuilder
           :field="field"
-          :available-fields="template.value.fields.filter((f: any) => f.id !== field.id)"
+          :available-fields="availableFieldsForConditions"
           @update:conditions="(conditions) => {
             field.condition_groups = conditions;
             save();
@@ -424,7 +418,7 @@
         <div class="flex justify-end gap-2">
           <button
             class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
-            @click="showConditionBuilder = false"
+            @click="closeConditionBuilder"
           >
             {{ t('common.close') }}
           </button>
@@ -441,29 +435,20 @@
         <FormulaBuilder
           ref="formulaBuilderRef"
           :field="field"
-          :available-fields="template.value.fields.filter((f: any) => f.id !== field.id && ['number', 'text'].includes(f.type))"
+          :available-fields="availableFieldsForFormula"
         />
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button
             class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
-            @click="showFormulaBuilder = false"
+            @click="closeFormulaBuilder"
           >
             {{ t('common.cancel') }}
           </button>
           <button
             class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
-            @click="
-              if (formulaBuilderRef?.getFormula) {
-                field.formula = formulaBuilderRef.getFormula();
-                if (field.formula && !field.calculationType) {
-                  field.calculationType = 'number';
-                }
-                save();
-                showFormulaBuilder = false;
-              }
-            "
+            @click="applyFormulaAndClose"
           >
             {{ t('common.save') }}
           </button>
@@ -527,6 +512,35 @@ const showFormulaBuilder = ref(false);
 
 const { isOpen: renderDropdown, close: closeDropdown } = useDropdown(dropdownRef);
 
+function openConditionBuilder(): void {
+  showConditionBuilder.value = true;
+  nextTick(() => closeDropdown());
+}
+
+function openFormulaBuilder(): void {
+  showFormulaBuilder.value = true;
+  nextTick(() => closeDropdown());
+}
+
+function closeConditionBuilder(): void {
+  showConditionBuilder.value = false;
+}
+
+function closeFormulaBuilder(): void {
+  showFormulaBuilder.value = false;
+}
+
+function applyFormulaAndClose(): void {
+  if (formulaBuilderRef.value?.getFormula) {
+    props.field.formula = formulaBuilderRef.value.getFormula();
+    if (props.field.formula && !props.field.calculationType) {
+      props.field.calculationType = "number";
+    }
+    save();
+    showFormulaBuilder.value = false;
+  }
+}
+
 const validationType = ref("");
 const validationPresets: Record<string, { pattern: string; message: string }> = {
   email: { pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", message: "Please enter a valid email address" },
@@ -554,6 +568,18 @@ const fieldNames: any = computed(() => fieldNamesConst);
 const submitterIndex = computed(() => {
   return template.value.submitters.findIndex((s: any) => s.id === props.field.submitter_id);
 });
+
+// Normalize signature format for select: backend omitempty can omit format when empty, so show "any"
+const signatureFormat = computed({
+  get: () => {
+    const v = props.field.preferences?.format;
+    return typeof v === "string" && v !== "" ? v : "any";
+  },
+  set: (value: string) => {
+    ensurePreferences();
+    props.field.preferences!.format = value;
+  }
+});
 const dateFormats = computed(() => [
   "MM/DD/YYYY",
   "DD/MM/YYYY",
@@ -566,31 +592,43 @@ const dateFormats = computed(() => [
   "D MMMM YYYY"
 ]);
 
-// Generate default field name based on party, type, and number
-const defaultName = computed(() => {
-  if (props.field.type === "payment" && props.field.preferences?.price) {
-    const { price, currency } = props.field.preferences || {};
-    const formattedPrice = new Intl.NumberFormat([], {
-      style: "currency",
-      currency
-    }).format(price);
-    return `${fieldNames.value[props.field.type]} ${formattedPrice}`;
+// Generate default field name for any field (used in conditions/formula dropdowns)
+function getDefaultFieldName(f: any): string {
+  if (!template?.value?.fields) return f.id || "Field";
+  if (f.type === "payment" && f.preferences?.price) {
+    const { price, currency } = f.preferences || {};
+    const formattedPrice = new Intl.NumberFormat([], { style: "currency", currency }).format(price);
+    return `${fieldNames.value[f.type]} ${formattedPrice}`;
   }
-
-  // Get party name (First, Second, Third, etc.)
-  const partyName = subNames[submitterIndex.value]?.replace(" Party", "") || "First";
-
-  // Get type name
-  const typeName = fieldNames.value[props.field.type] || "Field";
-
-  // Count how many fields of this type and party already exist
+  const idx = template.value.submitters?.findIndex((s: any) => s.id === f.submitter_id) ?? 0;
+  const partyName = subNames[idx]?.replace(" Party", "") || "First";
+  const typeName = fieldNames.value[f.type] || "Field";
   const sameTypeAndPartyFields = template.value.fields.filter(
-    (f: any) => f.type === props.field.type && f.submitter_id === props.field.submitter_id && f.id !== props.field.id
+    (other: any) => other.type === f.type && other.submitter_id === f.submitter_id && other.id !== f.id
   );
-
   const fieldNumber = sameTypeAndPartyFields.length + 1;
-
   return `${partyName} ${typeName} ${fieldNumber}`;
+}
+
+// Generate default field name based on party, type, and number
+const defaultName = computed(() => getDefaultFieldName(props.field));
+
+// Available fields with display names for Condition/Formula modals
+const availableFieldsForConditions = computed(() => {
+  const list = (template?.value?.fields ?? []).filter(
+    (f: any) => f.id !== props.field.id && f.submitter_id === props.field.submitter_id
+  );
+  return list.map((f: any) => ({ ...f, displayName: (f.name && String(f.name).trim()) || getDefaultFieldName(f) }));
+});
+
+const availableFieldsForFormula = computed(() => {
+  const list = (template?.value?.fields ?? []).filter(
+    (f: any) =>
+      f.id !== props.field.id &&
+      f.submitter_id === props.field.submitter_id &&
+      ["number", "text"].includes(f.type)
+  );
+  return list.map((f: any) => ({ ...f, displayName: (f.name && String(f.name).trim()) || getDefaultFieldName(f) }));
 });
 
 // Check if current field name matches the default pattern

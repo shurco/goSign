@@ -1,6 +1,6 @@
 # Conditional Fields
 
-**Last Updated**: 2026-01-21 00:00 UTC
+**Last Updated**: 2026-01-25
 
 ## Overview
 
@@ -101,13 +101,13 @@ Show "Discount Code" when total is greater than 1000 OR user type is "Premium":
 
 ## Using the Condition Builder
 
-1. Open field editor
-2. Click "Conditional Logic" tab
-3. Add condition group
-4. Select field, operator, and value
-5. Choose action (show/hide/require/disable)
-6. Add more conditions with AND/OR logic
-7. Validate conditions before saving
+1. Open field editor (gear icon on a field).
+2. Click **Conditional Logic** in the dropdown.
+3. Add a rule group; set logic (AND/OR), then action (show/hide/require/disable) for "this field".
+4. In each row: select field (only fields of the **active submitter** are listed), operator, and value.
+5. Use **Add Condition** for more rows; use **Delete** at the bottom to remove the group.
+6. Field selectors show display names (e.g. "First Number 1"); condition groups use a compact grid layout.
+7. UI supports multiple locales (description, empty state, rule labels).
 
 ## Validation
 

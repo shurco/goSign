@@ -96,6 +96,11 @@
     "validation": "Validation",
     "conditions": {
       "title": "Conditional Logic",
+      "description": "Define when this field is shown, hidden, required or disabled based on other fields.",
+      "empty": "No rules yet.",
+      "rule": "Rule",
+      "then": "then",
+      "thisField": "this field",
       "and": "AND",
       "or": "OR",
       "equals": "Equals",
@@ -118,11 +123,14 @@
     "type_value": "Type value",
     "formula": {
       "title": "Formula",
+      "description": "Use field IDs and operators to compute a value. Click fields and functions below to insert.",
+      "expression": "Formula",
       "placeholder": "Enter formula (e.g., field_1 + field_2)",
       "preview": "Preview",
       "insertField": "Insert Field",
       "functions": "Functions",
-      "examples": "Examples"
+      "examples": "Examples",
+      "noFields": "No number or text fields available."
     }
   },
   "signing": {

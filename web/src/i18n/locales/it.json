@@ -95,6 +95,11 @@
     "validation": "Validazione",
     "conditions": {
       "title": "Logica condizionale",
+      "description": "Definisci quando mostrare, nascondere, rendere obbligatorio o disabilitare questo campo in base ad altri campi.",
+      "empty": "Nessuna regola ancora.",
+      "rule": "Regola",
+      "then": "allora",
+      "thisField": "questo campo",
       "and": "E",
       "or": "O",
       "equals": "Uguale a",
@@ -116,11 +121,14 @@
     },
     "formula": {
       "title": "Formula",
+      "description": "Usa gli ID dei campi e gli operatori per calcolare. Clicca su campi e funzioni sotto per inserire.",
+      "expression": "Formula",
       "placeholder": "Inserisci formula (es. field_1 + field_2)",
       "preview": "Anteprima",
       "insertField": "Inserisci campo",
       "functions": "Funzioni",
-      "examples": "Esempi"
+      "examples": "Esempi",
+      "noFields": "Nessun campo numero o testo disponibile."
     }
   },
   "signing": {

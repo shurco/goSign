@@ -1,6 +1,6 @@
 # Formula Engine
 
-**Last Updated**: 2026-01-21 00:00 UTC
+**Last Updated**: 2026-01-25
 
 ## Overview
 
@@ -8,7 +8,7 @@ Formulas allow you to create calculated fields that automatically compute values
 
 ## Syntax
 
-Formulas use field IDs as variables and support standard arithmetic operations.
+Formulas use field IDs as variables (including UUIDs) and support standard arithmetic operations. The formula builder UI shows field **display names** in the expression (e.g. `[[First Number 1]]`) while storing and evaluating using field IDs; validation and evaluation handle UUIDs correctly.
 
 ### Basic Operations
 - Addition: `field_1 + field_2`
@@ -91,13 +91,13 @@ Formulas work with:
 
 ## Using the Formula Builder
 
-1. Open field editor
-2. Click "Formula" tab
-3. Enter formula or use builder
-4. Click field names to insert
-5. Click functions to insert syntax
-6. Preview result in real-time
-7. Validate before saving
+1. Open field editor (gear icon on a number or text field).
+2. Click **Formula** in the dropdown.
+3. Enter the formula in the text area; the UI shows field names as `[[Field Name]]` (stored as field IDs).
+4. Click **Insert Field** buttons to add references (only number/text fields of the active submitter).
+5. Click **Functions** to insert SUM, IF, MAX, MIN, ROUND.
+6. Use **Examples** to paste sample formulas; preview and validation run as you type.
+7. Save to apply the formula to the field.
 
 ## Validation
 
@@ -121,11 +121,14 @@ Content-Type: application/json
 }
 ```
 
+## Technical Notes
+
+- **Field IDs**: Templates may use UUIDs for field IDs. The backend rewrites UUIDs to safe identifiers before compiling/evaluating so that the expression parser does not treat hyphens as minus operators.
+- **Validation**: `POST /api/v1/templates/formulas/validate` checks syntax and that all referenced fields exist; non-UUID identifiers (e.g. `field_1`) and full UUIDs are both supported.
+
 ## Best Practices
 
-- Use descriptive field IDs
-- Test formulas with sample data
-- Handle edge cases (empty values, zero division)
-- Keep formulas readable
-- Document complex calculations
-- Use parentheses for clarity
+- Use descriptive field names so the formula builder display (`[[Name]]`) is clear.
+- Test formulas with sample data.
+- Handle edge cases (empty values, zero division).
+- Keep formulas readable; use parentheses for clarity.

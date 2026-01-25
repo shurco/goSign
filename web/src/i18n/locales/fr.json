@@ -95,6 +95,11 @@
     "validation": "Validation",
     "conditions": {
       "title": "Logique conditionnelle",
+      "description": "Définissez quand afficher, masquer, rendre obligatoire ou désactiver ce champ en fonction d'autres champs.",
+      "empty": "Aucune règle pour l'instant.",
+      "rule": "Règle",
+      "then": "alors",
+      "thisField": "ce champ",
       "and": "ET",
       "or": "OU",
       "equals": "Égal à",
@@ -116,11 +121,14 @@
     },
     "formula": {
       "title": "Formule",
+      "description": "Utilisez les ID de champs et les opérateurs pour calculer. Cliquez sur les champs et fonctions ci-dessous pour les insérer.",
+      "expression": "Formule",
       "placeholder": "Entrez une formule (ex. : field_1 + field_2)",
       "preview": "Aperçu",
       "insertField": "Insérer un champ",
       "functions": "Fonctions",
-      "examples": "Exemples"
+      "examples": "Exemples",
+      "noFields": "Aucun champ nombre ou texte disponible."
     }
   },
   "signing": {
