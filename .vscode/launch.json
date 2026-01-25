@@ -7,7 +7,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/goSign",
-      "envFile": "${workspaceFolder}/docker/.env",
+      "envFile": "${workspaceFolder}/cmd/goSign/.env",
       "args": ["serve"],
       //"args": ["gen", "--config"],
     },

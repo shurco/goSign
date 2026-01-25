@@ -49,11 +49,11 @@ import { fetchWithAuth } from "@/utils/auth";
 const { t } = useI18n();
 
 const smtpSettings = ref({
-  smtp_host: "",
-  smtp_port: "587",
+  host: "",
+  port: "587",
   encryption: "tls",
-  smtp_user: "",
-  smtp_pass: "",
+  username: "",
+  password: "",
   from_email: "",
   from_name: "goSign",
   provider: "smtp"
@@ -72,11 +72,11 @@ async function loadSettings(): Promise<void> {
       if (settings.email) {
         smtpSettings.value = {
           provider: settings.email.provider || "smtp",
-          smtp_host: settings.email.smtp_host || "",
-          smtp_port: String(settings.email.smtp_port || "587"),
+          host: settings.email.smtp_host || "",
+          port: String(settings.email.smtp_port || "587"),
           encryption: "tls",
-          smtp_user: settings.email.smtp_user || "",
-          smtp_pass: "",
+          username: settings.email.smtp_user || "",
+          password: "",
           from_email: settings.email.from_email || "",
           from_name: settings.email.from_name || "goSign"
         };
@@ -91,10 +91,21 @@ async function loadSettings(): Promise<void> {
 
 async function saveSmtp(): Promise<void> {
   try {
+    // Convert UI fields to API format
+    const payload = {
+      provider: smtpSettings.value.provider,
+      smtp_host: smtpSettings.value.host,
+      smtp_port: smtpSettings.value.port,
+      smtp_user: smtpSettings.value.username,
+      smtp_pass: smtpSettings.value.password,
+      from_email: smtpSettings.value.from_email,
+      from_name: smtpSettings.value.from_name
+    };
+    
     const response = await fetchWithAuth("/api/v1/settings/email", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(smtpSettings.value)
+      body: JSON.stringify(payload)
     });
 
     if (response.ok) {

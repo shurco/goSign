@@ -42,22 +42,6 @@ const pageInfo = computed(() => {
       title: t('settings.generalSettings'),
       description: t('settings.generalDescription')
     },
-    "settings-geolocation": {
-      title: t('settings.geolocation'),
-      description: t('settings.geolocationSectionDescription')
-    },
-    "settings-smtp": {
-      title: t('settings.smtpConfiguration'),
-      description: t('settings.smtpDescription')
-    },
-    "settings-sms": {
-      title: t('settings.smsConfiguration'),
-      description: t('settings.smsDescription')
-    },
-    "settings-storage": {
-      title: t('settings.storageConfiguration'),
-      description: t('settings.storageDescription')
-    },
     "settings-webhooks": {
       title: t('webhooks.title'),
       description: t('settings.description')
@@ -69,10 +53,6 @@ const pageInfo = computed(() => {
     "settings-branding": {
       title: t('branding.title'),
       description: t('branding.description')
-    },
-    "settings-email-templates": {
-      title: t('settings.emailTemplates'),
-      description: t('settings.emailTemplatesDescription')
     }
   };
 

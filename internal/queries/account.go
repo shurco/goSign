@@ -67,6 +67,25 @@ func (q *AccountQueries) GetAccountSettings(ctx context.Context, accountID strin
 	return settings, nil
 }
 
+// UpdateAccountSettings updates account settings in database
+func (q *AccountQueries) UpdateAccountSettings(ctx context.Context, accountID string, settings map[string]any) error {
+	settingsJSON, err := json.Marshal(settings)
+	if err != nil {
+		return fmt.Errorf("failed to marshal account settings: %w", err)
+	}
+
+	_, err = q.pool.Exec(ctx, `
+		UPDATE account
+		SET settings = $1::jsonb, updated_at = NOW()
+		WHERE id = $2
+	`, settingsJSON, accountID)
+	if err != nil {
+		return fmt.Errorf("failed to update account settings: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateAccountGeolocationSettings updates geolocation settings in account.settings jsonb
 func (q *AccountQueries) UpdateAccountGeolocationSettings(ctx context.Context, accountID string, maxmindLicenseKey, downloadURL, downloadMethod string) error {
 	// Build jsonb object dynamically - only include non-empty fields

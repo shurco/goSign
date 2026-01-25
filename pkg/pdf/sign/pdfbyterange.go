@@ -6,10 +6,7 @@ import (
 )
 
 func (context *SignContext) updateByteRange() error {
-	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
-		return err
-	}
-	output_file_size := int64(context.OutputBuffer.Buff.Len())
+	output_file_size := int64(context.OutputBuffer.Len())
 
 	// Calculate ByteRange values to replace them.
 	context.ByteRangeValues = make([]int64, 4)
@@ -31,20 +28,14 @@ func (context *SignContext) updateByteRange() error {
 	// Make sure our ByteRange string didn't shrink in length.
 	new_byte_range += strings.Repeat(" ", len(signatureByteRangePlaceholder)-len(new_byte_range))
 
-	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
-		return err
-	}
-	file_content := context.OutputBuffer.Buff.Bytes()
-
+	file_content := context.OutputBuffer.Bytes()
+	context.OutputBuffer.Reset()
 	if _, err := context.OutputBuffer.Write(file_content[:context.ByteRangeStartByte]); err != nil {
 		return err
 	}
-
-	// Write new ByteRange.
 	if _, err := context.OutputBuffer.Write([]byte(new_byte_range)); err != nil {
 		return err
 	}
-
 	if _, err := context.OutputBuffer.Write(file_content[context.ByteRangeStartByte+int64(len(new_byte_range)):]); err != nil {
 		return err
 	}

@@ -2,41 +2,26 @@ package config
 
 import (
 	"os"
+	"strings"
 
-	"github.com/pelletier/go-toml/v2"
-
-	"github.com/shurco/gosign/internal/trust"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
-	"github.com/shurco/gosign/pkg/utils"
 )
 
-const (
-	ConfigFile = "./gosign.toml"
-)
+const envPrefix = "GOSIGN_"
 
 var cfg *Config
 
-// Settings represents additional application settings
-type Settings struct {
-	Email      map[string]string `toml:"email" comment:"Email settings (provider, smtp_host, smtp_port, smtp_user, smtp_pass, from_email, from_name)"`
-	Storage    map[string]string `toml:"storage" comment:"Storage settings (provider: local/s3/gcs/azure, bucket, region, endpoint, base_path)"`
-	Webhook    map[string]string `toml:"webhook" comment:"Webhook settings (enabled, max_retries, timeout)"`
-	Geolocation map[string]string `toml:"geolocation" comment:"Geolocation settings (db_path: path to GeoLite2-City.mmdb file, base_dir: directory for database storage, default ./base)"`
-	Features   map[string]bool   `toml:"features" comment:"Feature flags (reminders_enabled, sms_verification, embedded_signing, bulk_operations)"`
-}
-
-// Config is ...
+// Config is the application configuration (infrastructure only; app settings are in DB).
+// All values are read from environment variables with GOSIGN_ prefix.
 type Config struct {
-	HTTPAddr string          `toml:"http-addr" comment:"Ports <= 1024 are privileged ports. You can't use them unless you're root or have the explicit\npermission to use them. See this answer for an explanation or wikipedia or something you trust more.\nsudo setcap 'cap_net_bind_service=+ep' /opt/yourGoBinary"`
-	DevMode  bool            `toml:"dev-mode" comment:"Active develop mode"`
-	Postgres postgres.Config `toml:"postgres" comment:"Postgres section"`
-	Redis    redis.Config    `toml:"redis" comment:"Redis section"`
-	Trust    trust.Config    `toml:"trust-certs" comment:"Trust certs section"`
-	Settings Settings        `toml:"settings" comment:"Additional settings section"`
+	HTTPAddr string
+	DevMode  bool
+	Postgres postgres.Config
+	Redis    redis.Config
 }
 
-// DefaultConfig is ...
+// Default returns config with default values (used when env vars are not set).
 func Default() *Config {
 	return &Config{
 		DevMode:  false,
@@ -48,75 +33,38 @@ func Default() *Config {
 			Address:  "localhost:6379",
 			Password: "redisPassword",
 		},
-		Trust: trust.Config{
-			List:   []string{"eutl12", "tl12"},
-			Update: 1,
-		},
-		Settings: Settings{
-			Email: map[string]string{
-				"provider":   "smtp",
-				"smtp_host":  "localhost",
-				"smtp_port":  "1025", 
-				"from_email": "noreply@gosign.local",
-				"from_name":  "goSign",
-			},
-			Storage: map[string]string{
-				"provider":  "local",
-				"base_path": "./uploads",
-			},
-			Webhook: map[string]string{
-				"enabled":     "true",
-				"max_retries": "3",
-				"timeout":     "30", 
-			},
-			Geolocation: map[string]string{
-				"base_dir": "./base",
-				"db_path":  "./base/GeoLite2-City.mmdb",
-				// Note: maxmind_license_key is now stored in account.settings, not in config file
-			},
-			Features: map[string]bool{
-				"reminders_enabled":   true,
-				"sms_verification":    false,
-				"embedded_signing":    false,
-				"bulk_operations":     false,
-			},
-		},
 	}
 }
 
-// Load is ...
+func getenv(key, defaultVal string) string {
+	if v := os.Getenv(envPrefix + key); v != "" {
+		return v
+	}
+	return defaultVal
+}
+
+func getenvBool(key string, defaultVal bool) bool {
+	v := os.Getenv(envPrefix + key)
+	if v == "" {
+		return defaultVal
+	}
+	v = strings.ToLower(strings.TrimSpace(v))
+	return v == "1" || v == "true" || v == "yes"
+}
+
+// Load reads configuration from environment variables and sets global config.
 func Load() error {
 	config := Default()
-
-	if utils.IsFile(ConfigFile) {
-		file, err := os.ReadFile(ConfigFile)
-		if err != nil {
-			return err
-		}
-
-		if err := toml.Unmarshal(file, &config); err != nil {
-			return err
-		}
-	}
-
+	config.HTTPAddr = getenv("HTTP_ADDR", config.HTTPAddr)
+	config.DevMode = getenvBool("DEV_MODE", config.DevMode)
+	config.Postgres.URL = getenv("POSTGRES_URL", config.Postgres.URL)
+	config.Redis.Address = getenv("REDIS_ADDRESS", config.Redis.Address)
+	config.Redis.Password = getenv("REDIS_PASSWORD", config.Redis.Password)
 	cfg = config
 	return nil
 }
 
-// Save is ...
-func Save(config *Config) error {
-	byteConfig, err := toml.Marshal(config)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(ConfigFile, byteConfig, 0o666); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Data is ...
+// Data returns the loaded config (or default if Load was not called).
 func Data() *Config {
 	if cfg == nil {
 		cfg = Default()

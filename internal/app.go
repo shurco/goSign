@@ -21,6 +21,7 @@ import (
 
 	"github.com/shurco/gosign/internal/assets"
 	"github.com/shurco/gosign/internal/config"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/handlers/api"
 	public "github.com/shurco/gosign/internal/handlers/public"
 	"github.com/shurco/gosign/internal/models"
@@ -140,6 +141,8 @@ func (r *simpleWebhookRepository) Delete(id string) error {
 func New() error {
 	fmt.Print("✍️ Sign documents without stress\n")
 
+	appdir.Init()
+
 	log := logging.Log
 
 	if err := config.Load(); err != nil {
@@ -154,14 +157,14 @@ func New() error {
 		return err
 	}
 
-	// Create geolocation base directory (hardcoded path)
-	const geolocationBaseDir = "./base"
-	if err := os.MkdirAll(geolocationBaseDir, 0755); err != nil {
-		log.Warn().Err(err).Str("path", geolocationBaseDir).Msg("Failed to create geolocation base directory")
+	// Create geolocation base directory next to executable
+	if err := os.MkdirAll(appdir.Base(), 0755); err != nil {
+		log.Warn().Err(err).Str("path", appdir.Base()).Msg("Failed to create geolocation base directory")
 	}
 
 	// Ensure embedded assets are available on disk (fonts/images for certificate rendering).
-	assetPaths, err := assets.EnsureOnDisk(assets.DefaultOutputDir())
+	assetsDir := filepath.Join(appdir.DataDir(), "assets")
+	assetPaths, err := assets.EnsureOnDisk(assetsDir)
 	if err != nil {
 		log.Err(err).Msg("Failed to extract embedded assets")
 		return err
@@ -194,6 +197,7 @@ func New() error {
 	organizationQueries := queries.NewOrganizationQueries(pool)
 	userQueries := queries.NewUserQueries(pool)
 	accountQueries := queries.NewAccountQueries(pool)
+	settingQueries := queries.NewSettingQueries(pool)
 
 	// Create template repository (for now using a simple implementation)
 	templateRepo := &simpleTemplateRepository{
@@ -209,7 +213,7 @@ func New() error {
 	submissionService := submission.NewService(submissionRepo, nil, nil)
 
 	// update trust certs
-	if err = trust.Update(cfg.Trust); err != nil {
+	if err = trust.Update(); err != nil {
 		log.Err(err).Send()
 		return err
 	}
@@ -236,13 +240,13 @@ func New() error {
 		time.Sleep(initialDelay)
 
 		// Execute immediately on first run
-		if err := trust.Update(cfg.Trust); err != nil {
+		if err := trust.Update(); err != nil {
 			log.Err(err).Send()
 		}
 
 		// Periodic execution
 		for range ticker.C {
-			if err := trust.Update(cfg.Trust); err != nil {
+			if err := trust.Update(); err != nil {
 				log.Err(err).Send()
 			}
 		}
@@ -256,9 +260,9 @@ func New() error {
 
 	// middleware.Fiber(app, log)
 	// routes.SiteRoutes(app)
-	app.Static("/drive/pages", "./lc_pages")
-	app.Static("/drive/signed", "./lc_signed")
-	app.Static("/drive/uploads", "./lc_uploads")
+	app.Static("/drive/pages", appdir.LcPages())
+	app.Static("/drive/signed", appdir.LcSigned())
+	app.Static("/drive/uploads", appdir.LcUploads())
 
 	// Initialize webhook repository
 	webhookRepo := &simpleWebhookRepository{}
@@ -266,33 +270,30 @@ func New() error {
 	// Initialize notification service (with nil repository - can work without it)
 	notificationService := notification.NewService(nil)
 
-	// Register email provider from config (best-effort).
-	if cfg.Settings.Email != nil && cfg.Settings.Email["provider"] == "smtp" {
-		port, _ := strconv.Atoi(cfg.Settings.Email["smtp_port"])
+	// Register email and SMS providers from global settings in DB (best-effort).
+	ctxApp := context.Background()
+	if smtpMap, err := settingQueries.GetGlobalSetting(ctxApp, "smtp"); err == nil && getStringFromMap(smtpMap, "provider", "") == "smtp" {
+		port, _ := strconv.Atoi(getStringFromMap(smtpMap, "smtp_port", "1025"))
 		if port == 0 {
 			port = 1025
 		}
 		smtpCfg := notification.SMTPConfig{
-			Host:      cfg.Settings.Email["smtp_host"],
+			Host:      getStringFromMap(smtpMap, "smtp_host", ""),
 			Port:      port,
-			User:      cfg.Settings.Email["smtp_user"],
-			Password:  cfg.Settings.Email["smtp_pass"],
-			FromEmail: cfg.Settings.Email["from_email"],
-			FromName:  cfg.Settings.Email["from_name"],
+			User:      getStringFromMap(smtpMap, "smtp_user", ""),
+			Password:  getStringFromMap(smtpMap, "smtp_pass", ""),
+			FromEmail: getStringFromMap(smtpMap, "from_email", ""),
+			FromName:  getStringFromMap(smtpMap, "from_name", ""),
 		}
-		// Only register when it looks usable.
 		if smtpCfg.Host != "" && smtpCfg.FromEmail != "" {
 			notificationService.RegisterProvider(notification.NewEmailProvider(smtpCfg))
 		}
 	}
-
-	// Register SMS provider if enabled via config (Twilio).
-	// Config keys are optional; provider will return an error if incomplete.
-	if cfg.Settings.Email["twilio_enabled"] == "true" {
+	if smsMap, err := settingQueries.GetGlobalSetting(ctxApp, "sms"); err == nil && getStringFromMap(smsMap, "twilio_enabled", "") == "true" {
 		notificationService.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
-			AccountSID: cfg.Settings.Email["twilio_account_sid"],
-			AuthToken:  cfg.Settings.Email["twilio_auth_token"],
-			FromNumber: cfg.Settings.Email["twilio_from_number"],
+			AccountSID: getStringFromMap(smsMap, "twilio_account_sid", ""),
+			AuthToken:  getStringFromMap(smsMap, "twilio_auth_token", ""),
+			FromNumber: getStringFromMap(smsMap, "twilio_from_number", ""),
 			Enabled:    true,
 		}))
 	}
@@ -301,16 +302,15 @@ func New() error {
 	completedDoc := &services.CompletedDocumentBuilder{
 		Pool:            pool,
 		TemplateQueries: templateQueries,
-		PagesDir:        "./lc_pages",
-		SignedDir:       "./lc_signed",
+		PagesDir:        appdir.LcPages(),
+		SignedDir:       appdir.LcSigned(),
 		AssetsDir:       assetPaths.Dir,
 	}
 
 	// Initialize geolocation service (best-effort; works without database)
 	geolocationDBPath := os.Getenv("GEOLITE2_DB_PATH")
 	if geolocationDBPath == "" {
-		// Hardcoded path (not configurable)
-		geolocationDBPath = "./base/GeoLite2-City.mmdb"
+		geolocationDBPath = filepath.Join(appdir.Base(), "GeoLite2-City.mmdb")
 	}
 	geolocationSvc, geolocationErr := geolocation.NewService(geolocationDBPath)
 	if geolocationErr != nil {
@@ -339,7 +339,7 @@ func New() error {
 		SigningLinks:   api.NewSigningLinkHandler(pool, templateQueries, completedDoc),
 		Templates:      api.NewTemplateHandler(templateRepo, templateQueries),
 		Webhooks:       api.NewWebhookHandler(webhookRepo),
-		Settings:       api.NewSettingsHandler(notificationService, accountQueries, userQueries, geolocationSvc),
+		Settings:       api.NewSettingsHandler(notificationService, accountQueries, userQueries, geolocationSvc, settingQueries),
 		APIKeys:        api.NewAPIKeyHandler(apiKeyService),
 		Stats:          api.NewStatsHandler(pool),
 		Events:         api.NewEventHandler(pool),
@@ -378,9 +378,10 @@ func New() error {
 
 func createDirs() error {
 	dirs := []string{
-		"./lc_pages",
-		"./lc_signed",
-		"./lc_uploads",
+		appdir.LcPages(),
+		appdir.LcSigned(),
+		appdir.LcUploads(),
+		appdir.LcTmp(),
 	}
 
 	for _, dir := range dirs {
@@ -392,6 +393,18 @@ func createDirs() error {
 	return nil
 }
 
+func getStringFromMap(m map[string]any, key, def string) string {
+	if m == nil {
+		return def
+	}
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return def
+}
+
 // scheduleGeoLite2Updates mirrors the Adobe trust-list updater loop:
 // a frequent tick (12h) + a "staleness" check so downloads happen ~2x/week.
 func scheduleGeoLite2Updates(pool *pgxpool.Pool, log *logging.Logger, geoSvc *geolocation.Service) {
@@ -399,8 +412,8 @@ func scheduleGeoLite2Updates(pool *pgxpool.Pool, log *logging.Logger, geoSvc *ge
 		return
 	}
 
+	dbPath := filepath.Join(appdir.Base(), "GeoLite2-City.mmdb")
 	const (
-		dbPath            = "./base/GeoLite2-City.mmdb"
 		checkEvery        = 12 * time.Hour
 		initialAlignEvery = 12 * time.Hour
 	)
@@ -482,6 +495,19 @@ func shouldForceGeoLite2UpdateToday(now time.Time, lastUpdatedAt string) bool {
 	return ts.Year() != now.Year() || ts.Month() != now.Month() || ts.Day() != now.Day()
 }
 
+// updateGlobalGeolocationLastUpdate stores last download time and source in global setting table (key geolocation).
+func updateGlobalGeolocationLastUpdate(ctx context.Context, pool *pgxpool.Pool, updatedAt time.Time, source string) {
+	_, err := pool.Exec(ctx, `
+		UPDATE setting
+		SET value = value || jsonb_build_object('last_updated_at', $1::text, 'last_updated_source', $2::text)
+		WHERE key = 'geolocation'
+	`, updatedAt.UTC().Format(time.RFC3339), source)
+	if err != nil {
+		// Best-effort; do not fail the download
+		return
+	}
+}
+
 // pickGeoLite2Settings selects one account's geolocation settings.
 // Priority: MaxMind key first, then URL.
 func pickGeoLite2Settings(ctx context.Context, pool *pgxpool.Pool) (accountID, method, licenseKey, downloadURL, lastUpdatedAt string, err error) {
@@ -502,7 +528,7 @@ func pickGeoLite2Settings(ctx context.Context, pool *pgxpool.Pool) (accountID, m
 		}
 	}
 
-	// Fallback: URL.
+	// Fallback: URL from account.
 	{
 		row := pool.QueryRow(ctx, `
 			SELECT
@@ -515,7 +541,28 @@ func pickGeoLite2Settings(ctx context.Context, pool *pgxpool.Pool) (accountID, m
 		`)
 		var id, url, last string
 		if scanErr := row.Scan(&id, &url, &last); scanErr == nil && url != "" {
-			return id, "url", "", url, last, nil
+			return id, "url", "", strings.TrimSpace(url), last, nil
+		}
+	}
+
+	// Fallback: global setting table (key = 'geolocation')
+	{
+		row := pool.QueryRow(ctx, `
+			SELECT COALESCE(value->>'maxmind_license_key', ''), COALESCE(value->>'download_url', ''), COALESCE(value->>'download_method', '')
+			FROM setting
+			WHERE key = 'geolocation'
+			LIMIT 1
+		`)
+		var globalKey, globalURL, globalMethod string
+		if scanErr := row.Scan(&globalKey, &globalURL, &globalMethod); scanErr == nil {
+			globalKey = strings.TrimSpace(globalKey)
+			globalURL = strings.TrimSpace(globalURL)
+			if globalKey != "" {
+				return "", "maxmind", globalKey, "", "", nil
+			}
+			if globalURL != "" {
+				return "", "url", "", globalURL, "", nil
+			}
 		}
 	}
 
@@ -525,7 +572,7 @@ func pickGeoLite2Settings(ctx context.Context, pool *pgxpool.Pool) (accountID, m
 // downloadGeoLite2IfNeeded downloads GeoLite2 database if it doesn't exist
 // Tries to download from MaxMind if license_key is configured in database, otherwise skips
 func downloadGeoLite2IfNeeded(cfg *config.Config, pool *pgxpool.Pool, log *logging.Logger) error {
-	const dbPath = "./base/GeoLite2-City.mmdb"
+	dbPath := filepath.Join(appdir.Base(), "GeoLite2-City.mmdb")
 
 	// Check if database already exists
 	if _, err := os.Stat(dbPath); err == nil {
@@ -544,9 +591,8 @@ func downloadGeoLite2IfNeeded(cfg *config.Config, pool *pgxpool.Pool, log *loggi
 }
 
 func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downloadURL, method, settingsAccountID string, force bool) error {
-	// Hardcoded paths (not configurable)
-	const baseDir = "./base"
-	const dbPath = "./base/GeoLite2-City.mmdb"
+	baseDir := appdir.Base()
+	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
 
 	if !force {
 		if _, err := os.Stat(dbPath); err == nil {
@@ -575,7 +621,15 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 		if downloadURL == "" {
 			return fmt.Errorf("download method url selected but download_url is empty")
 		}
-		client := &http.Client{Timeout: 5 * time.Minute}
+		client := &http.Client{
+			Timeout: 5 * time.Minute,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				return nil
+			},
+		}
 		resp, err := client.Get(downloadURL)
 		if err != nil {
 			return fmt.Errorf("failed to download from URL: %w", err)
@@ -586,25 +640,43 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 			return fmt.Errorf("failed to download from URL: HTTP status %d", resp.StatusCode)
 		}
 
-		tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
-		if err != nil {
-			return fmt.Errorf("failed to create temporary file: %w", err)
-		}
-		defer os.Remove(tmpFile.Name())
-		defer tmpFile.Close()
+		urlLower := strings.ToLower(downloadURL)
+		isDirectMMDB := strings.HasSuffix(urlLower, ".mmdb") && !strings.HasSuffix(urlLower, ".mmdb.gz")
 
-		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-			return fmt.Errorf("failed to save archive: %w", err)
-		}
+		if isDirectMMDB {
+			outFile, err := os.Create(dbPath)
+			if err != nil {
+				return fmt.Errorf("failed to create database file: %w", err)
+			}
+			defer outFile.Close()
+			if _, err := io.Copy(outFile, resp.Body); err != nil {
+				return fmt.Errorf("failed to save database file: %w", err)
+			}
+		} else {
+			tmpFile, err := os.CreateTemp("", "geolite2-*")
+			if err != nil {
+				return fmt.Errorf("failed to create temporary file: %w", err)
+			}
+			defer os.Remove(tmpFile.Name())
+			defer tmpFile.Close()
 
-		if err := extractGeoLite2FromTarGz(tmpFile.Name(), dbPath); err != nil {
-			if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), dbPath); gzErr != nil {
-				return fmt.Errorf("failed to extract database: tar.gz error: %w; gzip error: %v", err, gzErr)
+			if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+				return fmt.Errorf("failed to save archive: %w", err)
+			}
+
+			if err := extractGeoLite2FromTarGz(tmpFile.Name(), dbPath); err != nil {
+				if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), dbPath); gzErr != nil {
+					return fmt.Errorf("failed to extract database: tar.gz error: %w; gzip error: %v", err, gzErr)
+				}
 			}
 		}
 
-		if pool != nil && settingsAccountID != "" {
-			_ = queries.NewAccountQueries(pool).UpdateAccountGeolocationLastUpdate(context.Background(), settingsAccountID, time.Now(), "url")
+		if pool != nil {
+			if settingsAccountID != "" {
+				_ = queries.NewAccountQueries(pool).UpdateAccountGeolocationLastUpdate(context.Background(), settingsAccountID, time.Now(), "url")
+			} else {
+				updateGlobalGeolocationLastUpdate(context.Background(), pool, time.Now(), "url")
+			}
 		}
 		return nil
 
@@ -644,8 +716,12 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 			}
 		}
 
-		if pool != nil && settingsAccountID != "" {
-			_ = queries.NewAccountQueries(pool).UpdateAccountGeolocationLastUpdate(context.Background(), settingsAccountID, time.Now(), "maxmind")
+		if pool != nil {
+			if settingsAccountID != "" {
+				_ = queries.NewAccountQueries(pool).UpdateAccountGeolocationLastUpdate(context.Background(), settingsAccountID, time.Now(), "maxmind")
+			} else {
+				updateGlobalGeolocationLastUpdate(context.Background(), pool, time.Now(), "maxmind")
+			}
 		}
 		return nil
 	default:

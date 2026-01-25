@@ -43,11 +43,12 @@ type TrustEntry struct {
 	Url  string
 }
 
-// Config is ...
-type Config struct {
-	List   []string `toml:"list"`
-	Update int      `toml:"update-frequency"`
-}
+// DefaultTrustList and DefaultUpdateDays are hardcoded; not configurable via env.
+const (
+	DefaultTrustList   = "eutl12"
+	DefaultTrustList12 = "tl12"
+	DefaultUpdateDays  = 1
+)
 
 // SecuritySettings is ...
 type SecuritySettings struct {
@@ -59,8 +60,8 @@ type SecuritySettings struct {
 	} `xml:"TrustedIdentities"`
 }
 
-// Update is ...
-func Update(cfg Config) error {
+// Update fetches and applies Adobe trust lists (eutl12, tl12); skips if last update was within DefaultUpdateDays.
+func Update() error {
 	dateUp, err := queries.DB.TimeUpdateAdobeTL(context.Background())
 	if err != nil {
 		return err
@@ -71,12 +72,13 @@ func Update(cfg Config) error {
 		daysDiff = utils.DaysBetween(*dateUp, time.Now())
 	}
 
-	if daysDiff < cfg.Update {
+	if daysDiff < DefaultUpdateDays {
 		return nil
 	}
 
+	trustLists := []string{DefaultTrustList, DefaultTrustList12}
 	fmt.Printf("├─[🌍] Updating the list of trusted Adobe certificates\n")
-	for _, v := range cfg.List {
+	for _, v := range trustLists {
 		trust, found := TrustList[v]
 		if !found {
 			return errors.New("not found trust list")

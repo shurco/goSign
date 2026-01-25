@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/pdf/sign"
 	"github.com/shurco/gosign/pkg/utils"
@@ -44,7 +46,7 @@ func SignPDF(c *fiber.Ctx) error {
 	fileExt := utils.ExtName(fileHeader.Filename)
 	response.FileName = fmt.Sprintf("%s.%s", fileNameUUID, fileExt)
 	response.FileNameSigned = fmt.Sprintf("%s.%s", fileNameSignedUUID, fileExt)
-	filePath := fmt.Sprintf("./lc_uploads/%s", response.FileName)
+	filePath := filepath.Join(appdir.LcUploads(), response.FileName)
 
 	if err := c.SaveFile(fileHeader, filePath); err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
@@ -117,24 +119,27 @@ func SignPDF(c *fiber.Ctx) error {
 		}
 	}
 
-	err = sign.SignFile("../../cmd/goSign/lc_uploads/"+response.FileName, "../../cmd/goSign/lc_signed/"+response.FileNameSigned, sign.SignData{
-		Signature: sign.SignDataSignature{
-			Info: sign.SignDataSignatureInfo{
-				Name:   "User Name",
-				Reason: "Signed by ...",
-				Date:   time.Now().Local(),
+	err = sign.SignFile(
+		filepath.Join(appdir.LcUploads(), response.FileName),
+		filepath.Join(appdir.LcSigned(), response.FileNameSigned),
+		sign.SignData{
+			Signature: sign.SignDataSignature{
+				Info: sign.SignDataSignatureInfo{
+					Name:   "User Name",
+					Reason: "Signed by ...",
+					Date:   time.Now().Local(),
+				},
+				CertType:   sign.CertificationSignature,
+				DocMDPPerm: sign.AllowFillingExistingFormFieldsAndSignaturesPerms,
 			},
-			CertType:   sign.CertificationSignature,
-			DocMDPPerm: sign.AllowFillingExistingFormFieldsAndSignaturesPerms,
-		},
-		Signer:            pkey,
-		DigestAlgorithm:   crypto.SHA256,
-		Certificate:       cert,
-		CertificateChains: certificateChains,
-		TSA: sign.TSA{
-			URL: "http://timestamp.digicert.com",
-		},
-	})
+			Signer:            pkey,
+			DigestAlgorithm:   crypto.SHA256,
+			Certificate:       cert,
+			CertificateChains: certificateChains,
+			TSA: sign.TSA{
+				URL: "http://timestamp.digicert.com",
+			},
+		})
 	if err != nil {
 		log.Println(err)
 	} else {

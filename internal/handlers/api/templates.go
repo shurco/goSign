@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"image/jpeg"
 	"os"
 	"os/exec"
@@ -18,8 +19,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/image/draw"
 
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services/field"
@@ -492,8 +493,8 @@ func (h *TemplateHandler) storePDFPagesToStorage(ctx context.Context, templateID
 		return nil, fmt.Errorf("failed to write temp file: %w", err)
 	}
 
-	// Ensure lc_pages directory exists (same path as in app.go)
-	lcPagesDir := "./lc_pages"
+	// Ensure lc_pages directory exists (next to executable, same as app.go)
+	lcPagesDir := appdir.LcPages()
 	if err := os.MkdirAll(lcPagesDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create lc_pages directory: %w", err)
 	}
@@ -688,6 +689,74 @@ func (h *TemplateHandler) generatePagePreview(pdfPath, outputPath string) error 
 	return nil
 }
 
+// scaleBilinear scales src from srcRect into dst at dstRect using bilinear interpolation (stdlib only).
+func scaleBilinear(dst *image.RGBA, dstRect image.Rectangle, src image.Image, srcRect image.Rectangle) {
+	dx, dy := dstRect.Dx(), dstRect.Dy()
+	sx0, sy0 := srcRect.Min.X, srcRect.Min.Y
+	sw, sh := srcRect.Dx(), srcRect.Dy()
+	if sw <= 0 || sh <= 0 {
+		return
+	}
+	for y := 0; y < dy; y++ {
+		for x := 0; x < dx; x++ {
+			fx := float64(sx0) + (float64(x)+0.5)/float64(dx)*float64(sw) - 0.5
+			fy := float64(sy0) + (float64(y)+0.5)/float64(dy)*float64(sh) - 0.5
+			x0 := int(fx)
+			y0 := int(fy)
+			if x0 < srcRect.Min.X {
+				x0 = srcRect.Min.X
+			}
+			if y0 < srcRect.Min.Y {
+				y0 = srcRect.Min.Y
+			}
+			x1 := x0 + 1
+			y1 := y0 + 1
+			if x1 >= srcRect.Max.X {
+				x1 = srcRect.Max.X - 1
+			}
+			if y1 >= srcRect.Max.Y {
+				y1 = srcRect.Max.Y - 1
+			}
+			wx := fx - float64(x0)
+			wy := fy - float64(y0)
+			c00 := toRGBA(src.At(x0, y0))
+			c10 := toRGBA(src.At(x1, y0))
+			c01 := toRGBA(src.At(x0, y1))
+			c11 := toRGBA(src.At(x1, y1))
+			r := lerpU8(lerpF(c00.R, c10.R, wx), lerpF(c01.R, c11.R, wx), wy)
+			g := lerpU8(lerpF(c00.G, c10.G, wx), lerpF(c01.G, c11.G, wx), wy)
+			b := lerpU8(lerpF(c00.B, c10.B, wx), lerpF(c01.B, c11.B, wx), wy)
+			a := lerpU8(lerpF(c00.A, c10.A, wx), lerpF(c01.A, c11.A, wx), wy)
+			dst.SetRGBA(dstRect.Min.X+x, dstRect.Min.Y+y, color.RGBA{R: r, G: g, B: b, A: a})
+		}
+	}
+}
+
+func toRGBA(c color.Color) struct{ R, G, B, A float64 } {
+	r, g, b, a := c.RGBA()
+	return struct{ R, G, B, A float64 }{
+		R: float64(r >> 8),
+		G: float64(g >> 8),
+		B: float64(b >> 8),
+		A: float64(a >> 8),
+	}
+}
+
+func lerpF(a, b, t float64) float64 {
+	return a*(1-t) + b*t
+}
+
+func lerpU8(a, b, t float64) uint8 {
+	x := lerpF(a, b, t)
+	if x <= 0 {
+		return 0
+	}
+	if x >= 255 {
+		return 255
+	}
+	return uint8(x + 0.5)
+}
+
 // createThumbnail creates a small thumbnail version of the image
 func createThumbnail(imageData []byte) ([]byte, error) {
 	img, _, err := image.Decode(bytes.NewReader(imageData))
@@ -708,9 +777,9 @@ func createThumbnail(imageData []byte) ([]byte, error) {
 		thumbnailWidth = (srcWidth * 200) / srcHeight
 	}
 
-	// Create thumbnail
+	// Create thumbnail using stdlib bilinear scaling (no golang.org/x/image)
 	thumbnail := image.NewRGBA(image.Rect(0, 0, thumbnailWidth, thumbnailHeight))
-	draw.ApproxBiLinear.Scale(thumbnail, thumbnail.Bounds(), img, srcBounds, draw.Over, nil)
+	scaleBilinear(thumbnail, thumbnail.Bounds(), img, srcBounds)
 
 	// Encode to JPEG
 	var buf bytes.Buffer

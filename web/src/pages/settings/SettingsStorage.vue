@@ -29,12 +29,6 @@
       </div>
     </template>
 
-    <template v-else-if="storageSettings.provider === 'local'">
-      <FormControl :label="$t('settings.storagePath')">
-        <Input v-model="storageSettings.local_path" type="text" :placeholder="$t('settings.storagePathPlaceholder')" />
-      </FormControl>
-    </template>
-
     <div class="flex justify-end pt-4">
       <Button variant="primary" @click="saveStorage">{{ $t('common.save') }}</Button>
     </div>
@@ -54,7 +48,6 @@ const { t } = useI18n();
 
 const storageSettings = ref({
   provider: "local",
-  local_path: "/var/lib/gosign/storage",
   s3_bucket: "",
   s3_region: "us-east-1",
   s3_access_key: "",
@@ -74,7 +67,6 @@ async function loadSettings(): Promise<void> {
       if (settings.storage) {
         storageSettings.value = {
           provider: settings.storage.provider || "local",
-          local_path: settings.storage.base_path || "/var/lib/gosign/storage",
           s3_bucket: settings.storage.bucket || "",
           s3_region: settings.storage.region || "us-east-1",
           s3_access_key: "",

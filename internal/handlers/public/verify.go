@@ -13,6 +13,7 @@ import (
 
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/pdf/verify"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -39,8 +40,8 @@ func VerifyPDF(c *fiber.Ctx) error {
 	}
 	defer file.Close()
 
-	// Use a dedicated temp directory. Ensure it exists so the endpoint works regardless of current working directory.
-	const tmpDir = "./lc_tmp"
+	// Use a dedicated temp directory next to the executable
+	tmpDir := appdir.LcTmp()
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}

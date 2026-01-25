@@ -115,6 +115,7 @@ goSign/
 │   ├── storage/             # Blob storage
 │   │   ├── local/          # Local filesystem
 │   │   └── s3/             # AWS S3/MinIO
+│   ├── appdir/              # Application data directory (uploads, signed files)
 │   ├── security/
 │   │   ├── cert/           # Certificate operations
 │   │   └── password/       # Hashing and validation
@@ -169,13 +170,13 @@ cd gosign
 go mod download
 ```
 
-3. Generate or copy configuration (creates `gosign.toml` in project root):
+3. Set configuration via environment variables (see `cmd/goSign/.env.example`):
 ```bash
-go run cmd/goSign/main.go gen --config
-# or: cp cmd/goSign/gosign.example.toml ./gosign.toml
+cp cmd/goSign/.env.example cmd/goSign/.env
+# Edit cmd/goSign/.env: GOSIGN_POSTGRES_URL, GOSIGN_REDIS_ADDRESS, GOSIGN_REDIS_PASSWORD
 ```
 
-4. Edit `gosign.toml`: set Postgres URL, Redis, and SMTP
+4. Load .env before running (e.g. launch.json uses `cmd/goSign/.env`, or export vars in your shell)
 
 5. Run database migrations:
 ```bash
@@ -235,8 +236,6 @@ The application will start on `http://localhost:8088` (default) with three inter
 # Start the server
 go run cmd/goSign/main.go serve
 
-# Generate configuration
-go run cmd/goSign/main.go gen --config
 
 # Run certificate utilities
 go run cmd/cert/main.go [options]
@@ -342,30 +341,26 @@ go run cmd/cert/main.go [options]
 
 ## Configuration
 
-Configuration is managed through a TOML file (`gosign.toml` in project root).
+Configuration is read from environment variables (prefix `GOSIGN_`).
 
 ### Quick Setup
 
-1. **Copy example configuration to project root:**
+1. **Copy example and set variables:**
    ```bash
-   cp cmd/goSign/gosign.example.toml ./gosign.toml
+   cp .env.example .env
+   # Edit .env: GOSIGN_POSTGRES_URL, GOSIGN_REDIS_ADDRESS, GOSIGN_REDIS_PASSWORD, etc.
    ```
 
-2. **Update required values in `gosign.toml`:**
-   - Database connection (PostgreSQL)
-   - Redis connection (for authentication features)
-   - SMTP settings (for email notifications)
+2. Copy and edit env file: `cp cmd/goSign/.env.example cmd/goSign/.env`
 
-### Key Configuration Sections
+### Variables (infrastructure)
 
-- **http-addr**: Server address (default: `0.0.0.0:8088`)
-- **DevMode**: Development mode flag
-- **Postgres**: Database connection settings
-- **Redis**: Session storage and caching
-- **Settings**: Email, Storage, Webhook, Features
-- **Trust**: Certificate trust sources and updates
+- **GOSIGN_HTTP_ADDR**: Server address (default: `0.0.0.0:8088`)
+- **GOSIGN_DEV_MODE**: Development mode (true/false)
+- **GOSIGN_POSTGRES_URL**: PostgreSQL connection URL
+- **GOSIGN_REDIS_ADDRESS**, **GOSIGN_REDIS_PASSWORD**: Redis
 
-See `cmd/goSign/gosign.example.toml` for all configuration options.
+Application settings (SMTP, storage, features) are managed in the database and Admin UI.
 
 ## Development
 

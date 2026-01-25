@@ -1,6 +1,6 @@
 # goSign Documentation
 
-**Last Updated**: 2026-01-21 00:00 UTC
+**Last Updated**: 2026-01-25 00:00 UTC
 
 ## 📚 Available Documentation
 
@@ -174,6 +174,7 @@ All documentation follows these standards:
 - **Storage Abstraction**: Support for local, S3, GCS, Azure storage
 - **API Authentication**: JWT tokens and API keys with rate limiting
 - **Embedded Signing**: JavaScript SDK for iframe integration
+- **Settings in Database**: Global settings (SMTP, SMS, storage, branding) stored in DB; Admin UI at `/_/` for configuration
 
 ### Advanced Features
 - **Bulk Operations**: CSV/XLSX import for mass submission creation
@@ -220,7 +221,7 @@ All documentation follows these standards:
 
 **Status**: ✅ Complete  
 **Total Documents**: 13  
-**Version**: 2.4.0
+**Version**: 2.5.0
 
 ## 🆕 Enterprise Features
 

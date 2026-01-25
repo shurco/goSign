@@ -1,6 +1,7 @@
 package sign
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"encoding/base64"
@@ -14,8 +15,6 @@ import (
 	"github.com/digitorus/pdf"
 	"github.com/shurco/gosign/pkg/pdf/revocation"
 	"github.com/shurco/gosign/pkg/pdf/verify"
-
-	"github.com/mattetti/filebuffer"
 )
 
 const signCertPem = `-----BEGIN CERTIFICATE-----
@@ -394,17 +393,15 @@ func BenchmarkSignPDF(b *testing.B) {
 		return
 	}
 
-	input_file := filebuffer.New(data)
 	size := int64(len(data))
 
-	rdr, err := pdf.NewReader(input_file, size)
-	if err != nil {
-		input_file.Close()
-		b.Errorf("%s: %s", "testfile20.pdf", err.Error())
-		return
-	}
-
 	for n := 0; n < b.N; n++ {
+		input_file := bytes.NewReader(data)
+		rdr, err := pdf.NewReader(input_file, size)
+		if err != nil {
+			b.Errorf("%s: %s", "testfile20.pdf", err.Error())
+			return
+		}
 		if _, err := input_file.Seek(0, 0); err != nil {
 			b.Errorf("%s: %s", "testfile20.pdf", err.Error())
 			return
@@ -433,6 +430,4 @@ func BenchmarkSignPDF(b *testing.B) {
 			return
 		}
 	}
-
-	input_file.Close()
 }

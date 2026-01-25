@@ -3,17 +3,16 @@ package storage
 import (
 	"context"
 	"fmt"
+
+	"github.com/shurco/gosign/pkg/appdir"
 )
 
 // NewStorage creates storage according to configuration
 func NewStorage(ctx context.Context, cfg Config) (BlobStorage, error) {
 	switch cfg.Provider {
 	case "local":
-		basePath := cfg.BasePath
-		if basePath == "" {
-			basePath = "./uploads"
-		}
-		return NewLocalStorage(basePath)
+		// Local storage path is next to the executable, not configurable
+		return NewLocalStorage(appdir.LcUploads())
 
 	case "s3":
 		s3cfg := S3Config{

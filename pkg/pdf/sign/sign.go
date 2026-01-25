@@ -1,6 +1,7 @@
 package sign
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
@@ -12,8 +13,6 @@ import (
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pkcs7"
 	"github.com/shurco/gosign/pkg/pdf/revocation"
-
-	"github.com/mattetti/filebuffer"
 )
 
 type CatalogData struct {
@@ -82,7 +81,7 @@ type SignContext struct {
 	Filesize                   int64
 	InputFile                  io.ReadSeeker
 	OutputFile                 io.Writer
-	OutputBuffer               *filebuffer.Buffer
+	OutputBuffer               *bytes.Buffer
 	SignData                   SignData
 	CatalogData                CatalogData
 	VisualSignData             VisualSignData
@@ -166,7 +165,7 @@ func (context *SignContext) SignPDF() error {
 		context.SignData.DigestAlgorithm = crypto.SHA256
 	}
 
-	context.OutputBuffer = filebuffer.New([]byte{})
+	context.OutputBuffer = &bytes.Buffer{}
 
 	// Copy old file into new file.
 	_, err := context.InputFile.Seek(0, 0)
@@ -317,11 +316,7 @@ func (context *SignContext) SignPDF() error {
 		return fmt.Errorf("failed to replace signature: %w", err)
 	}
 
-	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
-		return err
-	}
-	file_content := context.OutputBuffer.Buff.Bytes()
-
+	file_content := context.OutputBuffer.Bytes()
 	if _, err := context.OutputFile.Write(file_content); err != nil {
 		return fmt.Errorf("failed to write to output file: %w", err)
 	}

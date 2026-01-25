@@ -59,6 +59,7 @@ export async function logout(): Promise<void> {
 
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user_role");
 
   // Try to invalidate refresh token on server (optional, don't wait for response)
   if (refreshToken) {

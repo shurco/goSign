@@ -59,6 +59,40 @@ const router = createRouter({
       component: () => import("@/pages/SubmissionStatus.vue")
     },
     {
+      path: "/admin/settings",
+      name: "admin-settings",
+      meta: { layout: "SettingsSidebar", requiresAuth: true, requiresAdmin: true },
+      component: () => import("@/pages/AdminSettings.vue"),
+      redirect: "/admin/settings/smtp",
+      children: [
+        {
+          path: "smtp",
+          name: "admin-settings-smtp",
+          component: () => import("@/pages/settings/SettingsSmtp.vue")
+        },
+        {
+          path: "sms",
+          name: "admin-settings-sms",
+          component: () => import("@/pages/settings/SettingsSms.vue")
+        },
+        {
+          path: "storage",
+          name: "admin-settings-storage",
+          component: () => import("@/pages/settings/SettingsStorage.vue")
+        },
+        {
+          path: "geolocation",
+          name: "admin-settings-geolocation",
+          component: () => import("@/pages/settings/SettingsGeolocation.vue")
+        },
+        {
+          path: "email/templates",
+          name: "admin-settings-email-templates",
+          component: () => import("@/pages/settings/SettingsEmailTemplates.vue")
+        }
+      ]
+    },
+    {
       path: "/settings",
       name: "settings",
       meta: { layout: "SettingsSidebar", requiresAuth: true },
@@ -69,26 +103,6 @@ const router = createRouter({
           path: "general",
           name: "settings-general",
           component: () => import("@/pages/settings/SettingsGeneral.vue")
-        },
-        {
-          path: "geolocation",
-          name: "settings-geolocation",
-          component: () => import("@/pages/settings/SettingsGeolocation.vue")
-        },
-        {
-          path: "email/smtp",
-          name: "settings-smtp",
-          component: () => import("@/pages/settings/SettingsSmtp.vue")
-        },
-        {
-          path: "sms",
-          name: "settings-sms",
-          component: () => import("@/pages/settings/SettingsSms.vue")
-        },
-        {
-          path: "storage",
-          name: "settings-storage",
-          component: () => import("@/pages/settings/SettingsStorage.vue")
         },
         {
           path: "webhooks",
@@ -104,11 +118,6 @@ const router = createRouter({
           path: "branding",
           name: "settings-branding",
           component: () => import("@/pages/settings/SettingsBranding.vue")
-        },
-        {
-          path: "email/templates",
-          name: "settings-email-templates",
-          component: () => import("@/pages/settings/SettingsEmailTemplates.vue")
         }
       ]
     },
@@ -194,6 +203,24 @@ router.beforeEach(async (to, from, next) => {
       if (to.meta.requiresAuth) {
         const token = localStorage.getItem("access_token");
         if (!token) {
+          next({ name: "signin", query: { redirect: to.fullPath } });
+          return;
+        }
+      }
+
+      // Check if route requires admin access
+      if (to.meta.requiresAdmin) {
+        try {
+          // Dynamically import apiGet to avoid circular dependencies
+          const { apiGet } = await import("@/services/api");
+          const response = await apiGet("/api/v1/users/me");
+          // UserRoleAdmin = 3
+          if (response.data?.role !== 3) {
+            next({ name: "dashboard" });
+            return;
+          }
+        } catch (error) {
+          console.error("Failed to check admin access:", error);
           next({ name: "signin", query: { redirect: to.fullPath } });
           return;
         }

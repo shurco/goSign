@@ -187,21 +187,17 @@ func (t *CleanupTask) ShouldRetry(err error) bool {
 	return false // cleanup is not critical, no retry
 }
 
-// TrustUpdateTask task for updating trust certificates
-type TrustUpdateTask struct {
-	trustConfig trust.Config
-}
+// TrustUpdateTask task for updating trust certificates (eutl12, tl12; hardcoded).
+type TrustUpdateTask struct{}
 
 // NewTrustUpdateTask creates a new task for updating trust certificates
-func NewTrustUpdateTask(trustConfig trust.Config) *TrustUpdateTask {
-	return &TrustUpdateTask{
-		trustConfig: trustConfig,
-	}
+func NewTrustUpdateTask() *TrustUpdateTask {
+	return &TrustUpdateTask{}
 }
 
 // Execute performs the task
 func (t *TrustUpdateTask) Execute(ctx context.Context) error {
-	return trust.Update(t.trustConfig)
+	return trust.Update()
 }
 
 // ShouldRetry determines if the task should be retried on error

@@ -158,12 +158,8 @@ func (context *SignContext) createSigningCertificateAttribute() (*pkcs7.Attribut
 }
 
 func (context *SignContext) createSignature() ([]byte, error) {
-	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
-		return nil, err
-	}
-
 	// Sadly we can't efficiently sign a file, we need to read all the bytes we want to sign.
-	file_content := context.OutputBuffer.Buff.Bytes()
+	file_content := context.OutputBuffer.Bytes()
 
 	// Collect the parts to sign.
 	sign_content := make([]byte, 0)
@@ -301,20 +297,14 @@ func (context *SignContext) replaceSignature() error {
 		return context.SignPDF()
 	}
 
-	if _, err := context.OutputBuffer.Seek(0, 0); err != nil {
-		return err
-	}
-	file_content := context.OutputBuffer.Buff.Bytes()
-
+	file_content := context.OutputBuffer.Bytes()
+	context.OutputBuffer.Reset()
 	if _, err := context.OutputBuffer.Write(file_content[:(context.ByteRangeValues[0] + context.ByteRangeValues[1] + 1)]); err != nil {
 		return err
 	}
-
-	// Write new ByteRange.
 	if _, err := context.OutputBuffer.Write([]byte(dst)); err != nil {
 		return err
 	}
-
 	if _, err := context.OutputBuffer.Write(file_content[(context.ByteRangeValues[0]+context.ByteRangeValues[1]+1)+int64(len(dst)):]); err != nil {
 		return err
 	}

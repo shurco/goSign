@@ -134,18 +134,37 @@
             </RouterLink>
           </li>
 
-          <li class="pt-3">
+          <li>
+            <RouterLink
+              to="/settings"
+              class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              :class="[{ 'bg-gray-100 text-gray-900': isActive('/settings') && !isActive('/admin/settings') }, isCollapsed ? 'justify-center' : '']"
+              :title="isCollapsed ? $t('navigation.settings') : ''"
+            >
+              <SvgIcon name="settings" class="h-4 w-4 flex-shrink-0" />
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.settings') }}</span>
+              <span
+                v-if="isCollapsed"
+                class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
+              >
+                {{ $t('navigation.settings') }}
+              </span>
+            </RouterLink>
+          </li>
+
+          <!-- Administrator Section (only for admins) -->
+          <li v-show="isAdmin" class="pt-3">
             <div
               v-show="!isCollapsed"
               class="mb-1.5 px-2.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase"
             >
-              {{ $t('navigation.system') }}
+              {{ $t('navigation.administrator') }}
             </div>
             <div v-if="isCollapsed" class="mb-1.5 border-t border-gray-200"></div>
             <RouterLink
-              to="/settings"
+              to="/admin/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[{ 'bg-gray-100 text-gray-900': isActive('/settings') }, isCollapsed ? 'justify-center' : '']"
+              :class="[{ 'bg-gray-100 text-gray-900': isActive('/admin/settings') }, isCollapsed ? 'justify-center' : '']"
               :title="isCollapsed ? $t('navigation.settings') : ''"
             >
               <SvgIcon name="settings" class="h-4 w-4 flex-shrink-0" />
@@ -274,6 +293,16 @@ interface UserData {
 
 const userData = ref<UserData | null>(null);
 
+// Cache user role to prevent flickering
+const cachedUserRole = ref<number | null>(null);
+
+// Check if user is admin (role === 3)
+// Use cached role if userData is not loaded yet to prevent flickering
+const isAdmin = computed(() => {
+  const role = userData.value?.role ?? cachedUserRole.value;
+  return role === 3;
+});
+
 // Organizations data
 const organizations = ref<Organization[]>([]);
 const currentOrganizationId = ref<string>("");
@@ -360,9 +389,20 @@ const handleOrganizationChange = async (orgId: string) => {
 // Load current user data
 const loadUserData = async () => {
   try {
+    // Try to load cached role from localStorage first
+    const cachedRole = localStorage.getItem("user_role");
+    if (cachedRole) {
+      cachedUserRole.value = parseInt(cachedRole, 10);
+    }
+    
     const response = await apiGet("/api/v1/users/me");
     if (response && response.data) {
       userData.value = response.data as UserData;
+      // Cache role in localStorage and ref
+      if (response.data.role !== undefined) {
+        cachedUserRole.value = response.data.role;
+        localStorage.setItem("user_role", String(response.data.role));
+      }
     }
   } catch (error) {
     console.error("Failed to load user data:", error);

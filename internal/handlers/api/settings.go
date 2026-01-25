@@ -16,9 +16,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
 
-	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage"
@@ -31,87 +31,168 @@ type SettingsHandler struct {
 	accountQueries  *queries.AccountQueries
 	userQueries     *queries.UserQueries
 	geolocationSvc  *geolocation.Service
+	settingQueries  *queries.SettingQueries
 }
 
 // NewSettingsHandler creates new handler
-func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, geolocationSvc *geolocation.Service) *SettingsHandler {
+func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, geolocationSvc *geolocation.Service, settingQueries *queries.SettingQueries) *SettingsHandler {
 	return &SettingsHandler{
 		notificationSvc: notificationSvc,
 		accountQueries:  accountQueries,
 		userQueries:     userQueries,
 		geolocationSvc:  geolocationSvc,
+		settingQueries: settingQueries,
 	}
 }
 
 // Get returns current settings
 // @Summary Get settings
-// @Description Returns current application settings
+// @Description Returns current application settings (global settings from DB, organization settings from account.settings)
 // @Tags settings
 // @Produce json
-// @Success 200 {object} config.Settings
+// @Success 200 {object} map[string]any
 // @Router /api/settings [get]
 func (h *SettingsHandler) Get(c *fiber.Ctx) error {
-	cfg := config.Data()
-	
-		// Hide sensitive data
-	safSettings := map[string]any{
-		"email": map[string]any{
-			"provider":   cfg.Settings.Email["provider"],
-			"smtp_host":  cfg.Settings.Email["smtp_host"],
-			"smtp_port":  cfg.Settings.Email["smtp_port"],
-			"smtp_user":  cfg.Settings.Email["smtp_user"],
-			"from_email": cfg.Settings.Email["from_email"],
-			"from_name":  cfg.Settings.Email["from_name"],
-			// hide smtp_pass
-		},
-		"sms": map[string]any{
-			"twilio_enabled":        cfg.Settings.Email["twilio_enabled"] == "true",
-			"twilio_account_sid":    cfg.Settings.Email["twilio_account_sid"],
-			"twilio_from_number":    cfg.Settings.Email["twilio_from_number"],
-			"twilio_auth_token_set": cfg.Settings.Email["twilio_auth_token"] != "",
-		},
-		"storage": map[string]any{
-			"provider":  cfg.Settings.Storage["provider"],
-			"bucket":    cfg.Settings.Storage["bucket"],
-			"region":    cfg.Settings.Storage["region"],
-			"base_path": cfg.Settings.Storage["base_path"],
-			// hide access_key_id and secret_access_key
-		},
-		"webhook": cfg.Settings.Webhook,
-		"features": cfg.Settings.Features,
-		"geolocation": map[string]any{
-			"base_dir": "./base",                    // Hardcoded (not configurable)
-			"db_path":  "./base/GeoLite2-City.mmdb", // Hardcoded (not configurable)
-		},
+	safSettings := make(map[string]any)
+
+	// Get global settings from database (SMTP, SMS, Storage, Geolocation)
+	if h.settingQueries != nil {
+		globalSettings, err := h.settingQueries.GetAllGlobalSettings(c.Context())
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to load global settings from database, using config fallback")
+		}
+		if err == nil && len(globalSettings) > 0 {
+			// Email/SMTP settings
+			if smtpMap, ok := globalSettings["smtp"]; ok {
+				safSettings["email"] = map[string]any{
+					"provider":   getString(smtpMap, "provider", ""),
+					"smtp_host":  getString(smtpMap, "smtp_host", ""),
+					"smtp_port":  getString(smtpMap, "smtp_port", ""),
+					"smtp_user":  getString(smtpMap, "smtp_user", ""),
+					"from_email": getString(smtpMap, "from_email", ""),
+					"from_name":  getString(smtpMap, "from_name", ""),
+					// hide smtp_pass
+				}
+			}
+
+			// SMS settings
+			if smsMap, ok := globalSettings["sms"]; ok {
+				safSettings["sms"] = map[string]any{
+					"twilio_enabled":        getBool(smsMap, "twilio_enabled", false),
+					"twilio_account_sid":     getString(smsMap, "twilio_account_sid", ""),
+					"twilio_from_number":     getString(smsMap, "twilio_from_number", ""),
+					"twilio_auth_token_set":  getString(smsMap, "twilio_auth_token", "") != "",
+				}
+			}
+
+			// Storage settings (local path is fixed ./lc_uploads, not exposed)
+			if storageMap, ok := globalSettings["storage"]; ok {
+				safSettings["storage"] = map[string]any{
+					"provider": getString(storageMap, "provider", ""),
+					"bucket":   getString(storageMap, "bucket", ""),
+					"region":   getString(storageMap, "region", ""),
+					// hide access_key_id and secret_access_key
+				}
+			}
+
+			// Geolocation settings (global; paths next to executable)
+			if geolocMap, ok := globalSettings["geolocation"]; ok {
+				safSettings["geolocation"] = map[string]any{
+					"base_dir": appdir.Base(),
+					"db_path":  filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+					"maxmind_license_key_set": getString(geolocMap, "maxmind_license_key", "") != "",
+					"download_url": getString(geolocMap, "download_url", ""),
+					"download_method": getString(geolocMap, "download_method", ""),
+					"last_updated_at":   getString(geolocMap, "last_updated_at", ""),
+					"last_updated_source": getString(geolocMap, "last_updated_source", ""),
+				}
+				if licenseKey := getString(geolocMap, "maxmind_license_key", ""); licenseKey != "" {
+					if geolocSettings, ok := safSettings["geolocation"].(map[string]any); ok {
+						geolocSettings["maxmind_license_key_masked"] = maskSecretFirstLast4(licenseKey)
+					}
+				}
+			}
+
+		}
+		// Defaults when not in DB
+		if _, ok := safSettings["email"]; !ok {
+			safSettings["email"] = map[string]any{
+				"provider": "", "smtp_host": "", "smtp_port": "", "smtp_user": "",
+				"from_email": "", "from_name": "",
+			}
+		}
+		if _, ok := safSettings["sms"]; !ok {
+			safSettings["sms"] = map[string]any{
+				"twilio_enabled": false, "twilio_account_sid": "", "twilio_from_number": "",
+				"twilio_auth_token_set": false,
+			}
+		}
+		if _, ok := safSettings["storage"]; !ok {
+			safSettings["storage"] = map[string]any{
+				"provider": "", "bucket": "", "region": "",
+			}
+		}
+		if _, ok := safSettings["geolocation"]; !ok {
+			safSettings["geolocation"] = map[string]any{
+				"base_dir": appdir.Base(),
+				"db_path":  filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+				"download_url": "", "download_method": "",
+			}
+		}
 	}
 
-	// Get geolocation settings from account settings if available
+	// Get organization-specific settings from account.settings (webhooks, branding, etc.)
 	accountID, err := h.getAccountIDFromUser(c)
 	if err == nil && h.accountQueries != nil && accountID != "" {
-		geolocSettings, err := h.accountQueries.GetAccountGeolocationSettings(c.Context(), accountID)
-		if err == nil && geolocSettings != nil {
-			if geoloc, ok := safSettings["geolocation"].(map[string]any); ok {
-				if licenseKey, ok := geolocSettings["maxmind_license_key"].(string); ok && licenseKey != "" {
-					geoloc["maxmind_license_key_set"] = true // Don't expose actual key, just indicate it's set
-				geoloc["maxmind_license_key_masked"] = maskSecretFirstLast4(licenseKey)
-				}
-				if lastUpdatedAt, ok := geolocSettings["last_updated_at"].(string); ok && strings.TrimSpace(lastUpdatedAt) != "" {
-					geoloc["last_updated_at"] = lastUpdatedAt
-				}
-				if lastUpdatedSource, ok := geolocSettings["last_updated_source"].(string); ok && strings.TrimSpace(lastUpdatedSource) != "" {
-					geoloc["last_updated_source"] = lastUpdatedSource
-				}
-				if downloadURL, ok := geolocSettings["download_url"].(string); ok {
-					geoloc["download_url"] = downloadURL
-				}
-				if downloadMethod, ok := geolocSettings["download_method"].(string); ok {
-					geoloc["download_method"] = downloadMethod
+		accountSettings, err := h.accountQueries.GetAccountSettings(c.Context(), accountID)
+		if err == nil {
+			// Webhook settings (organization-level)
+			if webhook, ok := accountSettings["webhook"].(map[string]any); ok {
+				safSettings["webhook"] = webhook
+			}
+
+			// Branding settings (organization-level)
+			if branding, ok := accountSettings["branding"].(map[string]any); ok {
+				safSettings["branding"] = branding
+			}
+
+			// Merge geolocation last update info from account (set after download from URL/MaxMind)
+			if geolocAccount, ok := accountSettings["geolocation"].(map[string]any); ok {
+				if g, ok := safSettings["geolocation"].(map[string]any); ok {
+					if v := getString(geolocAccount, "last_updated_at", ""); v != "" {
+						g["last_updated_at"] = v
+					}
+					if v := getString(geolocAccount, "last_updated_source", ""); v != "" {
+						g["last_updated_source"] = v
+					}
 				}
 			}
 		}
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "settings", safSettings)
+}
+
+// Helper functions
+func getString(m map[string]any, key string, defaultValue string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return defaultValue
+}
+
+func getBool(m map[string]any, key string, defaultValue bool) bool {
+	if v, ok := m[key]; ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+		if s, ok := v.(string); ok {
+			return s == "true"
+		}
+	}
+	return defaultValue
 }
 
 // maskSecretFirstLast4 returns the first 4 and last 4 characters of a secret.
@@ -143,9 +224,9 @@ type UpdateEmailRequest struct {
 	FromName  string `json:"from_name"`
 }
 
-// UpdateEmail updates email settings
+// UpdateEmail updates email settings (global settings in DB)
 // @Summary Update email settings
-// @Description Updates email/SMTP configuration
+// @Description Updates email/SMTP configuration (global settings)
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -158,18 +239,17 @@ func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	cfg := config.Data()
-	if cfg.Settings.Email == nil {
-		cfg.Settings.Email = map[string]string{}
+	if h.settingQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Settings queries not initialized", nil)
 	}
 
-	// Normalize payload from UI.
-	if req.Provider != "" {
-		cfg.Settings.Email["provider"] = req.Provider
-	} else if cfg.Settings.Email["provider"] == "" {
-		cfg.Settings.Email["provider"] = "smtp"
+	// Get current SMTP settings
+	currentSettings, err := h.settingQueries.GetGlobalSetting(c.Context(), "smtp")
+	if err != nil {
+		currentSettings = make(map[string]any)
 	}
 
+	// Normalize payload from UI
 	if req.SMTPHost == "" && req.Host != "" {
 		req.SMTPHost = req.Host
 	}
@@ -183,51 +263,61 @@ func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 		req.SMTPPort = fmt.Sprint(req.Port)
 	}
 
-	if strings.TrimSpace(req.SMTPHost) != "" {
-		cfg.Settings.Email["smtp_host"] = strings.TrimSpace(req.SMTPHost)
-	}
-	if strings.TrimSpace(req.SMTPPort) != "" {
-		cfg.Settings.Email["smtp_port"] = strings.TrimSpace(req.SMTPPort)
-	}
-	if strings.TrimSpace(req.SMTPUser) != "" {
-		cfg.Settings.Email["smtp_user"] = strings.TrimSpace(req.SMTPUser)
-	}
-	// Only overwrite password if provided.
-	if strings.TrimSpace(req.SMTPPass) != "" {
-		cfg.Settings.Email["smtp_pass"] = req.SMTPPass
-	}
-	if strings.TrimSpace(req.FromEmail) != "" {
-		cfg.Settings.Email["from_email"] = strings.TrimSpace(req.FromEmail)
-	}
-	if strings.TrimSpace(req.FromName) != "" {
-		cfg.Settings.Email["from_name"] = strings.TrimSpace(req.FromName)
+	// Update settings map
+	if req.Provider != "" {
+		currentSettings["provider"] = req.Provider
+	} else if currentSettings["provider"] == nil {
+		currentSettings["provider"] = "smtp"
 	}
 
-	// Persist to gosign.toml (single source of truth today).
-	if err := config.Save(cfg); err != nil {
-		log.Error().Err(err).Msg("Failed to persist email settings")
+	if strings.TrimSpace(req.SMTPHost) != "" {
+		currentSettings["smtp_host"] = strings.TrimSpace(req.SMTPHost)
+	}
+	if strings.TrimSpace(req.SMTPPort) != "" {
+		currentSettings["smtp_port"] = strings.TrimSpace(req.SMTPPort)
+	}
+	if strings.TrimSpace(req.SMTPUser) != "" {
+		currentSettings["smtp_user"] = strings.TrimSpace(req.SMTPUser)
+	}
+	// Only overwrite password if provided
+	if strings.TrimSpace(req.SMTPPass) != "" {
+		currentSettings["smtp_pass"] = req.SMTPPass
+	}
+	if strings.TrimSpace(req.FromEmail) != "" {
+		currentSettings["from_email"] = strings.TrimSpace(req.FromEmail)
+	}
+	if strings.TrimSpace(req.FromName) != "" {
+		currentSettings["from_name"] = strings.TrimSpace(req.FromName)
+	}
+
+	// Save to database
+	if err := h.settingQueries.UpdateGlobalSetting(c.Context(), "smtp", currentSettings, "email"); err != nil {
+		log.Error().Err(err).Msg("Failed to save email settings to database")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
 	}
 
-	// Update provider instance (best-effort). Secrets are already in cfg.
-	if h.notificationSvc != nil && cfg.Settings.Email["provider"] == "smtp" {
-		// Port parsing is best-effort; defaults are handled by provider validation too.
-		var port int
-		_, _ = fmt.Sscanf(cfg.Settings.Email["smtp_port"], "%d", &port)
-		if port == 0 {
-			port = 1025
+	// Update provider instance
+	if h.notificationSvc != nil {
+		provider := getString(currentSettings, "provider", "smtp")
+		if provider == "smtp" {
+			var port int
+			portStr := getString(currentSettings, "smtp_port", "1025")
+			_, _ = fmt.Sscanf(portStr, "%d", &port)
+			if port == 0 {
+				port = 1025
+			}
+			h.notificationSvc.RegisterProvider(notification.NewEmailProvider(notification.SMTPConfig{
+				Host:      getString(currentSettings, "smtp_host", ""),
+				Port:      port,
+				User:      getString(currentSettings, "smtp_user", ""),
+				Password:  getString(currentSettings, "smtp_pass", ""),
+				FromEmail: getString(currentSettings, "from_email", ""),
+				FromName:  getString(currentSettings, "from_name", ""),
+			}))
 		}
-		h.notificationSvc.RegisterProvider(notification.NewEmailProvider(notification.SMTPConfig{
-			Host:      cfg.Settings.Email["smtp_host"],
-			Port:      port,
-			User:      cfg.Settings.Email["smtp_user"],
-			Password:  cfg.Settings.Email["smtp_pass"],
-			FromEmail: cfg.Settings.Email["from_email"],
-			FromName:  cfg.Settings.Email["from_name"],
-		}))
 	}
 
-	log.Info().Msg("Email settings updated")
+	log.Info().Msg("Email settings updated in database")
 	
 	return webutil.Response(c, fiber.StatusOK, "email_settings", map[string]any{
 		"status": "updated",
@@ -247,40 +337,43 @@ func (h *SettingsHandler) UpdateSMS(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	cfg := config.Data()
-	if cfg.Settings.Email == nil {
-		cfg.Settings.Email = map[string]string{}
+	if h.settingQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Settings queries not initialized", nil)
 	}
 
-	if req.TwilioEnabled {
-		cfg.Settings.Email["twilio_enabled"] = "true"
-	} else {
-		cfg.Settings.Email["twilio_enabled"] = "false"
+	// Get current SMS settings
+	currentSettings, err := h.settingQueries.GetGlobalSetting(c.Context(), "sms")
+	if err != nil {
+		currentSettings = make(map[string]any)
 	}
+
+	// Update settings
+	currentSettings["twilio_enabled"] = req.TwilioEnabled
 
 	if strings.TrimSpace(req.TwilioAccountSID) != "" {
-		cfg.Settings.Email["twilio_account_sid"] = strings.TrimSpace(req.TwilioAccountSID)
+		currentSettings["twilio_account_sid"] = strings.TrimSpace(req.TwilioAccountSID)
 	}
 	if strings.TrimSpace(req.TwilioFromNumber) != "" {
-		cfg.Settings.Email["twilio_from_number"] = strings.TrimSpace(req.TwilioFromNumber)
+		currentSettings["twilio_from_number"] = strings.TrimSpace(req.TwilioFromNumber)
 	}
-	// Only overwrite token if provided.
+	// Only overwrite token if provided
 	if strings.TrimSpace(req.TwilioAuthToken) != "" {
-		cfg.Settings.Email["twilio_auth_token"] = req.TwilioAuthToken
+		currentSettings["twilio_auth_token"] = req.TwilioAuthToken
 	}
 
-	if err := config.Save(cfg); err != nil {
-		log.Error().Err(err).Msg("Failed to persist SMS settings")
+	// Save to database
+	if err := h.settingQueries.UpdateGlobalSetting(c.Context(), "sms", currentSettings, "sms"); err != nil {
+		log.Error().Err(err).Msg("Failed to save SMS settings to database")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
 	}
 
-	// Replace provider entry (enabled/disabled is checked by Service.CanSend()).
+	// Update provider instance
 	if h.notificationSvc != nil {
 		h.notificationSvc.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
-			AccountSID: cfg.Settings.Email["twilio_account_sid"],
-			AuthToken:  cfg.Settings.Email["twilio_auth_token"],
-			FromNumber: cfg.Settings.Email["twilio_from_number"],
-			Enabled:    cfg.Settings.Email["twilio_enabled"] == "true",
+			AccountSID: getString(currentSettings, "twilio_account_sid", ""),
+			AuthToken:  getString(currentSettings, "twilio_auth_token", ""),
+			FromNumber: getString(currentSettings, "twilio_from_number", ""),
+			Enabled:    getBool(currentSettings, "twilio_enabled", false),
 		}))
 	}
 
@@ -334,9 +427,9 @@ type UpdateStorageRequest struct {
 	SecretAccessKey string `json:"secret_access_key,omitempty"`
 }
 
-// UpdateStorage updates storage settings
+// UpdateStorage updates storage settings (global settings in DB)
 // @Summary Update storage settings
-// @Description Updates storage configuration (local, S3, GCS, Azure)
+// @Description Updates storage configuration (local, S3, GCS, Azure) - global settings
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -349,11 +442,41 @@ func (h *SettingsHandler) UpdateStorage(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	// TODO: Validation based on provider
-	// TODO: Save to DB
-	// TODO: Update in memory
+	if h.settingQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Settings queries not initialized", nil)
+	}
 
-	log.Info().Str("provider", req.Provider).Msg("Storage settings updated")
+	// Get current storage settings
+	currentSettings, err := h.settingQueries.GetGlobalSetting(c.Context(), "storage")
+	if err != nil {
+		currentSettings = make(map[string]any)
+	}
+
+	// Update settings (local storage uses fixed path ./lc_uploads, base_path not stored)
+	currentSettings["provider"] = req.Provider
+	if req.Bucket != "" {
+		currentSettings["bucket"] = req.Bucket
+	}
+	if req.Region != "" {
+		currentSettings["region"] = req.Region
+	}
+	if req.Endpoint != "" {
+		currentSettings["endpoint"] = req.Endpoint
+	}
+	if req.AccessKeyID != "" {
+		currentSettings["access_key_id"] = req.AccessKeyID
+	}
+	if req.SecretAccessKey != "" {
+		currentSettings["secret_access_key"] = req.SecretAccessKey
+	}
+
+	// Save to database
+	if err := h.settingQueries.UpdateGlobalSetting(c.Context(), "storage", currentSettings, "storage"); err != nil {
+		log.Error().Err(err).Msg("Failed to save storage settings to database")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
+	}
+
+	log.Info().Str("provider", req.Provider).Msg("Storage settings updated in database")
 	
 	return webutil.Response(c, fiber.StatusOK, "storage_settings", map[string]any{
 		"status": "updated",
@@ -368,9 +491,9 @@ type UpdateBrandingRequest struct {
 	SecondaryColor string `json:"secondary_color"`
 }
 
-// UpdateBranding updates branding settings
+// UpdateBranding updates branding settings (organization settings in account.settings)
 // @Summary Update branding settings
-// @Description Updates company branding configuration
+// @Description Updates company branding configuration (organization-level settings)
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -378,14 +501,57 @@ type UpdateBrandingRequest struct {
 // @Success 200 {object} map[string]any
 // @Router /api/settings/branding [put]
 func (h *SettingsHandler) UpdateBranding(c *fiber.Ctx) error {
+	accountID, err := h.getAccountIDFromUser(c)
+	if err != nil {
+		return err
+	}
+	if accountID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
 	var req UpdateBrandingRequest
 	if err := c.BodyParser(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	// TODO: Save to DB (account.settings_jsonb)
-	
-	log.Info().Msg("Branding settings updated")
+	if h.accountQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Account queries not initialized", nil)
+	}
+
+	// Get current account settings
+	currentSettings, err := h.accountQueries.GetAccountSettings(c.Context(), accountID)
+	if err != nil {
+		currentSettings = make(map[string]any)
+	}
+
+	// Update branding settings
+	branding, ok := currentSettings["branding"].(map[string]any)
+	if !ok {
+		branding = make(map[string]any)
+	}
+
+	if req.CompanyName != "" {
+		branding["company_name"] = req.CompanyName
+	}
+	if req.LogoURL != "" {
+		branding["logo_url"] = req.LogoURL
+	}
+	if req.PrimaryColor != "" {
+		branding["primary_color"] = req.PrimaryColor
+	}
+	if req.SecondaryColor != "" {
+		branding["secondary_color"] = req.SecondaryColor
+	}
+
+	currentSettings["branding"] = branding
+
+	// Save to account.settings
+	if err := h.accountQueries.UpdateAccountSettings(c.Context(), accountID, currentSettings); err != nil {
+		log.Error().Err(err).Msg("Failed to update branding settings in database")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
+	}
+
+	log.Info().Str("account_id", accountID).Msg("Branding settings updated in database")
 	
 	return webutil.Response(c, fiber.StatusOK, "branding_settings", map[string]any{
 		"status": "updated",
@@ -492,16 +658,13 @@ func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	// Create storage configuration
+	// Create storage configuration (local uses fixed ./lc_uploads)
 	var storageConfig storage.Config
 	switch req.Provider {
 	case "local":
-		if req.BasePath == "" {
-			return webutil.Response(c, fiber.StatusBadRequest, "base_path is required for local storage", nil)
-		}
 		storageConfig = storage.Config{
 			Provider: "local",
-			BasePath: req.BasePath,
+			BasePath: appdir.LcUploads(),
 		}
 	case "s3":
 		if req.Bucket == "" || req.Region == "" {
@@ -603,9 +766,9 @@ type UpdateGeolocationRequest struct {
 	DownloadMethod    string `json:"download_method,omitempty"`      // Optional: "maxmind" or "url"
 }
 
-// UpdateGeolocation updates geolocation settings (method and credentials in database)
+// UpdateGeolocation updates geolocation settings (global settings in DB)
 // @Summary Update geolocation settings
-// @Description Updates geolocation download method and credentials in account settings
+// @Description Updates geolocation download method and credentials - global settings
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -613,42 +776,48 @@ type UpdateGeolocationRequest struct {
 // @Success 200 {object} map[string]any
 // @Router /api/settings/geolocation [put]
 func (h *SettingsHandler) UpdateGeolocation(c *fiber.Ctx) error {
-	accountID, err := h.getAccountIDFromUser(c)
-	if err != nil {
-		return err
-	}
-	if accountID == "" {
-		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
-
 	var req UpdateGeolocationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
-	if h.accountQueries == nil {
-		return webutil.Response(c, fiber.StatusInternalServerError, "Account queries not initialized", nil)
+	if h.settingQueries == nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, "Settings queries not initialized", nil)
 	}
 
-	// Update ONLY the fields provided by the request.
-	// We intentionally do not "preserve" or rewrite other fields to avoid unintended updates.
+	// Get current geolocation settings
+	currentSettings, err := h.settingQueries.GetGlobalSetting(c.Context(), "geolocation")
+	if err != nil {
+		currentSettings = make(map[string]any)
+	}
+
+	// Update only provided fields
 	licenseKey := strings.TrimSpace(req.MaxMindLicenseKey)
 	downloadURL := strings.TrimSpace(req.DownloadURL)
 	downloadMethod := strings.TrimSpace(req.DownloadMethod)
 
+	if licenseKey != "" {
+		currentSettings["maxmind_license_key"] = licenseKey
+	}
+	if downloadURL != "" {
+		currentSettings["download_url"] = downloadURL
+	}
+	if downloadMethod != "" {
+		currentSettings["download_method"] = downloadMethod
+	}
+
 	// Check if at least one field is provided
-	if licenseKey == "" && downloadURL == "" && downloadMethod == "" {
+	if len(currentSettings) == 0 {
 		return webutil.Response(c, fiber.StatusBadRequest, "At least one field must be provided", nil)
 	}
 
-	if err := h.accountQueries.UpdateAccountGeolocationSettings(c.Context(), accountID, licenseKey, downloadURL, downloadMethod); err != nil {
+	// Save to database
+	if err := h.settingQueries.UpdateGlobalSetting(c.Context(), "geolocation", currentSettings, "geolocation"); err != nil {
 		log.Error().Err(err).Msg("Failed to update geolocation settings in database")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
 	}
 
-	// Single concise log line (avoid noise; doesn't imply other fields were updated)
 	log.Info().
-		Str("account_id", accountID).
 		Str("method", downloadMethod).
 		Bool("has_license_key", licenseKey != "").
 		Bool("has_download_url", downloadURL != "").
@@ -683,9 +852,8 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
-	// Hardcoded paths (not configurable)
-	const baseDir = "./base"
-	const dbPath = "./base/GeoLite2-City.mmdb"
+	baseDir := appdir.Base()
+	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
 
 	// Check if database already exists
 	if _, err := os.Stat(dbPath); err == nil {
@@ -698,58 +866,115 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 		}
 	}
 
-	// Create base directory if it doesn't exist
+	// Create base directory if it doesn't exist (next to executable)
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
 	}
 
-	// Download archive from URL
-	client := &http.Client{Timeout: 5 * time.Minute}
+	// Download from URL (follow redirects automatically)
+	client := &http.Client{
+		Timeout: 5 * time.Minute,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Allow up to 10 redirects
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirects")
+			}
+			return nil
+		},
+	}
 	resp, err := client.Get(req.URL)
 	if err != nil {
-		log.Error().Err(err).Str("url", req.URL).Msg("Failed to download archive")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download archive", map[string]any{
+		log.Error().Err(err).Str("url", req.URL).Msg("Failed to download file")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{
 			"error": err.Error(),
 		})
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Error().Int("status", resp.StatusCode).Str("url", req.URL).Msg("Failed to download archive")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download archive", map[string]any{
+		log.Error().Int("status", resp.StatusCode).Str("url", req.URL).Msg("Failed to download file")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{
 			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
 		})
 	}
 
-	// Create temporary file for tar.gz
-	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create temporary file")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// Save tar.gz to temporary file
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		log.Error().Err(err).Msg("Failed to save tar.gz file")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save tar.gz file", nil)
-	}
+	// Determine file type from URL or Content-Type
+	urlLower := strings.ToLower(req.URL)
+	contentType := resp.Header.Get("Content-Type")
+	isDirectMMDB := strings.HasSuffix(urlLower, ".mmdb") && !strings.HasSuffix(urlLower, ".mmdb.gz")
+	isGzipMMDB := strings.HasSuffix(urlLower, ".mmdb.gz") || strings.HasSuffix(urlLower, ".gz")
+	isTarGz := strings.HasSuffix(urlLower, ".tar.gz") || strings.Contains(contentType, "application/x-gzip") || strings.Contains(contentType, "application/gzip")
 
 	// Extract into temp output, then atomically replace dbPath
 	tmpDBPath := dbPath + ".tmp"
 	_ = os.Remove(tmpDBPath)
 
-	// Extract GeoLite2-City.mmdb from tar.gz
-	if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-		// Fallback: some users provide GeoLite2-City.mmdb.gz (gzip-compressed mmdb, not tar.gz)
-		if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); gzErr != nil {
-			log.Error().Err(err).Msg("Failed to extract database from tar.gz")
-			log.Error().Err(gzErr).Msg("Failed to extract database from mmdb.gz")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
-				"error": fmt.Sprintf("tar.gz error: %s; gzip error: %s", err.Error(), gzErr.Error()),
-			})
+	// Handle direct .mmdb file (no archive)
+	if isDirectMMDB {
+		// Create output directory if needed
+		if err := os.MkdirAll(filepath.Dir(tmpDBPath), 0755); err != nil {
+			log.Error().Err(err).Msg("Failed to create output directory")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create output directory", nil)
+		}
+
+		// Create output file
+		outFile, err := os.Create(tmpDBPath)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create output file")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create output file", nil)
+		}
+		defer outFile.Close()
+
+		// Copy file content directly
+		if _, err := io.Copy(outFile, resp.Body); err != nil {
+			log.Error().Err(err).Msg("Failed to save database file")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save database file", nil)
+		}
+	} else {
+		// Handle archive files (tar.gz, .gz, etc.)
+		// Create temporary file for archive
+		tmpFile, err := os.CreateTemp("", "geolite2-*")
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create temporary file")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
+		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
+
+		// Save archive to temporary file
+		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+			log.Error().Err(err).Msg("Failed to save archive file")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save archive file", nil)
+		}
+
+		// Extract GeoLite2-City.mmdb from archive
+		if isTarGz {
+			if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+				log.Error().Err(err).Msg("Failed to extract database from tar.gz")
+				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from tar.gz", map[string]any{
+					"error": err.Error(),
+				})
+			}
+		} else if isGzipMMDB {
+			// Handle gzip-compressed mmdb file
+			if err := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); err != nil {
+				log.Error().Err(err).Msg("Failed to extract database from mmdb.gz")
+				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from mmdb.gz", map[string]any{
+					"error": err.Error(),
+				})
+			}
+		} else {
+			// Try tar.gz first, then fallback to gzip
+			if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+				if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); gzErr != nil {
+					log.Error().Err(err).Msg("Failed to extract database from tar.gz")
+					log.Error().Err(gzErr).Msg("Failed to extract database from mmdb.gz")
+					return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
+						"error": fmt.Sprintf("tar.gz error: %s; gzip error: %s", err.Error(), gzErr.Error()),
+					})
+				}
+			}
 		}
 	}
 
@@ -818,9 +1043,8 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "MaxMind license key is required. Please configure it in settings first.", nil)
 	}
 
-	// Hardcoded paths (not configurable)
-	const baseDir = "./base"
-	const dbPath = "./base/GeoLite2-City.mmdb"
+	baseDir := appdir.Base()
+	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
 
 	// Check if database already exists
 	if _, err := os.Stat(dbPath); err == nil {
@@ -833,7 +1057,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 		}
 	}
 
-	// Create base directory if it doesn't exist
+	// Create base directory if it doesn't exist (next to executable)
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
