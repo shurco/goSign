@@ -1,6 +1,6 @@
 # goSign Documentation
 
-**Last Updated**: 2026-01-25 00:00 UTC
+**Last Updated**: 2026-01-25
 
 ## 📚 Available Documentation
 
@@ -175,6 +175,8 @@ All documentation follows these standards:
 - **API Authentication**: JWT tokens and API keys with rate limiting
 - **Embedded Signing**: JavaScript SDK for iframe integration
 - **Settings in Database**: Global settings (SMTP, SMS, storage, branding) stored in DB; Admin UI at `/_/` for configuration
+- **Field Model**: Field preferences (format, align, price, currency, date format, signature format), structured validation (pattern, min, max, message), readonly, title; number field type; Areas with cell_count/option_id
+- **Submitter Signing UX**: In-document field overlays with labels and filled values, expandable field list, prev/next navigation, draft persistence, signature ID display
 
 ### Advanced Features
 - **Bulk Operations**: CSV/XLSX import for mass submission creation

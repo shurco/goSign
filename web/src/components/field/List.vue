@@ -224,7 +224,7 @@ function addField(type: any): void {
   }
 
   if (type === "stamp") {
-    field.readonly = true;
+    field.readonly = false;
   }
 
   if (type === "date") {

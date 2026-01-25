@@ -9,16 +9,21 @@
       :disabled="disabled"
       @blur="handleBlur"
     />
+    <div v-if="dateFormat && formattedDisplay" class="mt-1 text-sm text-[--color-base-content]/70">
+      {{ formattedDisplay }}
+    </div>
     <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import Input from "@/components/ui/Input.vue";
+import { formatDateByPattern } from "@/utils/time";
 
 interface Props {
   modelValue?: string;
+  dateFormat?: string;
   placeholder?: string;
   required?: boolean;
   readonly?: boolean;
@@ -33,6 +38,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
+  dateFormat: "",
   placeholder: "",
   required: false,
   readonly: false,
@@ -42,6 +48,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
+
+const formattedDisplay = computed(() => {
+  if (!props.dateFormat || !localValue.value) return "";
+  return formatDateByPattern(localValue.value, props.dateFormat);
+});
 
 watch(
   () => props.modelValue,

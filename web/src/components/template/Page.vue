@@ -185,6 +185,18 @@ function onPointerup(): void {
 
     if (newArea.value.cell_w) {
       area.cell_w = newArea.value.cell_w;
+      // Persist cell count for signing page (same formula as Area.vue)
+      const cw = newArea.value.cell_w;
+      const aw = newArea.value.w;
+      if (cw > 0 && aw > 0) {
+        let currentWidth = 0;
+        let count = 0;
+        while (currentWidth + (cw + cw / 4) < aw) {
+          currentWidth += cw;
+          count++;
+        }
+        area.cell_count = Math.max(count, 1);
+      }
     }
 
     // Ensure page number is explicitly set

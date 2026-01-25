@@ -20,7 +20,12 @@
         :key="option.id || option.value"
         class="flex cursor-pointer items-center gap-2"
       >
-        <Radio v-model="localValue" :value="option.value || option.id" :disabled="disabled" />
+        <Radio
+          v-model="localValue"
+          :name="radioGroupName"
+          :value="option.value ?? option.id ?? ''"
+          :disabled="disabled"
+        />
         <span>{{ option.label || option.value }}</span>
       </label>
     </div>
@@ -50,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, useId } from "vue";
 import Select from "@/components/ui/Select.vue";
 import Radio from "@/components/ui/Radio.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
@@ -88,15 +93,21 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
+const radioGroupName = useId();
+
 const localValue = ref(props.modelValue);
 const selectedValues = ref<string[]>(Array.isArray(props.modelValue) ? props.modelValue : []);
 
 watch(
   () => props.modelValue,
   (newValue) => {
-    localValue.value = newValue;
-    if (props.type === "multiple") {
+    if (props.type === "radio") {
+      localValue.value = newValue != null ? String(newValue) : "";
+    } else if (props.type === "multiple") {
+      localValue.value = newValue;
       selectedValues.value = Array.isArray(newValue) ? newValue : [];
+    } else {
+      localValue.value = newValue;
     }
   }
 );

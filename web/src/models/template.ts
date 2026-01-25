@@ -6,6 +6,7 @@ import type { Areas, Field as BaseField, Submitter } from "./index";
 export interface Area extends Omit<Areas, "z"> {
   h: number; // height (replaces z from backend)
   cell_w?: number; // cell width for cells field type
+  cell_count?: number; // number of cells (persisted, used on signing)
   option_id?: string; // option id for radio/multiple field types
   initialX?: number; // initial X position for drawing
   initialY?: number; // initial Y position for drawing
@@ -71,13 +72,35 @@ export type Field = Omit<BaseField, "areas"> & {
   condition_groups?: FieldConditionGroup[];
   areas?: Area[];
   options?: FieldOption[];
-  preferences?: {
-    format?: string; // date format
-    price?: number; // payment price
-    currency?: string; // payment currency
-    [key: string]: any;
-  };
+  validation?: FieldValidation;
+  preferences?: FieldPreferences;
 };
+
+export interface FieldPreferences {
+  format?: string;
+  align?: string;
+  font?: string;
+  font_type?: string;
+  font_size?: number;
+  valign?: string;
+  color?: string;
+  price?: number;
+  currency?: string;
+  formula?: string;
+  with_logo?: boolean;
+  with_signature_id?: boolean;
+  reasons?: string[];
+  reason_field_uuid?: string;
+  method?: string;
+}
+
+export interface FieldValidation {
+  pattern?: string;
+  message?: string;
+  min?: number;
+  max?: number;
+  step?: string;
+}
 
 /**
  * Submitter with extended properties

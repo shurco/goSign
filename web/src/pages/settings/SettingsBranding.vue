@@ -5,12 +5,17 @@
     </FormControl>
 
     <FormControl :label="$t('branding.companyLogo')">
-      <FileInput accept="image/*" @change="handleLogoUpload" />
+      <FileDropZone
+        accept="image/*"
+        :selected-label="logoFileName || (brandingSettings.logo_url ? 'Image' : '')"
+        @change="handleLogoUpload"
+        @clear="clearLogo"
+      />
       <img
         v-if="brandingSettings.logo_url"
         :src="brandingSettings.logo_url"
         :alt="$t('branding.companyLogo')"
-        class="mt-2 max-h-20"
+        class="mt-2 max-h-20 object-contain"
       />
     </FormControl>
 
@@ -29,7 +34,7 @@ import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import FormControl from "@/components/ui/FormControl.vue";
 import Input from "@/components/ui/Input.vue";
-import FileInput from "@/components/ui/FileInput.vue";
+import FileDropZone from "@/components/ui/FileDropZone.vue";
 import Button from "@/components/ui/Button.vue";
 import { fetchWithAuth } from "@/utils/auth";
 
@@ -40,6 +45,7 @@ const brandingSettings = ref({
   logo_url: "",
   primary_color: "#4F46E5"
 });
+const logoFileName = ref("");
 
 onMounted(async () => {
   await loadBranding();
@@ -88,15 +94,17 @@ async function saveBranding(): Promise<void> {
   }
 }
 
-function handleLogoUpload(event: Event): void {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      brandingSettings.value.logo_url = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  }
+function handleLogoUpload(file: File): void {
+  logoFileName.value = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    brandingSettings.value.logo_url = (e.target?.result as string) || "";
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo(): void {
+  logoFileName.value = "";
+  brandingSettings.value.logo_url = "";
 }
 </script>

@@ -18,7 +18,29 @@
         </button>
       </div>
 
-      <div class="relative">
+      <!-- Tabs when multiple formats allowed (DocuSeal-style) -->
+      <div
+        v-if="tabs.length > 1"
+        class="tabs tabs-boxed mb-3 flex gap-1 rounded-lg bg-[var(--color-base-200)] p-1"
+        role="tablist"
+      >
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.id"
+          class="tab tab-sm flex-1"
+          :class="{ 'tab-active': activeTab === tab.id }"
+          :disabled="disabled"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- Drawn panel -->
+      <div v-if="showDrawn" v-show="activeTab === 'drawn'" class="relative">
         <canvas
           ref="canvasEl"
           class="w-full rounded-md border border-dashed border-[var(--color-base-300)] bg-[--color-base-100]"
@@ -30,13 +52,51 @@
           @pointerleave="onPointerUp"
         />
         <div
-          v-if="!hasValue"
+          v-if="!hasValue && activeTab === 'drawn'"
           class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-[--color-base-content]/60"
         >
           {{
             placeholder ||
             (mode === "initials" ? t("signing.drawInitials") : t("signing.drawSignature"))
           }}
+        </div>
+      </div>
+
+      <!-- Typed panel -->
+      <div v-if="showTyped" v-show="activeTab === 'typed'" class="space-y-2">
+        <input
+          v-model="typedText"
+          type="text"
+          class="input input-bordered w-full"
+          :placeholder="mode === 'initials' ? t('signing.typeInitials') : t('signing.typeSignature')"
+          :disabled="disabled"
+          :style="{ fontFamily: typedFontFamily }"
+          @input="emitTypedAsImage"
+          @blur="$emit('blur')"
+        />
+        <div
+          v-if="typedText && typedPreviewUrl"
+          class="rounded-md border border-[var(--color-base-300)] bg-[--color-base-100] p-2"
+          style="min-height: 60px"
+        >
+          <img :src="typedPreviewUrl" alt="" class="max-h-20 w-full object-contain" style="font-family: cursive" />
+        </div>
+      </div>
+
+      <!-- Upload panel -->
+      <div v-if="showUpload" v-show="activeTab === 'upload'" class="space-y-2">
+        <FileDropZone
+          accept="image/*"
+          :disabled="disabled"
+          :selected-label="uploadFileName || (hasValue ? 'Image' : '')"
+          @change="onUploadChange"
+          @clear="clearUpload"
+        />
+        <div
+          v-if="hasValue && activeTab === 'upload'"
+          class="rounded-md border border-[var(--color-base-300)] bg-[--color-base-100] p-2"
+        >
+          <img :src="modelValue" alt="" class="max-h-32 w-full object-contain" />
         </div>
       </div>
 
@@ -50,10 +110,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import FileDropZone from "@/components/ui/FileDropZone.vue";
+
+export type SignatureFormat =
+  | ""
+  | "drawn"
+  | "typed"
+  | "drawn_or_typed"
+  | "drawn_or_upload"
+  | "upload";
 
 interface Props {
   modelValue?: string;
   mode?: "signature" | "initials";
+  /** Format from template: '', drawn, typed, drawn_or_typed, drawn_or_upload, upload */
+  format?: SignatureFormat | string;
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
@@ -68,6 +139,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
   mode: "signature",
+  format: "",
   placeholder: "",
   required: false,
   disabled: false,
@@ -78,12 +150,60 @@ const emit = defineEmits<Emits>();
 const { t } = useI18n();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
+const uploadFileName = ref("");
 const isDrawing = ref(false);
 const last = ref({ x: 0, y: 0 });
+const typedText = ref("");
+const typedPreviewUrl = ref("");
+
+// Which panels to show (DocuSeal-style: enable/disable drawn, typed, upload)
+const showDrawn = computed(() => {
+  const f = (props.format || "").toLowerCase();
+  if (!f || f === "any") return true;
+  return f === "drawn" || f === "drawn_or_typed" || f === "drawn_or_upload";
+});
+const showTyped = computed(() => {
+  const f = (props.format || "").toLowerCase();
+  if (!f || f === "any") return true;
+  return f === "typed" || f === "drawn_or_typed";
+});
+const showUpload = computed(() => {
+  const f = (props.format || "").toLowerCase();
+  if (!f || f === "any") return true;
+  return f === "upload" || f === "drawn_or_upload";
+});
+
+const tabs = computed(() => {
+  const list: { id: "drawn" | "typed" | "upload"; label: string }[] = [];
+  if (showDrawn.value) list.push({ id: "drawn", label: t("signing.signatureDraw") });
+  if (showTyped.value) list.push({ id: "typed", label: t("signing.signatureType") });
+  if (showUpload.value) list.push({ id: "upload", label: t("signing.signatureUpload") });
+  return list;
+});
+
+const activeTab = ref<"drawn" | "typed" | "upload">("drawn");
+
+// Set initial activeTab to first available when format changes
+watch(
+  () => [showDrawn.value, showTyped.value, showUpload.value],
+  () => {
+    if (showDrawn.value && (activeTab.value === "drawn" || !tabs.value.find((x) => x.id === activeTab.value)))
+      activeTab.value = "drawn";
+    else if (showTyped.value && activeTab.value !== "drawn" && activeTab.value !== "upload") activeTab.value = "typed";
+    else if (showUpload.value) activeTab.value = "upload";
+    if (tabs.value.length && !tabs.value.some((x) => x.id === activeTab.value))
+      activeTab.value = tabs.value[0].id;
+  },
+  { immediate: true }
+);
 
 const hasValue = computed(() => !!props.modelValue && props.modelValue.trim() !== "");
 
-let resizeObserver: ResizeObserver | null = null;
+/** Cursive font for typed signature (system fallback). */
+const typedFontFamily = "cursive";
+
+const TYPED_CANVAS_WIDTH = 400;
+const TYPED_CANVAS_HEIGHT = 120;
 
 function getCtx(): CanvasRenderingContext2D | null {
   const c = canvasEl.value;
@@ -97,7 +217,6 @@ function setupCanvasSize(): void {
   const ctx = getCtx();
   if (!ctx) return;
 
-  // Make canvas crisp on high-DPI displays.
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = c.getBoundingClientRect().width;
   const cssHeight = c.getBoundingClientRect().height;
@@ -112,7 +231,7 @@ function setupCanvasSize(): void {
 
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "#111827"; // gray-900
+  ctx.strokeStyle = "#111827";
   ctx.lineWidth = props.mode === "initials" ? 3 : 2;
 }
 
@@ -135,7 +254,6 @@ function drawFromModelValue(dataUrl: string): void {
   const img = new Image();
   img.onload = () => {
     clearCanvas();
-    // Draw image to fit canvas area.
     const cssW = c.getBoundingClientRect().width;
     const cssH = c.getBoundingClientRect().height;
     ctx.drawImage(img, 0, 0, cssW, cssH);
@@ -190,19 +308,64 @@ async function onPointerUp(): Promise<void> {
 
   const c = canvasEl.value;
   if (!c) return;
-  // Export on stroke end to avoid doing it every move.
   const dataUrl = c.toDataURL("image/png");
   emit("update:modelValue", dataUrl);
-  // Important: wait a tick so parent v-model updates before validation runs.
   await nextTick();
   emit("blur");
+}
+
+/** Render typed text to image (data URL) using offscreen canvas. */
+function typedTextToDataUrl(text: string): string {
+  if (!text || !text.trim()) return "";
+  const canvas = document.createElement("canvas");
+  canvas.width = TYPED_CANVAS_WIDTH;
+  canvas.height = TYPED_CANVAS_HEIGHT;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  ctx.fillStyle = "transparent";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#111827";
+  ctx.font = `italic 48px ${typedFontFamily}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text.trim(), 20, TYPED_CANVAS_HEIGHT / 2);
+  return canvas.toDataURL("image/png");
+}
+
+function emitTypedAsImage(): void {
+  const text = typedText.value;
+  const dataUrl = typedTextToDataUrl(text);
+  typedPreviewUrl.value = dataUrl;
+  emit("update:modelValue", dataUrl);
+  nextTick().then(() => emit("blur"));
+}
+
+function onUploadChange(file: File): void {
+  uploadFileName.value = file.name;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const result = ev.target?.result as string;
+    if (result) {
+      emit("update:modelValue", result);
+      nextTick().then(() => emit("blur"));
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearUpload(): void {
+  uploadFileName.value = "";
+  emit("update:modelValue", "");
+  nextTick().then(() => emit("blur"));
 }
 
 function clear(): void {
   if (props.disabled) return;
   clearCanvas();
+  typedText.value = "";
+  typedPreviewUrl.value = "";
+  uploadFileName.value = "";
   emit("update:modelValue", "");
-  // Same reason as onPointerUp: let v-model update before validating.
   nextTick().then(() => emit("blur"));
 }
 
@@ -213,12 +376,13 @@ onMounted(() => {
   if (canvasEl.value && typeof ResizeObserver !== "undefined") {
     resizeObserver = new ResizeObserver(() => {
       setupCanvasSize();
-      // Re-draw current value after resize to keep it visible.
-      drawFromModelValue(props.modelValue || "");
+      if (activeTab.value === "drawn") drawFromModelValue(props.modelValue || "");
     });
     resizeObserver.observe(canvasEl.value);
   }
 });
+
+let resizeObserver: ResizeObserver | null = null;
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
@@ -228,9 +392,14 @@ onBeforeUnmount(() => {
 watch(
   () => props.modelValue,
   (v) => {
-    // If value changes externally (e.g., form reset), keep canvas in sync.
     setupCanvasSize();
-    drawFromModelValue(v || "");
+    if (activeTab.value === "drawn") drawFromModelValue(v || "");
+    if (activeTab.value === "upload") typedPreviewUrl.value = "";
+    if (!v) {
+      typedText.value = "";
+      typedPreviewUrl.value = "";
+      uploadFileName.value = "";
+    }
   }
 );
 </script>
@@ -240,4 +409,3 @@ watch(
   touch-action: none;
 }
 </style>
-

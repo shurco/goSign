@@ -82,7 +82,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    VueDevTools(),
+    // VueDevTools disabled: its inspector parser fails on Area.vue ("Invalid end tag").
+    // VueDevTools(),
     vue(),
     tailwindcss(),
     VueI18nPlugin({

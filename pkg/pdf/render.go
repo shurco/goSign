@@ -112,6 +112,29 @@ func RenderCompletedTemplatePDF(input RenderCompletedTemplatePDFInput) ([]byte, 
 					}
 					_ = pdf.ImageByHolder(holder, x, y, rect)
 
+					// If "with signature ID" is enabled, draw the signature ID below the image.
+					if field.Preferences != nil && field.Preferences.WithSignatureID {
+						if sigIDAny, ok := input.Values[field.ID+"_signature_id"]; ok {
+							if sigID, ok := sigIDAny.(string); ok && strings.TrimSpace(sigID) != "" {
+								_ = pdf.SetFont("helvetica", "", 8)
+								idLabel := "ID: " + strings.TrimSpace(sigID)
+								// Place text just below the image (smaller y in gopdf = lower on page).
+								textY := y - 10
+								if textY < 0 {
+									textY = y + 2
+								}
+								pdf.SetXY(x, textY)
+								pdf.Cell(nil, idLabel)
+							}
+						}
+						// Restore default font for subsequent fields.
+						if fontSet.NormalOK {
+							_ = pdf.SetFont(fontSet.NormalName, "", 10)
+						} else {
+							_ = pdf.SetFont("helvetica", "", 10)
+						}
+					}
+
 				default:
 					text := stringifyValue(val)
 					if strings.TrimSpace(text) == "" {

@@ -24,6 +24,8 @@ type SignatureCertificateSigner struct {
 	// SignatureValue is expected to be a PNG data URL (or raw base64) as stored by the frontend
 	// for signature/initials/stamp/image fields.
 	SignatureValue any
+	// SignatureID is the unique ID for this signature when "with_signature_id" was enabled (e.g. "SIG-A1B2C3D4").
+	SignatureID string
 }
 
 type SignatureCertificateInput struct {
@@ -184,6 +186,12 @@ func GenerateSignatureCertificatePDF(input SignatureCertificateInput) ([]byte, e
 				if holder, err := gopdf.ImageHolderByBytes(imgBytes); err == nil {
 					_ = pdf.ImageByHolder(holder, 373, 80+shiftSignerBlock, &gopdf.Rect{W: 139, H: 49})
 				}
+			}
+			// Show signature ID below the example signature when present.
+			if strings.TrimSpace(signer.SignatureID) != "" {
+				_ = pdf.SetFont("Arial", "", 7)
+				pdf.SetXY(370, 132+shiftSignerBlock)
+				pdf.Cell(nil, "ID: "+strings.TrimSpace(signer.SignatureID))
 			}
 
 			pdf.SetXY(370, 143+shiftSignerBlock)

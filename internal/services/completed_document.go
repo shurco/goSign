@@ -272,6 +272,7 @@ func (b *CompletedDocumentBuilder) EnsureCompletedPDF(ctx context.Context, submi
 	completedAtMax := data.completedAtMax
 	for _, s := range data.submitters {
 		var sigVal any
+		var sigID string
 
 		// Prefer fields assigned to this signer (multi-signer templates).
 		if s.templateSubmitter != "" {
@@ -284,6 +285,9 @@ func (b *CompletedDocumentBuilder) EnsureCompletedPDF(ctx context.Context, submi
 				case "signature", "initials", "stamp", "image":
 					if v, ok := s.fields[f.ID]; ok && strings.TrimSpace(fmt.Sprint(v)) != "" {
 						sigVal = v
+						if id, _ := s.fields[f.ID+"_signature_id"].(string); id != "" {
+							sigID = strings.TrimSpace(id)
+						}
 					}
 				}
 				if sigVal != nil {
@@ -300,6 +304,9 @@ func (b *CompletedDocumentBuilder) EnsureCompletedPDF(ctx context.Context, submi
 				case "signature", "initials", "stamp", "image":
 					if v, ok := s.fields[f.ID]; ok && strings.TrimSpace(fmt.Sprint(v)) != "" {
 						sigVal = v
+						if id, _ := s.fields[f.ID+"_signature_id"].(string); id != "" {
+							sigID = strings.TrimSpace(id)
+						}
 					}
 				}
 				if sigVal != nil {
@@ -321,14 +328,15 @@ func (b *CompletedDocumentBuilder) EnsureCompletedPDF(ctx context.Context, submi
 		}
 
 		certSigners = append(certSigners, pdf.SignatureCertificateSigner{
-			Name:          s.name,
-			Email:         s.email,
-			IP:            s.ip,
-			SentAt:        s.sentAt, // Use actual sent_at, not fallback to created_at
-			OpenedAt:      s.openedAt,
-			CompletedAt:   s.completedAt, // Use actual completed_at, not fallback to updated_at
-			Location:      s.location,
+			Name:           s.name,
+			Email:          s.email,
+			IP:             s.ip,
+			SentAt:         s.sentAt,
+			OpenedAt:       s.openedAt,
+			CompletedAt:    s.completedAt,
+			Location:       s.location,
 			SignatureValue: sigVal,
+			SignatureID:    sigID,
 		})
 	}
 
@@ -397,6 +405,7 @@ func (b *CompletedDocumentBuilder) EnsureCertificatePDF(ctx context.Context, sub
 	completedAtMax := data.completedAtMax
 	for _, s := range data.submitters {
 		var sigVal any
+		var sigID string
 
 		if s.templateSubmitter != "" {
 			for i := range tpl.Fields {
@@ -408,6 +417,9 @@ func (b *CompletedDocumentBuilder) EnsureCertificatePDF(ctx context.Context, sub
 				case "signature", "initials", "stamp", "image":
 					if v, ok := s.fields[f.ID]; ok && strings.TrimSpace(fmt.Sprint(v)) != "" {
 						sigVal = v
+						if id, _ := s.fields[f.ID+"_signature_id"].(string); id != "" {
+							sigID = strings.TrimSpace(id)
+						}
 					}
 				}
 				if sigVal != nil {
@@ -422,6 +434,9 @@ func (b *CompletedDocumentBuilder) EnsureCertificatePDF(ctx context.Context, sub
 				case "signature", "initials", "stamp", "image":
 					if v, ok := s.fields[f.ID]; ok && strings.TrimSpace(fmt.Sprint(v)) != "" {
 						sigVal = v
+						if id, _ := s.fields[f.ID+"_signature_id"].(string); id != "" {
+							sigID = strings.TrimSpace(id)
+						}
 					}
 				}
 				if sigVal != nil {
@@ -442,14 +457,15 @@ func (b *CompletedDocumentBuilder) EnsureCertificatePDF(ctx context.Context, sub
 		}
 
 		certSigners = append(certSigners, pdf.SignatureCertificateSigner{
-			Name:          s.name,
-			Email:         s.email,
-			IP:            s.ip,
-			SentAt:        s.sentAt, // Use actual sent_at, not fallback to created_at
-			OpenedAt:      s.openedAt,
-			CompletedAt:   s.completedAt, // Use actual completed_at, not fallback to updated_at
-			Location:      s.location,
+			Name:           s.name,
+			Email:          s.email,
+			IP:             s.ip,
+			SentAt:         s.sentAt, // Use actual sent_at, not fallback to created_at
+			OpenedAt:       s.openedAt,
+			CompletedAt:    s.completedAt, // Use actual completed_at, not fallback to updated_at
+			Location:       s.location,
 			SignatureValue: sigVal,
+			SignatureID:    sigID,
 		})
 	}
 

@@ -115,6 +115,7 @@
       "addCondition": "Add Condition",
       "addGroup": "Add Group"
     },
+    "type_value": "Type value",
     "formula": {
       "title": "Formula",
       "placeholder": "Enter formula (e.g., field_1 + field_2)",
@@ -125,6 +126,7 @@
     }
   },
   "signing": {
+    "signing_date": "Signing Date",
     "title": "Complete Document",
     "subtitle": "Please fill in all required fields",
     "submit": "Submit",
@@ -159,7 +161,15 @@
     "updateFailed": "Failed to update information",
     "drawSignature": "Draw your signature",
     "drawInitials": "Draw your initials",
+    "signatureDraw": "Draw",
+    "signatureType": "Type",
+    "signatureUpload": "Upload",
+    "typeSignature": "Type your full name",
+    "typeInitials": "Type your initials",
+    "signatureId": "Signature ID",
+    "stampId": "Stamp ID",
     "selectAtLeastOne": "Please select at least one option",
+    "fillAllCells": "Fill all cells with exactly one character each",
     "submissionNotFound": "Submission not found",
     "submitFailed": "Failed to submit",
     "declineFailed": "Failed to decline",

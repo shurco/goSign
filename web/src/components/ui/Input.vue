@@ -32,11 +32,11 @@ const emit = defineEmits<Emits>();
 
 const inputClasses = computed(() => {
   const base =
-    "w-full rounded-lg border bg-[var(--color-base-100)] text-[var(--color-base-content)] transition-all duration-200 focus:outline-none focus:outline-offset-2";
+    "w-full rounded-md border border-gray-300 shadow-sm bg-[var(--color-base-100)] text-[var(--color-base-content)] transition-all duration-200 focus:outline-none focus:outline-offset-2 focus:ring-2 focus:ring-[var(--color-primary)]";
 
   const borderColor = props.error
-    ? "border-[var(--color-error)] focus:border-[var(--color-error)] focus:outline-[var(--color-error)]"
-    : "border-[var(--color-base-300)] hover:border-[var(--color-base-content)]/20 focus:border-[var(--color-primary)] focus:outline-[var(--color-primary)]";
+    ? "border-[var(--color-error)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]"
+    : "hover:border-[var(--color-base-content)]/20 focus:border-[var(--color-primary)]";
 
   const sizes = {
     sm: "h-8 px-3 text-xs min-h-[2rem]",

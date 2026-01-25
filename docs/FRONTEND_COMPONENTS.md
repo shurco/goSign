@@ -1,6 +1,6 @@
 # Frontend Component Architecture
 
-**Last Updated**: 2025-10-28 08:30 UTC
+**Last Updated**: 2026-01-25
 
 ## Overview
 
@@ -21,12 +21,13 @@ web/src/components/
 Located in `web/src/components/ui/`, these 21 components provide the foundation for all user interfaces.
 
 ### Form Components
-- **Input** - Text input with type support and error state
+- **Input** - Text input with type support, error state, and optional password visibility toggle
 - **Checkbox** - Selection with consistent styling
 - **Radio** - Radio button with unified design
 - **Select** - Dropdown with options
 - **Switch** - Toggle for binary states
 - **FileInput** - File upload with drag-and-drop
+- **FileDropZone** - Reusable file drop zone for uploads
 - **FormControl** - Form field wrapper with label and validation
 
 ### Action Components
@@ -60,29 +61,31 @@ Located in `web/src/components/common/`, these 3 components compose UI primitive
 
 ### FieldInput
 
-Universal component for all 14 field types used in document signing.
+Universal component for field types used in document signing. Fields support `readonly`, `validation` (pattern, min, max, message), and `preferences` (format, price, currency, date format, signature format, etc.).
 
 **Supported Types**:
 - `text` - Text field
-- `signature` - Canvas signature
+- `number` - Number field with optional format preferences
+- `signature` - Canvas signature (format, with_signature_id)
 - `initials` - Canvas initials
-- `date` - Date picker
+- `date` - Date picker with optional format pattern
 - `image` - Image upload
 - `file` - File upload
 - `checkbox` - Checkbox
 - `radio` - Radio buttons
 - `select` - Dropdown
 - `multiple` - Multi-select
-- `cells` - Code/number cells
+- `cells` - Code/number cells (cell_count persisted)
 - `stamp` - Stamp image
 - `payment` - Payment with amount
 - `phone` - Phone number
 
 **Key Features**:
 - Single component for all field types
-- Consistent validation and error handling
-- Built-in required/optional field support
+- Structured validation (FieldValidation) and preferences (FieldPreferences)
+- Built-in required/optional and readonly support
 - Automatic value type conversion
+- Formula fields with calculated values; date format by pattern
 
 **Usage**:
 ```vue

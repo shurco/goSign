@@ -157,22 +157,110 @@ type FieldConditionGroup struct {
 	Action     ConditionAction   `json:"action"`
 }
 
+// FieldPreferences holds field display/format preferences (DocuSeal-aligned).
+type FieldPreferences struct {
+	Format          string   `json:"format,omitempty"`            // date/number format
+	Align           string   `json:"align,omitempty"`             // left, center, right
+	Font            string   `json:"font,omitempty"`
+	FontType        string   `json:"font_type,omitempty"`         // bold, italic, bold_italic
+	FontSize        int      `json:"font_size,omitempty"`
+	Valign          string   `json:"valign,omitempty"`            // top, center, bottom
+	Color           string   `json:"color,omitempty"`
+	Price           float64  `json:"price,omitempty"`
+	Currency        string   `json:"currency,omitempty"`
+	Formula         string   `json:"formula,omitempty"`
+	WithLogo        bool     `json:"with_logo,omitempty"`
+	WithSignatureID bool     `json:"with_signature_id,omitempty"`
+	Reasons         []string `json:"reasons,omitempty"`
+	ReasonFieldUUID string   `json:"reason_field_uuid,omitempty"`
+	Method          string   `json:"method,omitempty"`
+}
+
+// FieldValidation holds structured validation rules.
+type FieldValidation struct {
+	Pattern string   `json:"pattern,omitempty"`
+	Message string   `json:"message,omitempty"`
+	Min     *float64 `json:"min,omitempty"`
+	Max     *float64 `json:"max,omitempty"`
+	Step    string   `json:"step,omitempty"`
+}
+
+// fieldPayload is used to decode Field with validation as string or object.
+type fieldPayload struct {
+	ID              string                `json:"id"`
+	SubmitterID     string                `json:"submitter_id"`
+	Name            string                `json:"name"`
+	Label           string                `json:"label,omitempty"`
+	Title           string                `json:"title,omitempty"`
+	Type            FieldType             `json:"type"`
+	Required        bool                  `json:"required"`
+	Readonly        bool                  `json:"readonly,omitempty"`
+	DefaultValue    string                `json:"default_value,omitempty"`
+	Options         FieldOptions          `json:"options,omitempty"`
+	Validation      json.RawMessage       `json:"validation,omitempty"`
+	Preferences     *FieldPreferences     `json:"preferences,omitempty"`
+	Translations    map[string]string     `json:"translations,omitempty"`
+	ConditionGroups []FieldConditionGroup `json:"condition_groups,omitempty"`
+	Formula         string                `json:"formula,omitempty"`
+	CalculationType string                `json:"calculation_type,omitempty"`
+	Areas           []*Areas              `json:"areas,omitempty"`
+}
+
 // Field is ...
 type Field struct {
-	ID              string               `json:"id"`
-	SubmitterID     string               `json:"submitter_id"`
-	Name            string               `json:"name"`
-	Label           string               `json:"label,omitempty"`        // base label for display
-	Type            FieldType            `json:"type"`
-	Required        bool                 `json:"required"`
-	DefaultValue    string               `json:"default_value,omitempty"`
-	Options         FieldOptions         `json:"options,omitempty"` // for select, radio, multiple
-	Validation      string               `json:"validation,omitempty"`
-	Translations    map[string]string    `json:"translations,omitempty"` // locale -> translated label
+	ID              string                `json:"id"`
+	SubmitterID     string                `json:"submitter_id"`
+	Name            string                `json:"name"`
+	Label           string                `json:"label,omitempty"`
+	Title           string                `json:"title,omitempty"`
+	Type            FieldType             `json:"type"`
+	Required        bool                  `json:"required"`
+	Readonly        bool                  `json:"readonly,omitempty"`
+	DefaultValue    string                `json:"default_value,omitempty"`
+	Options         FieldOptions          `json:"options,omitempty"`
+	Validation      *FieldValidation      `json:"validation,omitempty"`
+	Preferences     *FieldPreferences     `json:"preferences,omitempty"`
+	Translations    map[string]string     `json:"translations,omitempty"`
 	ConditionGroups []FieldConditionGroup `json:"condition_groups,omitempty"`
-	Formula         string               `json:"formula,omitempty"`         // e.g., "field_1 + field_2 * 0.2"
-	CalculationType string               `json:"calculation_type,omitempty"` // "number", "currency"
-	Areas           []*Areas             `json:"areas,omitempty"`
+	Formula         string                `json:"formula,omitempty"`
+	CalculationType string                `json:"calculation_type,omitempty"`
+	Areas           []*Areas              `json:"areas,omitempty"`
+}
+
+// UnmarshalJSON decodes Field, accepting validation as string (legacy) or object.
+func (f *Field) UnmarshalJSON(b []byte) error {
+	var p fieldPayload
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+	f.ID = p.ID
+	f.SubmitterID = p.SubmitterID
+	f.Name = p.Name
+	f.Label = p.Label
+	f.Title = p.Title
+	f.Type = p.Type
+	f.Required = p.Required
+	f.Readonly = p.Readonly
+	f.DefaultValue = p.DefaultValue
+	f.Options = p.Options
+	f.Preferences = p.Preferences
+	f.Translations = p.Translations
+	f.ConditionGroups = p.ConditionGroups
+	f.Formula = p.Formula
+	f.CalculationType = p.CalculationType
+	f.Areas = p.Areas
+	if len(p.Validation) == 0 {
+		return nil
+	}
+	if p.Validation[0] == '"' {
+		var s string
+		if err := json.Unmarshal(p.Validation, &s); err != nil {
+			return err
+		}
+		f.Validation = &FieldValidation{Pattern: s}
+		return nil
+	}
+	return json.Unmarshal(p.Validation, &f.Validation)
 }
 
 // FieldOption represents a selectable option for select/radio/multiple fields.
@@ -217,12 +305,15 @@ func (o *FieldOptions) UnmarshalJSON(b []byte) error {
 
 // Areas is ...
 type Areas struct {
-	AttachmentID string  `json:"attachment_id"`
-	Page         int     `json:"page"`
-	X            float64 `json:"x"`
-	Y            float64 `json:"y"`
-	W            float64 `json:"w"`
-	H            float64 `json:"h"`
+	AttachmentID string   `json:"attachment_id"`
+	Page         int      `json:"page"`
+	X            float64  `json:"x"`
+	Y            float64  `json:"y"`
+	W            float64  `json:"w"`
+	H            float64  `json:"h"`
+	CellW        *float64 `json:"cell_w,omitempty"`
+	CellCount    *int     `json:"cell_count,omitempty"`
+	OptionID     *string  `json:"option_id,omitempty"`
 }
 
 // UnmarshalJSON accepts both `h` (current) and legacy `z` (height).
@@ -236,6 +327,7 @@ func (a *Areas) UnmarshalJSON(b []byte) error {
 		H            *float64 `json:"h"`
 		Z            *float64 `json:"z"`
 		CellW        *float64 `json:"cell_w,omitempty"`
+		CellCount    *int     `json:"cell_count,omitempty"`
 		OptionID     *string  `json:"option_id,omitempty"`
 	}
 
@@ -253,6 +345,15 @@ func (a *Areas) UnmarshalJSON(b []byte) error {
 		a.H = *p.H
 	} else if p.Z != nil {
 		a.H = *p.Z
+	}
+	if p.CellW != nil {
+		a.CellW = p.CellW
+	}
+	if p.CellCount != nil {
+		a.CellCount = p.CellCount
+	}
+	if p.OptionID != nil {
+		a.OptionID = p.OptionID
 	}
 
 	return nil

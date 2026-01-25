@@ -16,7 +16,7 @@
   <!-- Regular text input -->
   <TextInput
     v-else-if="isTextType"
-    v-model="localValue"
+    :modelValue="stringValue"
     :type="type"
     :placeholder="placeholder"
     :required="required"
@@ -28,7 +28,7 @@
   />
   <DateInput
     v-else-if="type === 'date'"
-    v-model="localValue"
+    :modelValue="stringValue"
     :placeholder="placeholder"
     :required="required"
     :readonly="readonly"
@@ -39,7 +39,7 @@
   />
   <SelectInput
     v-else-if="isSelectType"
-    v-model="localValue"
+    :modelValue="selectModelValue"
     :type="type as any"
     :placeholder="placeholder"
     :required="required"
@@ -51,30 +51,31 @@
   />
   <FileInput
     v-else-if="type === 'file' || type === 'image'"
-      v-model="localValue"
+    :modelValue="stringValue"
     :type="type"
-      :placeholder="placeholder"
-      :required="required"
-      :readonly="readonly"
-      :disabled="disabled"
+    :placeholder="placeholder"
+    :required="required"
+    :readonly="readonly"
+    :disabled="disabled"
     :error="error"
     @update:modelValue="handleUpdate"
     @blur="$emit('blur')"
-    />
+  />
   <SignatureInput
-    v-else-if="isSignatureType"
-    v-model="localValue"
+    v-else-if="isSignatureType || type === 'stamp'"
+    :modelValue="stringValue"
     :mode="type === 'initials' ? 'initials' : 'signature'"
+    :format="signatureFormat"
     :placeholder="placeholder"
     :required="required"
-    :disabled="disabled"
+    :disabled="disabled || (type === 'stamp' && readonly)"
     :error="error"
     @update:modelValue="handleUpdate"
     @blur="$emit('blur')"
   />
   <CellsInput
     v-else-if="type === 'cells'"
-    v-model="localValue"
+    :modelValue="stringValue"
     :cell-count="cellCount"
     :placeholder="placeholder"
     :required="required"
@@ -84,6 +85,18 @@
     @update:modelValue="handleUpdate"
     @blur="$emit('blur')"
   />
+  <div
+    v-else-if="type === 'payment'"
+    class="field-input-wrapper"
+  >
+    <div class="text-lg font-semibold">
+      {{ formatPaymentPrice(price, currency) }}
+    </div>
+    <div class="text-sm text-gray-500 mt-1">
+      {{ placeholder || 'Payment required' }}
+    </div>
+    <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
+  </div>
   <div v-else class="field-input-wrapper">
     <div class="text-sm text-gray-500">Field type "{{ type }}" not yet implemented</div>
   </div>
@@ -118,6 +131,11 @@ interface Props {
   calculationType?: 'number' | 'currency';
   calculatedValue?: number;
   cellCount?: number;
+  price?: number;
+  currency?: string;
+  dateFormat?: string;
+  /** Signature field format: '', drawn, typed, drawn_or_typed, drawn_or_upload, upload */
+  signatureFormat?: string;
 }
 
 interface Emits {
@@ -134,11 +152,34 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   options: () => [],
   error: "",
-  cellCount: 6
+  cellCount: 6,
+  price: 0,
+  currency: "USD",
+  dateFormat: undefined,
+  signatureFormat: ""
 });
 
 const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
+
+const stringValue = computed(() =>
+  typeof localValue.value === "string" ? localValue.value : ""
+);
+
+const selectModelValue = computed(() => {
+  if (props.type === "checkbox") {
+    const v = localValue.value;
+    return v === true || v === "true";
+  }
+  if (props.type === "multiple" || props.type === "multi_select") {
+    return Array.isArray(localValue.value) ? localValue.value : [];
+  }
+  if (props.type === "radio") {
+    const v = localValue.value;
+    return v != null && v !== "" ? String(v) : "";
+  }
+  return stringValue.value;
+});
 
 const isTextType = computed(() => {
   return ["text", "number", "phone"].includes(props.type);
@@ -157,16 +198,23 @@ const isSignatureType = computed(() => {
 });
 
 function formatCalculated(value: number | undefined): string {
-  if (value === undefined || value === null) return ''
-  
+  if (value === undefined || value === null) return '';
+
   if (props.calculationType === 'currency') {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(value)
+    }).format(value);
   }
-  
-  return value.toFixed(2)
+
+  return value.toFixed(2);
+}
+
+function formatPaymentPrice(price: number | undefined, currency: string | undefined): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD'
+  }).format(price ?? 0);
 }
 
 watch(

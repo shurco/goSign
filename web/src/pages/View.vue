@@ -459,7 +459,7 @@ function onDropfield(area: any): void {
   }
 
   if (field.type === "stamp") {
-    field.readonly = true;
+    field.readonly = false;
   }
 
   if (field.type === "date") {

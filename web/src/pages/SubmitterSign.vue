@@ -153,7 +153,7 @@
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <!-- Document Preview -->
-        <div class="lg:col-span-2">
+        <div class="lg:col-span-2 relative">
           <div class="bg-white">
             <div class="px-6 py-5">
               <div class="overflow-hidden">
@@ -169,22 +169,86 @@
                         loading="lazy"
                         @load="onImageLoad"
                       />
-                      <!-- Field Overlays -->
+                      <!-- Field Overlays: label outside, bordered block unchanged -->
                       <div
                         v-for="field in getFieldsForPage(doc.id, pageNumberFromPreview(page, pageIndex))"
-                        :key="field.id"
-                        class="bg-primary/10 hover:bg-primary/20 border-primary absolute cursor-pointer rounded border-2 transition"
+                        :key="`${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
+                        :id="`doc-field-${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
+                        class="doc-field-overlay absolute cursor-pointer rounded transition"
+                        :data-field-id="field.id"
                         :style="getFieldStyle(field, doc.id, pageNumberFromPreview(page, pageIndex))"
                         @click="scrollToField(field.id)"
                       >
-                        <span class="bg-primary text-primary-content px-1 text-xs">
+                        <span
+                          class="absolute left-0 w-full truncate text-xs text-[--color-base-content]/80"
+                          style="bottom: 100%; margin-bottom: 2px"
+                        >
                           {{ getFieldLabel(field) }}
                         </span>
+                        <div
+                          class="bg-primary/10 hover:bg-primary/20 border-primary absolute inset-0 flex items-center justify-center overflow-hidden rounded border-2"
+                        >
+                          <template v-if="getFieldDisplayValue(field)">
+                            <img
+                              v-if="isFieldDisplayImage(field)"
+                              :src="getFieldDisplayValue(field)"
+                              class="max-h-full max-w-full object-contain"
+                              alt=""
+                            />
+                            <span v-else class="truncate px-1 text-xs">
+                              {{ getFieldDisplayValue(field) }}
+                            </span>
+                          </template>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Bottom bar: prev/next, status, reset & sign -->
+          <div
+            class="signing-bottom-bar sticky bottom-0 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-t-lg border border-b-0 border-[var(--color-base-300)] bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+          >
+            <div class="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                :disabled="prevUnfilledIndex < 0"
+                @click="goToPrevField"
+              >
+                {{ t('common.previous') }}
+              </Button>
+              <template v-if="isFormValid">
+                <Button type="button" variant="ghost" size="sm" :disabled="isSubmitting" @click="handleReset">
+                  {{ t('common.reset') }}
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  :loading="isSubmitting"
+                  :disabled="isSubmitting"
+                  @click="handleSubmit"
+                >
+                  {{ t('signing.sign') }}
+                </Button>
+              </template>
+              <span v-else class="shrink-0 text-sm font-medium text-[--color-base-content]/80">
+                {{ t('signing.fieldsProgress', { completed: completedFieldsCount, total: visibleFields.length }) }}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                :disabled="nextUnfilledIndex < 0"
+                @click="goToNextField"
+              >
+                {{ t('common.next') }}
+              </Button>
             </div>
           </div>
         </div>
@@ -195,56 +259,50 @@
             <div class="px-6 py-5">
               <div class="space-y-4">
                 <div v-for="field in visibleFields" :id="`field-${field.id}`" :key="field.id" class="form-control">
-                  <label class="label">
-                    <span class="label-text font-semibold">
+                  <!-- Header row: checkbox icon + label + (filled); click expands this block and scrolls to document -->
+                  <div
+                    class="label flex cursor-pointer items-center gap-2 py-2"
+                    :class="{ 'rounded ring-2 ring-primary': expandedFieldId === field.id }"
+                    @click="expandFieldAndScrollToDocument(field.id)"
+                  >
+                    <span class="shrink-0 select-none text-lg leading-none" aria-hidden="true">
+                      {{ isFieldFilled(field) ? '✅' : '⬜️' }}
+                    </span>
+                    <span class="label-text min-w-0 flex-1 font-semibold">
                       {{ getFieldLabel(field) }}
                       <span v-if="fieldStates[field.id]?.required || field.required" class="text-error">*</span>
                     </span>
-                  </label>
+                  </div>
 
-                  <FieldInput
-                    v-model="formData[field.id]"
-                    :type="field.type as any"
-                    :required="fieldStates[field.id]?.required || field.required"
-                    :disabled="fieldStates[field.id]?.disabled"
-                    :options="field.options"
-                    :placeholder="getFieldLabel(field)"
-                    :error="fieldErrors[field.id]"
-                    :formula="field.formula"
-                    :calculationType="field.calculationType as 'number' | 'currency' | undefined"
-                    :calculatedValue="calculatedValues[field.id]"
-                    :cell-count="getCellCount(field)"
-                    @blur="validateField(field)"
-                  />
+                  <!-- Field input: only when this block is expanded -->
+                  <template v-if="expandedFieldId === field.id">
+                    <FieldInput
+                      v-model="formData[field.id]"
+                      :type="field.type as any"
+                      :required="fieldStates[field.id]?.required || field.required"
+                      :readonly="field.readonly"
+                      :disabled="fieldStates[field.id]?.disabled"
+                      :options="field.options"
+                      :placeholder="getFieldLabel(field)"
+                      :error="fieldErrors[field.id]"
+                      :formula="field.formula"
+                      :calculationType="field.calculationType as 'number' | 'currency' | undefined"
+                      :calculatedValue="calculatedValues[field.id]"
+                      :cell-count="getCellCount(field)"
+                      :price="field.preferences?.price"
+                      :currency="field.preferences?.currency"
+                      :date-format="field.type === 'date' ? (field.preferences as { format?: string })?.format : undefined"
+                      :signature-format="getSignatureFormat(field)"
+                      @blur="validateField(field)"
+                    />
+                    <p
+                      v-if="hasWithSignatureId(field) && isFieldFilled(field) && signatureIds[field.id]"
+                      class="mt-2 text-xs text-[--color-base-content]/70"
+                    >
+                      {{ field.type === 'stamp' ? t('signing.stampId') : t('signing.signatureId') }}: <span class="font-mono font-medium">{{ signatureIds[field.id] }}</span>
+                    </p>
+                  </template>
                 </div>
-              </div>
-
-              <!-- Actions -->
-              <div class="card-actions mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <Button type="button" variant="ghost" :disabled="isSubmitting" @click="handleReset">
-                  {{ t('common.reset') }}
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  :loading="isSubmitting"
-                  :disabled="!isFormValid || isSubmitting"
-                  @click="handleSubmit"
-                >
-                  {{ t('signing.sign') }}
-                </Button>
-              </div>
-
-              <!-- Progress -->
-              <div class="mt-4">
-                <div class="text-center text-sm text-[--color-base-content]/60">
-                  {{ t('signing.fieldsProgress', { completed: completedFieldsCount, total: myFields.length }) }}
-                </div>
-                <progress
-                  class="progress progress-primary mt-2 w-full"
-                  :value="completedFieldsCount"
-                  :max="visibleFields.length"
-                ></progress>
               </div>
             </div>
           </div>
@@ -271,7 +329,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import FieldInput from "@/components/common/FieldInput.vue";
@@ -283,6 +341,32 @@ import { useFormulas } from "@/composables/useFormulas";
 import type { Field } from "@/models/template";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
 import { fieldNames, subNames } from "@/components/field/constants";
+import { formatDateByPattern } from "@/utils/time";
+
+const SIGNING_DRAFT_STORAGE_KEY_PREFIX = "signing-draft-";
+
+function getDraftStorageKey(s: string): string {
+  return SIGNING_DRAFT_STORAGE_KEY_PREFIX + s;
+}
+
+function loadDraftFromStorage(s: string): Record<string, unknown> | null {
+  try {
+    const raw = localStorage.getItem(getDraftStorageKey(s));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraftStorage(s: string): void {
+  try {
+    localStorage.removeItem(getDraftStorageKey(s));
+  } catch {
+    // ignore
+  }
+}
 
 // Field type is imported from @/models/template
 
@@ -343,6 +427,13 @@ const submissionStatus = ref<string>("");
 const completedDocumentUrl = ref<string>("");
 const formData = ref<Record<string, any>>({});
 const fieldErrors = ref<Record<string, string>>({});
+const currentFieldIndex = ref(0);
+/** Single expanded form block (only this field shows input). Null = all collapsed. */
+const expandedFieldId = ref<string | null>(null);
+/** Signature IDs for fields with "with_signature_id" (generated when value is set). */
+const signatureIds = ref<Record<string, string>>({});
+/** Timeout for auto-removing field highlight so only one block is highlighted at a time. */
+let highlightTimeout: ReturnType<typeof setTimeout> | null = null;
 const isUpdatingSubmitter = ref(false);
 const submitterInfo = ref({ name: "", email: "" });
 const submitterInfoErrors = ref<Record<string, string>>({});
@@ -384,9 +475,12 @@ const completedFieldsCount = computed(() => {
     
     // Special handling for image/file types
     if (field.type === "image" || field.type === "file") {
-      // For image, value is base64 string (starts with "data:")
-      // For file, value is filename string
+      // For image, value is base64 string (starts with "data:"); for file, filename string
       return typeof value === "string" && value.trim() !== "";
+    }
+    // Signature, initials, stamp: value must be a non-empty data URL image
+    if (field.type === "signature" || field.type === "initials" || field.type === "stamp") {
+      return typeof value === "string" && value.trim() !== "" && value.startsWith("data:");
     }
     
     // Special handling for cells type - check if all cells are filled
@@ -516,6 +610,47 @@ onUnmounted(() => {
   }
 });
 
+// Persist form draft to localStorage (debounced) so reload restores filled fields
+let draftSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(
+  () => formData.value,
+  () => {
+    if (!slug.value || !submitter.value) return;
+    const status = submitter.value.status;
+    if (status === "completed" || status === "declined") return;
+    if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+    draftSaveTimeout = setTimeout(() => {
+      draftSaveTimeout = null;
+      const fieldIds = new Set(myFields.value.map((f) => f.id));
+      const draft: Record<string, unknown> = {};
+      fieldIds.forEach((id) => {
+        if (formData.value[id] !== undefined) draft[id] = formData.value[id];
+      });
+      try {
+        localStorage.setItem(getDraftStorageKey(slug.value), JSON.stringify(draft));
+      } catch {
+        /* ignore */
+      }
+    }, 500);
+  },
+  { deep: true }
+);
+
+// Generate signature ID when user fills a signature/initials field with "with_signature_id"
+watch(
+  () => formData.value,
+  () => {
+    myFields.value.forEach((field) => {
+      if (!hasWithSignatureId(field)) return;
+      const v = formData.value[field.id];
+      if (v != null && String(v).trim() !== "" && !signatureIds.value[field.id]) {
+        signatureIds.value[field.id] = generateSignatureId(field);
+      }
+    });
+  },
+  { deep: true }
+);
+
 function initializeFormData(): void {
   // Reset field values for the current submitter fields.
   // This also clears signature/initials because SignatureInput watches v-model.
@@ -570,6 +705,28 @@ function getFieldLabel(field: Field): string {
   return field.id;
 }
 
+/** Value to show on document overlay when field is filled (or empty string). */
+function getFieldDisplayValue(field: Field): string {
+  const value = formData.value[field.id];
+  if (value == null || value === "") return "";
+  if (field.type === "signature" || field.type === "initials" || field.type === "stamp" || field.type === "image") {
+    return typeof value === "string" && value.startsWith("data:") ? value : "";
+  }
+  if (field.type === "checkbox") return value ? "✓" : "";
+  if (field.type === "file") return typeof value === "string" ? value : "";
+  if (field.type === "date") {
+    const format = (field as { preferences?: { format?: string } }).preferences?.format || "DD/MM/YYYY";
+    return formatDateByPattern(String(value), format);
+  }
+  if (Array.isArray(value)) return value.join(", ");
+  return String(value).slice(0, 200);
+}
+
+function isFieldDisplayImage(field: Field): boolean {
+  const value = formData.value[field.id];
+  return typeof value === "string" && value.startsWith("data:") && /^data:image\//i.test(value);
+}
+
 function generateDefaultFieldName(field: Field): string {
   if (!template.value || !submitter.value) {
     return "";
@@ -592,29 +749,85 @@ function generateDefaultFieldName(field: Field): string {
   return `${partyName} ${typeName} ${fieldNumber}`;
 }
 
+function isFieldFilled(field: Field): boolean {
+  const value = formData.value[field.id];
+  const required = fieldStates.value[field.id]?.required ?? field.required;
+  if (!required) {
+    return true;
+  }
+  if (field.type === "image" || field.type === "file") {
+    return typeof value === "string" && value.trim() !== "";
+  }
+  if (field.type === "signature" || field.type === "initials" || field.type === "stamp") {
+    return typeof value === "string" && value.trim() !== "" && value.startsWith("data:");
+  }
+  if (field.type === "cells") {
+    const cellCount = getCellCount(field);
+    return typeof value === "string" && value.length === cellCount;
+  }
+  if (typeof value === "string") {
+    return value.trim() !== "";
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (typeof value === "boolean") {
+    return value === true;
+  }
+  return value !== undefined && value !== null;
+}
+
+/** Signature/initials/stamp format from field preferences for signing UI (drawn, typed, upload, etc.). Stamp: upload only. */
+function getSignatureFormat(field: Field): string {
+  if (field.type === "stamp") return "upload";
+  if (field.type !== "signature" && field.type !== "initials") return "";
+  const prefs = field.preferences as { format?: string } | undefined;
+  const format = prefs?.format;
+  return typeof format === "string" ? format : "";
+}
+
+function hasWithSignatureId(field: Field): boolean {
+  if (field.type !== "signature" && field.type !== "initials" && field.type !== "stamp") return false;
+  const prefs = field.preferences as { with_signature_id?: boolean } | undefined;
+  return !!prefs?.with_signature_id;
+}
+
+function generateSignatureId(field: Field): string {
+  const prefix = field.type === "stamp" ? "STMP-" : "SIG-";
+  const hex = "0123456789ABCDEF";
+  let s = prefix;
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  for (let i = 0; i < 4; i++) {
+    s += hex[bytes[i]! >> 4] + hex[bytes[i]! & 15];
+  }
+  return s;
+}
+
 function getCellCount(field: Field): number {
   if (field.type !== "cells" || !field.areas || field.areas.length === 0) {
-    return 6; // Default cell count
+    return 6;
   }
 
   const area = field.areas[0] as any;
-  const cellWidth = area.cell_w;
-  const areaWidth = area.w;
-
-  if (!cellWidth || !areaWidth) {
-    return 6; // Default cell count
+  // Use persisted cell_count so editor and signing show the same number of cells
+  if (area.cell_count != null && area.cell_count > 0) {
+    return area.cell_count;
   }
 
-  // Calculate number of cells based on cell_w and area width
-  // Formula: while (currentWidth + (cellWidth + cellWidth / 4) < areaWidth)
+  const cellWidth = area.cell_w;
+  const areaWidth = area.w;
+  if (!cellWidth || !areaWidth) {
+    return 6;
+  }
+
   let currentWidth = 0;
   let count = 0;
   while (currentWidth + (cellWidth + cellWidth / 4) < areaWidth) {
     currentWidth += cellWidth;
     count++;
   }
-
-  return Math.max(count, 1); // At least 1 cell
+  return Math.max(count, 1);
 }
 
 function normalizeTemplateForSigning(tpl: Template | null): void {
@@ -677,6 +890,22 @@ async function loadSubmission(): Promise<void> {
     // Initialize form data
     initializeFormData();
 
+    // Restore saved draft from localStorage (only when not completed/declined)
+    const status = submitter.value?.status;
+    if (status !== "completed" && status !== "declined") {
+      const draft = loadDraftFromStorage(slug.value);
+      if (draft) {
+        const allowedIds = new Set(myFields.value.map((f) => f.id));
+        Object.keys(draft).forEach((id) => {
+          if (allowedIds.has(id) && draft[id] !== undefined) {
+            formData.value[id] = draft[id];
+          }
+        });
+      }
+    } else {
+      clearDraftStorage(slug.value);
+    }
+
     // Pre-fill submitter info if available
     if (submitter.value) {
       submitterInfo.value.name = submitter.value.name || "";
@@ -723,15 +952,105 @@ function onImageLoad(e: Event): void {
   target.setAttribute("height", target.naturalHeight.toString());
 }
 
-function scrollToField(fieldId: string): void {
-  const element = document.getElementById(`field-${fieldId}`);
+function clearAllFieldHighlights(): void {
+  if (highlightTimeout != null) {
+    clearTimeout(highlightTimeout);
+    highlightTimeout = null;
+  }
+  document.querySelectorAll(".doc-field-overlay").forEach((el) => {
+    el.classList.remove("ring-2", "ring-primary");
+  });
+  visibleFields.value.forEach((f) => {
+    const el = document.getElementById(`field-${f.id}`);
+    if (el) el.classList.remove("ring-2", "ring-primary", "rounded");
+  });
+}
+
+function scrollToField(fieldId: string, documentOnly = false): void {
+  expandedFieldId.value = fieldId;
+  const idx = visibleFields.value.findIndex((f) => f.id === fieldId);
+  if (idx >= 0) {
+    currentFieldIndex.value = idx;
+  }
+  clearAllFieldHighlights();
+  const docEl = document.querySelector(`[data-field-id="${fieldId}"].doc-field-overlay`);
+  const formEl = document.getElementById(`field-${fieldId}`);
+
+  if (documentOnly) {
+    if (docEl) {
+      docEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      docEl.classList.add("ring-2", "ring-primary", "rounded");
+    }
+    if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (formEl) formEl.classList.add("ring-2", "ring-primary", "rounded");
+  } else {
+    if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (docEl) docEl.classList.add("ring-2", "ring-primary", "rounded");
+    if (formEl) formEl.classList.add("ring-2", "ring-primary", "rounded");
+  }
+  highlightTimeout = setTimeout(clearAllFieldHighlights, 2000);
+}
+
+/** Expand this form block (collapse others) and scroll document to the field. */
+function expandFieldAndScrollToDocument(fieldId: string): void {
+  expandedFieldId.value = fieldId;
+  scrollToFieldOnDocument(fieldId);
+}
+
+function getPrevUnfilledIndex(): number {
+  const fields = visibleFields.value;
+  for (let i = currentFieldIndex.value - 1; i >= 0; i--) {
+    if (!isFieldFilled(fields[i])) return i;
+  }
+  return -1;
+}
+
+function getNextUnfilledIndex(): number {
+  const fields = visibleFields.value;
+  for (let i = currentFieldIndex.value + 1; i < fields.length; i++) {
+    if (!isFieldFilled(fields[i])) return i;
+  }
+  return -1;
+}
+
+const prevUnfilledIndex = computed(() => {
+  void formData.value;
+  void fieldStates.value;
+  return getPrevUnfilledIndex();
+});
+const nextUnfilledIndex = computed(() => {
+  void formData.value;
+  void fieldStates.value;
+  return getNextUnfilledIndex();
+});
+
+function goToPrevField(): void {
+  const idx = getPrevUnfilledIndex();
+  if (idx < 0) return;
+  currentFieldIndex.value = idx;
+  const field = visibleFields.value[idx];
+  if (field) scrollToField(field.id, true);
+}
+
+function goToNextField(): void {
+  const idx = getNextUnfilledIndex();
+  if (idx < 0) return;
+  currentFieldIndex.value = idx;
+  const field = visibleFields.value[idx];
+  if (field) scrollToField(field.id, true);
+}
+
+function scrollToFieldOnDocument(fieldId: string): void {
+  expandedFieldId.value = fieldId;
+  clearAllFieldHighlights();
+  const element = document.querySelector(`[data-field-id="${fieldId}"].doc-field-overlay`);
   if (element) {
     element.scrollIntoView({ behavior: "smooth", block: "center" });
     element.classList.add("ring-2", "ring-primary", "rounded");
-    setTimeout(() => {
-      element.classList.remove("ring-2", "ring-primary");
-    }, 2000);
+    highlightTimeout = setTimeout(clearAllFieldHighlights, 2000);
   }
+  const formEl = document.getElementById(`field-${fieldId}`);
+  if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function validateField(field: Field): void {
@@ -743,9 +1062,22 @@ function validateField(field: Field): void {
       fieldErrors.value[field.id] = t("signing.required");
       return;
     }
+    if (field.type === "signature" || field.type === "initials" || field.type === "stamp") {
+      if (typeof value !== "string" || !value.startsWith("data:")) {
+        fieldErrors.value[field.id] = t("signing.required");
+        return;
+      }
+    }
     if (Array.isArray(value) && value.length === 0) {
       fieldErrors.value[field.id] = t("signing.selectAtLeastOne");
       return;
+    }
+    if (field.type === "cells") {
+      const cellCount = getCellCount(field);
+      if (typeof value !== "string" || value.length !== cellCount) {
+        fieldErrors.value[field.id] = t("signing.fillAllCells");
+        return;
+      }
     }
   }
 
@@ -767,13 +1099,25 @@ async function handleSubmit(): Promise<void> {
   isSubmitting.value = true;
 
   try {
+    const payload: Record<string, unknown> = { ...formData.value };
+    myFields.value.forEach((field) => {
+      if (hasWithSignatureId(field)) {
+        const v = formData.value[field.id];
+        if (v != null && String(v).trim() !== "") {
+          if (!signatureIds.value[field.id]) {
+            signatureIds.value[field.id] = generateSignatureId(field);
+          }
+          payload[`${field.id}_signature_id`] = signatureIds.value[field.id];
+        }
+      }
+    });
     const response = await fetch(`/public/sign/${slug.value}/complete`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        fields: formData.value
+        fields: payload
       })
     });
 
@@ -781,6 +1125,7 @@ async function handleSubmit(): Promise<void> {
       throw new Error(t("signing.submitFailed"));
     }
 
+    clearDraftStorage(slug.value);
     // Reload to show completed state
     await loadSubmission();
   } catch (err) {
@@ -811,6 +1156,7 @@ async function handleDecline(): Promise<void> {
       throw new Error(t("signing.declineFailed"));
     }
 
+    clearDraftStorage(slug.value);
     // Reload to show declined state
     await loadSubmission();
   } catch (err) {

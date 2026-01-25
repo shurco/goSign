@@ -4,6 +4,7 @@ interface DefInterface {
 
 export const fieldNames: DefInterface = {
   text: "Text",
+  number: "Number",
   signature: "Signature",
   initials: "Initials",
   date: "Date",
@@ -21,6 +22,7 @@ export const fieldNames: DefInterface = {
 
 export const fieldIcons: DefInterface = {
   text: "text-size",
+  number: "number",
   signature: "writing-sign",
   initials: "letter-case-upper",
   date: "calendar-event",

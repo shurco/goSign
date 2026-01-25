@@ -1,6 +1,8 @@
 <template>
   <div
+    ref="rootRef"
     class="group absolute overflow-visible"
+    :class="{ 'z-[1]': isDragged }"
     :style="positionStyle"
     @pointerdown.stop="handleDragStart"
     @dblclick.stop="handleDoubleClick"
@@ -48,7 +50,7 @@
         :menu-classes="'dropdown-content bg-white menu menu-xs p-2 shadow rounded-box w-52 rounded-t-none -left-[1px]'"
         :submitters="template.submitters"
         @update:model-value="[save(), emit('select-submitter', $event)]"
-        @click="selectedAreaRef = area"
+        @click="focusArea(area)"
       />
       <FieldType
         v-model="field.type"
@@ -57,7 +59,7 @@
         :button-classes="'px-1'"
         :menu-classes="'bg-white rounded-t-none'"
         @update:model-value="[maybeUpdateOptions(), save()]"
-        @click="selectedAreaRef = area"
+        @click="focusArea(area)"
       />
       <span
         v-if="field.type !== 'checkbox' || field.name"
@@ -69,8 +71,9 @@
         @keydown.enter.prevent="onNameEnter"
         @focus="onNameFocus"
         @blur="onNameBlur"
-        >{{ optionIndexText }} {{ field.name || defaultName }}</span
       >
+        {{ optionIndexText }} {{ field.name || defaultName }}
+      </span>
       <div
         v-if="isNameFocus && !['checkbox', 'phone'].includes(field.type)"
         class="ml-1.5 flex items-center gap-1.5 pr-2"
@@ -92,39 +95,104 @@
       class="flex h-full w-full items-center"
       :class="[
         bgColors[submitterIndex],
-        field?.default_value ? '' : 'justify-center',
-        !field?.required ? 'opacity-50' : ''
+        isValueInput || isCheckboxInput || isSelectInput ? 'bg-opacity-50' : 'bg-opacity-80',
+        !isDefaultValuePresent && !isValueInput && !isSelectInput ? 'justify-center' : ''
       ]"
     >
-      <span v-if="field" class="flex h-full items-center justify-center space-x-1">
+      <span v-if="field" class="flex h-full items-center justify-center space-x-1" :class="{ 'w-full': isWFullType }">
         <div
-          v-if="field?.default_value"
-          :class="{ 'text-[1.5vw] lg:text-base': !textOverflowChars, 'text-[1.0vw] lg:text-xs': textOverflowChars }"
+          v-if="isDefaultValuePresent || isValueInput || isSelectInput || (field.areas?.length && field.type !== 'checkbox')"
+          ref="textContainer"
+          class="flex items-center px-0.5 flex-1 min-w-0 h-full"
+          :class="{ 'w-full h-full': isWFullType }"
+          :style="fontStyle"
         >
-          <div ref="textContainer" class="flex items-center px-0.5">
-            <span class="whitespace-pre-wrap">{{ field.default_value }}</span>
+          <div
+            class="flex items-center flex-1 min-w-0"
+            :class="{ 'w-full h-full': isWFullType }"
+            :style="{ color: field.preferences?.color }"
+          >
+            <SvgIcon
+              v-if="field.type === 'checkbox' && field.default_value"
+              name="check-circle"
+              class="aspect-square mx-auto flex-shrink-0"
+              :class="areaWiderThanHigh ? '!w-auto !h-full' : '!w-full !h-auto'"
+            />
+            <template v-else-if="(field.type === 'radio' || field.type === 'multiple') && hasMultipleAreas">
+              <SvgIcon
+                v-if="field.type === 'multiple' ? (Array.isArray(field.default_value) && field.default_value.includes(buildAreaOptionValue(area))) : (buildAreaOptionValue(area) === field.default_value)"
+                name="check-circle"
+                class="aspect-square mx-auto flex-shrink-0"
+                :class="areaWiderThanHigh ? '!w-auto !h-full' : '!w-full !h-auto'"
+              />
+            </template>
+            <span
+              v-else-if="field.type === 'number' && (field.default_value != null && String(field.default_value) !== '')"
+              class="whitespace-pre-wrap"
+            >{{ formatNumber(field.default_value, field.preferences?.format) }}</span>
+            <span v-else-if="isDatePlaceholder">{{ t('signing.signing_date') }}</span>
+            <div
+              v-else-if="field.type === 'cells' && field.default_value"
+              class="w-full flex items-center"
+            >
+              <div
+                v-for="(char, index) in String(field.default_value)"
+                :key="index"
+                class="text-center flex-none"
+                :style="{ width: (area.w && effectiveCellW ? (effectiveCellW / area.w * 100) : 0) + '%' }"
+              >
+                {{ char }}
+              </div>
+            </div>
+            <span
+              v-else-if="isSelectInput && field.default_value"
+              class="whitespace-pre-wrap"
+            >{{ field.default_value }}</span>
+            <span
+              v-else-if="isValueInput"
+              ref="defaultValue"
+              :contenteditable="editable && !defaultField"
+              dir="auto"
+              class="whitespace-pre-wrap outline-none flex-1 min-w-0 empty:before:content-[attr(data-placeholder)] before:text-base-content/30"
+              :class="{ 'cursor-text': editable }"
+              :data-placeholder="field.type === 'date' ? (field.preferences?.format || t('fields.type_value')) : t('fields.type_value')"
+              @blur="onDefaultValueBlur"
+              @focus="focusArea(area)"
+              @paste.prevent="onDefaultValuePaste"
+              @keydown.enter.prevent="onDefaultValueEnter"
+            >{{ field.type === 'date' && field.default_value ? formatDateByPattern(String(field.default_value), field.preferences?.format || 'DD/MM/YYYY') : field.default_value }}</span>
           </div>
         </div>
-        <SvgIcon v-else :name="fieldIcons[field.type]" width="100%" height="100%" class="max-h-10 opacity-50" />
+        <SvgIcon
+          v-else
+          :name="fieldIcons[field.type]"
+          width="100%"
+          height="100%"
+          class="max-h-10 opacity-50 flex-shrink-0"
+        />
       </span>
     </div>
 
-    <div ref="touchTarget" class="absolute top-0 right-0 bottom-0 left-0 cursor-pointer" />
+    <div ref="touchTarget" class="absolute top-0 right-0 bottom-0 left-0 cursor-pointer"></div>
     <span
       v-if="field?.type && editable"
       class="absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border border-gray-400 bg-white shadow-md md:h-2.5 md:w-2.5"
       @pointerdown.stop="handleResizeStart"
-    />
+    ></span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, inject, nextTick, type Ref, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import FieldSubmitter from "@/components/field/Submitter.vue";
 import FieldType from "@/components/field/Type.vue";
 import { bgColors, borderColors, fieldIcons, fieldNames, subNames } from "@/components/field/constants.ts";
 import type { Template } from "@/models/index";
 import type { Area, Field } from "@/models/template";
+import { formatDateByPattern } from "@/utils/time";
+
+const { t } = useI18n();
 
 interface Props {
   area: Area;
@@ -159,11 +227,91 @@ if (!template || !selectedAreaRef || !save) {
   throw new Error("Required injectables are missing in Area component");
 }
 
+const rootRef = ref<HTMLElement | null>(null);
 const name = ref<HTMLElement | null>(null);
 const textContainer = ref<HTMLElement | null>(null);
+const defaultValue = ref<HTMLElement | null>(null);
 const touchTarget = ref<HTMLElement | null>(null);
 
 const isDragged = ref(false);
+
+const isValueInput = computed(() =>
+  props.field ? ["text", "number", "date", "cells"].includes(props.field.type) : false
+);
+const isCheckboxInput = computed(() => props.field?.type === "checkbox");
+const isSelectInput = computed(() =>
+  props.field ? ["select", "radio", "multiple"].includes(props.field.type) : false
+);
+const isDefaultValuePresent = computed(() => {
+  if (!props.field) return false;
+  const v = props.field.default_value;
+  if (props.field.type === "checkbox") return !!v;
+  if (props.field.type === "multiple") return Array.isArray(v) ? v.length > 0 : !!v;
+  if (props.field.type === "radio" || props.field.type === "select") return v != null && v !== "";
+  if (props.field.type === "number") return v != null && v !== "" && !Number.isNaN(Number(v));
+  return v != null && v !== "";
+});
+const isWFullType = computed(() =>
+  props.field ? ["text", "number", "date", "cells", "select"].includes(props.field.type) : false
+);
+
+const areaWiderThanHigh = computed(() => props.area.w > props.area.h);
+
+const hasMultipleAreas = computed(
+  () => (props.field?.areas?.length ?? 0) > 1
+);
+
+const isDatePlaceholder = computed(
+  () => props.field?.default_value === "\u007b\u007bdate\u007d\u007d"
+);
+
+function buildAreaOptionValue(area: Area): string {
+  if (!area.option_id || !props.field?.options) return "";
+  const option = props.field.options.find((o: { id?: string; value?: string }) => o.id === area.option_id);
+  return (option && "value" in option ? option.value : "") ?? "";
+}
+
+function formatNumber(value: number | string, format?: string): string {
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (Number.isNaN(num)) return String(value);
+  if (!format || format === "none") return String(num);
+  if (format === "comma") return new Intl.NumberFormat("en-US").format(num);
+  if (format === "dot") return new Intl.NumberFormat("de-DE").format(num);
+  if (format === "space") return new Intl.NumberFormat("fr-FR").format(num);
+  if (format === "usd")
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num);
+  if (format === "eur")
+    return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(num);
+  if (format === "gbp")
+    return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(num);
+  return String(num);
+}
+
+const fontStyle = computed(() => {
+  const field = props.field;
+  if (!field?.preferences) return {};
+  const style: Record<string, string> = {};
+  if (field.preferences.font) style.fontFamily = field.preferences.font;
+  if (field.preferences.font_size) style.fontSize = String(field.preferences.font_size) + "px";
+  if (field.preferences.font_type) {
+    if (field.preferences.font_type === "bold") style.fontWeight = "bold";
+    else if (field.preferences.font_type === "italic") style.fontStyle = "italic";
+    else if (field.preferences.font_type === "bold_italic") {
+      style.fontWeight = "bold";
+      style.fontStyle = "italic";
+    }
+  }
+  if (field.preferences.align) style.textAlign = field.preferences.align;
+  if (field.preferences.valign) {
+    style.alignItems =
+      field.preferences.valign === "top"
+        ? "flex-start"
+        : field.preferences.valign === "bottom"
+          ? "flex-end"
+          : "center";
+  }
+  return style;
+});
 const isNameFocus = ref(false);
 const textOverflowChars = ref(0);
 const dragFrom = ref({ x: 0, y: 0 });
@@ -198,16 +346,41 @@ const defaultName = computed(() => {
 });
 
 const optionIndexText = computed(() => {
-  if (props.area.option_id && props.field?.options) {
-    return `${props.field.options.findIndex((o) => o.id === props.area.option_id) + 1}.`;
-  }
-  return "";
+  const opts = props.field?.options as Array<{ id?: string }> | undefined;
+  if (!props.area.option_id || !opts?.length) return "";
+  const idx = opts.findIndex((o) => o && typeof o === "object" && "id" in o && o.id === props.area.option_id);
+  return idx >= 0 ? `${idx + 1}.` : "";
 });
+
+function getEffectiveCellW(area: Area): number {
+  if (area.cell_w != null && area.cell_w > 0) return area.cell_w;
+  if (area.w <= 0) return 0;
+  if (area.h > 0) {
+    const denom = Math.floor(area.w / area.h);
+    return denom > 0 ? (area.w * 2) / denom : area.w / 5;
+  }
+  return area.w / 5;
+}
+
+/** Returns number of cells for a cells-type area (same formula as cells computed). */
+function getCellCountFromArea(area: Area): number {
+  const cellWidth = getEffectiveCellW(area);
+  if (!cellWidth || cellWidth <= 0 || area.w <= 0) return 0;
+  let currentWidth = 0;
+  let count = 0;
+  while (currentWidth + (cellWidth + cellWidth / 4) < area.w) {
+    currentWidth += cellWidth;
+    count++;
+  }
+  return Math.max(count, 1);
+}
+
+const effectiveCellW = computed(() => getEffectiveCellW(props.area));
 
 const cells = computed(() => {
   const cellsList: number[] = [];
-  const cellWidth = props.area.cell_w;
-  if (!cellWidth) {
+  const cellWidth = getEffectiveCellW(props.area);
+  if (!cellWidth || cellWidth <= 0) {
     return cellsList;
   }
 
@@ -231,7 +404,7 @@ const submitterIndex = computed(() => {
 });
 
 const isSelected = computed(() => {
-  return selectedAreaRef.value === props.area;
+  return selectedAreaRef?.value === props.area;
 });
 
 const positionStyle = computed(() => {
@@ -287,7 +460,7 @@ function isDefaultName(name: string): boolean {
 }
 
 function onNameFocus(): void {
-  selectedAreaRef.value = props.area;
+  if (selectedAreaRef) selectedAreaRef.value = props.area;
   isNameFocus.value = true;
   if (name.value) {
     name.value.style.minWidth = name.value.clientWidth + "px";
@@ -314,7 +487,7 @@ function onNameBlur(): void {
     if (!text && name.value) {
       name.value.innerText = defaultName.value;
     }
-    save();
+    save?.();
   }
 }
 
@@ -322,26 +495,61 @@ function onNameEnter(): void {
   name.value?.blur();
 }
 
+function onDefaultValueBlur(): void {
+  const el = defaultValue.value;
+  if (!el || !props.field) return;
+  const text = el.innerText.trim();
+  if (props.field.default_value !== text) {
+    (props.field as { default_value?: string }).default_value = text;
+    save?.();
+  }
+}
+
+function onDefaultValuePaste(e: ClipboardEvent): void {
+  e.preventDefault();
+  const text = e.clipboardData?.getData("text") ?? "";
+  document.execCommand("insertText", false, text);
+}
+
+function onDefaultValueEnter(): void {
+  defaultValue.value?.blur();
+}
+
+function focusArea(a: Area): void {
+  if (selectedAreaRef) selectedAreaRef.value = a;
+}
+
 function maybeUpdateOptions(): void {
   if (!props.field) {
     return;
   }
 
-  delete props.field.default_value;
+  if (props.field.type !== "cells") {
+    delete props.field.default_value;
+  }
 
   if (!["radio", "multiple", "select"].includes(props.field.type)) {
     delete props.field.options;
   }
 
   if (["select", "multiple", "radio"].includes(props.field.type)) {
-    props.field.options ||= [{ value: "", id: crypto.randomUUID() }];
+    type OptionItem = { id: string; value: string };
+    const opts = (props.field as { options?: OptionItem[] }).options;
+    (props.field as { options: OptionItem[] }).options = opts?.length ? opts : [{ value: "", id: crypto.randomUUID() }];
   }
 
   (props.field.areas || []).forEach((area: Area) => {
     if (props.field?.type === "cells") {
-      area.cell_w = (area.w * 2) / Math.floor(area.w / area.h);
+      const denom = area.h > 0 ? Math.floor(area.w / area.h) : 0;
+      if (denom > 0) {
+        area.cell_w = (area.w * 2) / denom;
+      } else if (area.w > 0 && (!area.cell_w || area.cell_w <= 0)) {
+        area.cell_w = area.w / 5;
+      }
+      area.cell_count = getCellCountFromArea(area);
     } else {
       delete area.cell_w;
+      delete area.cell_count;
     }
   });
 }
@@ -355,7 +563,7 @@ function handleDoubleClick(): void {
 
 // Unified pointer event handlers
 function handleDragStart(e: PointerEvent): void {
-  selectedAreaRef.value = props.area;
+  if (selectedAreaRef) selectedAreaRef.value = props.area;
 
   if (!props.editable) {
     return;
@@ -379,7 +587,8 @@ function handleDragStart(e: PointerEvent): void {
     e.preventDefault();
   }
 
-  const rect = (e.target as HTMLElement).getBoundingClientRect();
+  const el = rootRef.value || (e.target as HTMLElement);
+  const rect = el.getBoundingClientRect();
   dragFrom.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
   pointerMode.value = "drag";
 
@@ -389,7 +598,7 @@ function handleDragStart(e: PointerEvent): void {
 }
 
 function handleResizeStart(e: PointerEvent): void {
-  selectedAreaRef.value = props.area;
+  if (selectedAreaRef) selectedAreaRef.value = props.area;
   if (e.pointerType === "touch") {
     name.value?.blur();
     e.preventDefault();
@@ -424,30 +633,33 @@ function handlePointerUp(): void {
 
   if (pointerMode.value === "drag") {
     if (isDragged.value) {
-      save();
+      save?.();
     }
     isDragged.value = false;
     emit("stop-drag");
   } else if (pointerMode.value === "resize" || pointerMode.value === "resize-cell") {
     emit("stop-resize");
-    save();
+    save?.();
   }
 
   pointerMode.value = null;
 }
 
 function getMaskForArea(): HTMLElement | null {
-  // Find the page container that contains this area
-  // Start from touchTarget and traverse up to find the page container
   let current: HTMLElement | null = touchTarget.value;
   if (!current) return null;
 
-  // Traverse up to find the page container (div.relative.cursor-crosshair)
   while (current && current.parentElement) {
     current = current.parentElement;
-    if (current.classList.contains('relative') && current.classList.contains('cursor-crosshair')) {
-      // Found the page container, now find the mask within it
-      return current.querySelector('#mask') as HTMLElement | null;
+    if (current.classList.contains("relative") && current.classList.contains("cursor-crosshair")) {
+      const mask = current.querySelector("#mask") as HTMLElement | null;
+      if (mask && typeof mask.clientWidth === "number" && mask.clientWidth > 0) {
+        return mask;
+      }
+      if (!mask && process.env.NODE_ENV === "development") {
+        console.warn("[Area] getMaskForArea: #mask not found in page container");
+      }
+      return mask;
     }
   }
 
@@ -455,66 +667,37 @@ function getMaskForArea(): HTMLElement | null {
 }
 
 function handleDrag(e: PointerEvent): void {
-  // Always find the mask for this area's page to ensure correct coordinate calculation
-  let mask: HTMLElement | null = getMaskForArea();
-  
-  // If event target is the mask, we can use it directly (more efficient)
-  if (!mask && (e.target as HTMLElement).id === "mask") {
-    mask = e.target as HTMLElement;
-  }
-
-  if (!mask) {
-    return;
-  }
+  const mask: HTMLElement | null =
+    getMaskForArea() || ((e.target as HTMLElement).id === "mask" ? (e.target as HTMLElement) : null);
+  if (!mask) return;
 
   isDragged.value = true;
 
-  if (e.pointerType === "touch") {
-    const page = mask.previousElementSibling as HTMLElement;
-    if (!page) return;
-    const rect = page.getBoundingClientRect();
-    props.area.x = (dragFrom.value.x + e.clientX - rect.left) / rect.width;
-    props.area.y = (dragFrom.value.y + e.clientY - rect.top) / rect.height;
-  } else {
-    // For mouse events, use layerX/layerY if on mask, otherwise calculate from clientX/clientY
-    if ((e.target as HTMLElement).id === "mask") {
-      props.area.x = (e.layerX - dragFrom.value.x) / mask.clientWidth;
-      props.area.y = (e.layerY - dragFrom.value.y) / mask.clientHeight;
-    } else {
-      // Calculate relative to mask's bounding rect
-      const rect = mask.getBoundingClientRect();
-      props.area.x = (e.clientX - rect.left - dragFrom.value.x) / mask.clientWidth;
-      props.area.y = (e.clientY - rect.top - dragFrom.value.y) / mask.clientHeight;
-    }
-  }
+  const rect = mask.getBoundingClientRect();
+  const width = rect.width || mask.clientWidth || 1;
+  const height = rect.height || mask.clientHeight || 1;
+  const newX = (e.clientX - rect.left - dragFrom.value.x) / width;
+  const newY = (e.clientY - rect.top - dragFrom.value.y) / height;
+  props.area.x = Math.min(Math.max(newX, 0), 1 - props.area.w);
+  props.area.y = Math.min(Math.max(newY, 0), 1 - props.area.h);
 }
 
 function handleResize(e: PointerEvent): void {
-  // Always find the mask for this area's page to ensure correct coordinate calculation
   let mask: HTMLElement | null = getMaskForArea();
-  
-  // If event target is the mask, we can use it directly (more efficient)
   if (!mask && (e.target as HTMLElement).id === "mask") {
     mask = e.target as HTMLElement;
   }
-
-  if (!mask) {
-    return;
-  }
+  if (!mask) return;
 
   if (e.pointerType === "touch") {
-    const page = mask.previousElementSibling as HTMLElement;
-    if (!page) return;
-    const rect = page.getBoundingClientRect();
+    const rect = mask.getBoundingClientRect();
     props.area.w = (e.clientX - rect.left) / rect.width - props.area.x;
     props.area.h = (e.clientY - rect.top) / rect.height - props.area.y;
   } else {
-    // For mouse events, use layerX/layerY if on mask, otherwise calculate from clientX/clientY
     if ((e.target as HTMLElement).id === "mask") {
-      props.area.w = e.layerX / mask.clientWidth - props.area.x;
-      props.area.h = e.layerY / mask.clientHeight - props.area.y;
+      props.area.w = e.offsetX / mask.clientWidth - props.area.x;
+      props.area.h = e.offsetY / mask.clientHeight - props.area.y;
     } else {
-      // Calculate relative to mask's bounding rect
       const rect = mask.getBoundingClientRect();
       props.area.w = (e.clientX - rect.left) / mask.clientWidth - props.area.x;
       props.area.h = (e.clientY - rect.top) / mask.clientHeight - props.area.y;
@@ -523,35 +706,23 @@ function handleResize(e: PointerEvent): void {
 }
 
 function handleResizeCell(e: PointerEvent): void {
-  // Always find the mask for this area's page to ensure correct coordinate calculation
   let mask: HTMLElement | null = getMaskForArea();
-  
-  // If event target is the mask, we can use it directly (more efficient)
   if (!mask && (e.target as HTMLElement).id === "mask") {
     mask = e.target as HTMLElement;
   }
+  if (!mask) return;
 
-  if (!mask) {
-    return;
-  }
-
-  // Calculate position relative to mask
   let positionX: number;
-  if (e.pointerType === "touch") {
+  if ((e.target as HTMLElement).id === "mask") {
+    positionX = e.offsetX / mask.clientWidth;
+  } else {
     const rect = mask.getBoundingClientRect();
     positionX = (e.clientX - rect.left) / mask.clientWidth;
-  } else {
-    // For mouse events, use layerX if on mask, otherwise calculate from clientX
-    if ((e.target as HTMLElement).id === "mask") {
-      positionX = e.layerX / (mask.clientWidth - 1);
-    } else {
-      const rect = mask.getBoundingClientRect();
-      positionX = (e.clientX - rect.left) / mask.clientWidth;
-    }
   }
 
   if (positionX > props.area.x) {
     props.area.cell_w = positionX - props.area.x;
+    props.area.cell_count = getCellCountFromArea(props.area);
   }
 }
 

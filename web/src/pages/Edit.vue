@@ -17,17 +17,6 @@
       <div v-if="!loadingTemplate && template" class="flex items-center gap-2">
         <button
           type="button"
-          class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="uploading"
-          @click="showAddPagesModal = true"
-        >
-          <SvgIcon name="plus" class="mr-2 h-4 w-4" />
-          <span v-if="!uploading">{{ $t("templates.addPages") }}</span>
-          <span v-else>{{ $t("templates.uploading") }}</span>
-        </button>
-
-        <button
-          type="button"
           class="inline-flex items-center rounded-lg border bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           :class="[
             lastSaveError
@@ -87,6 +76,17 @@
           @down="moveDocument(item, 1)"
           @change="save"
         />
+        <button
+          type="button"
+          class="mt-2 flex w-full cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50/80 py-4 transition-colors hover:border-gray-400 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+          :class="[{ 'aspect-[210/297]': template?.schema?.length }, 'min-h-[5rem]']"
+          :disabled="uploading"
+          :aria-label="$t('templates.addPages')"
+          @click="showAddPagesModal = true"
+        >
+          <SvgIcon name="plus" class="h-6 w-6 text-gray-400" />
+          <span class="mt-1.5 text-center text-xs font-medium text-gray-500">{{ $t("templates.addPages") }}</span>
+        </button>
       </div>
 
       <!-- Center documents: the ONLY column that should scroll by default -->
@@ -686,11 +686,10 @@ function pushUndo(): void {
 }
 
 function onDraw(area: any): void {
-  // Ensure page number and attachment_id are set correctly
-  if (typeof area.page !== 'number' || area.page < 0) {
-    console.warn('Invalid page number in area:', area);
-    return;
-  }
+  const documentRefForArea = documentRefs.value.find((e: any) => e?.document?.id === area.attachment_id);
+  const maxPage = documentRefForArea?.pageRefs?.length ?? 1;
+  const clampedPage = Math.max(0, Math.min(typeof area.page === "number" ? area.page : 0, maxPage - 1));
+  area.page = clampedPage;
 
   if (drawField.value) {
     if (drawOption.value) {
@@ -716,15 +715,9 @@ function onDraw(area: any): void {
         const documentRef = documentRefs.value.find(
           (e: any) => e && e.document && e.document.id === area.attachment_id
         );
-        if (!documentRef) {
-          console.warn('Document ref not found for attachment_id:', area.attachment_id);
-          return;
-        }
-        // Ensure page number is within valid range
-        if (area.page >= documentRef.pageRefs.length) {
-          console.warn('Page number out of range:', area.page, 'max:', documentRef.pageRefs.length - 1);
-          return;
-        }
+        if (!documentRef) return;
+        const maxPage = documentRef.pageRefs.length;
+        area.page = Math.max(0, Math.min(area.page, maxPage - 1));
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
         if (drawField.value.type === "checkbox" || drawOption.value) {
@@ -752,11 +745,10 @@ function onDraw(area: any): void {
 
     drawField.value.areas ||= [];
 
-    // Ensure page number and attachment_id are preserved
     const areaToAdd = {
       ...area,
-      page: typeof area.page === 'number' ? area.page : 0,
-      attachment_id: area.attachment_id || ''
+      page: Math.max(0, Math.min(typeof area.page === "number" ? area.page : 0, maxPage - 1)),
+      attachment_id: area.attachment_id || ""
     };
 
     const insertBeforeAreaIndex = drawField.value.areas.findIndex((a: any) => {
@@ -778,16 +770,10 @@ function onDraw(area: any): void {
     selectedAreaRef.value = areaToAdd;
     save();
   } else {
-    const documentRef = documentRefs.value.find((e: any) => e.document.id === area.attachment_id);
-    if (!documentRef) {
-      console.warn('Document ref not found for attachment_id:', area.attachment_id);
-      return;
-    }
-    // Ensure page number is within valid range
-    if (area.page >= documentRef.pageRefs.length) {
-      console.warn('Page number out of range:', area.page, 'max:', documentRef.pageRefs.length - 1);
-      return;
-    }
+    const documentRef = documentRefs.value.find((e: any) => e?.document?.id === area.attachment_id);
+    if (!documentRef) return;
+    const maxPage = documentRef.pageRefs.length;
+    area.page = Math.max(0, Math.min(area.page, maxPage - 1));
     const pageMask = documentRef.pageRefs[area.page].$refs.mask;
 
     let type = pageMask.clientWidth * area.w < 35 ? "checkbox" : "text";
@@ -847,7 +833,7 @@ function onDropfield(area: any): void {
   }
 
   if (field.type === "stamp") {
-    field.readonly = true;
+    field.readonly = false;
   }
 
   if (field.type === "date") {

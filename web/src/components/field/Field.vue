@@ -94,13 +94,182 @@
                 </select>
                 <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Format </label>
               </div>
+              <li v-if="field.type === 'number' && !defaultField" class="px-2 py-1" @click.stop>
+                <div class="space-y-1">
+                  <label class="label text-xs py-0">
+                    <span>Number format</span>
+                  </label>
+                  <select
+                    v-model="field.preferences.format"
+                    class="select select-xs w-full"
+                    @change="[ensurePreferences(), save()]"
+                  >
+                    <option value="">None</option>
+                    <option value="comma">1,000.00 (comma)</option>
+                    <option value="dot">1.000,00 (dot)</option>
+                    <option value="space">1 000,00 (space)</option>
+                    <option value="usd">$1,000.00 (USD)</option>
+                    <option value="eur">€1.000,00 (EUR)</option>
+                    <option value="gbp">£1,000.00 (GBP)</option>
+                  </select>
+                  <label class="label text-xs py-0 mt-1"><span>Min</span></label>
+                  <input
+                    v-model.number="field.validation.min"
+                    type="number"
+                    class="input input-xs w-full"
+                    @change="[ensureValidation(), save()]"
+                  />
+                  <label class="label text-xs py-0 mt-1"><span>Max</span></label>
+                  <input
+                    v-model.number="field.validation.max"
+                    type="number"
+                    class="input input-xs w-full"
+                    @change="[ensureValidation(), save()]"
+                  />
+                  <label class="label text-xs py-0 mt-1"><span>Step</span></label>
+                  <input
+                    v-model="field.validation.step"
+                    type="text"
+                    placeholder="any"
+                    class="input input-xs w-full"
+                    @change="[ensureValidation(), save()]"
+                  />
+                </div>
+              </li>
+              <li v-if="field.type === 'signature' && !defaultField" class="px-2 py-1" @click.stop>
+                <div class="space-y-1">
+                  <label class="label text-xs py-0"><span>Signature format</span></label>
+                  <select
+                    v-model="field.preferences.format"
+                    class="select select-xs w-full"
+                    @change="[ensurePreferences(), save()]"
+                  >
+                    <option value="">Any</option>
+                    <option value="drawn">Drawn</option>
+                    <option value="typed">Typed</option>
+                    <option value="drawn_or_typed">Drawn or typed</option>
+                    <option value="drawn_or_upload">Drawn or upload</option>
+                    <option value="upload">Upload</option>
+                  </select>
+                  <label class="flex cursor-pointer items-center gap-2 py-1">
+                    <input
+                      v-model="field.preferences.with_signature_id"
+                      type="checkbox"
+                      class="toggle toggle-xs"
+                      @change="[ensurePreferences(), save()]"
+                    />
+                    <span class="label-text text-xs">With signature ID</span>
+                  </label>
+                </div>
+              </li>
+              <li v-if="field.type === 'payment' && editable && !defaultField" class="px-2 py-1" @click.stop>
+                <div class="space-y-1">
+                  <label class="label text-xs py-0"><span>Price</span></label>
+                  <input
+                    v-model.number="field.preferences.price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    class="input input-xs w-full"
+                    @change="[ensurePreferences(), save()]"
+                  />
+                  <label class="label text-xs py-0 mt-1"><span>Currency</span></label>
+                  <select
+                    v-model="field.preferences.currency"
+                    class="select select-xs w-full"
+                    @change="[ensurePreferences(), save()]"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="RUB">RUB</option>
+                  </select>
+                </div>
+              </li>
+              <li v-if="field.type === 'stamp' && !defaultField" @click.stop>
+                <div class="space-y-1">
+                  <label class="flex cursor-pointer items-center gap-2 py-1">
+                    <input
+                      v-model="field.preferences.with_logo"
+                      type="checkbox"
+                      class="toggle toggle-xs"
+                      @change="[ensurePreferences(), save()]"
+                    />
+                    <span class="label-text text-xs">With logo</span>
+                  </label>
+                  <label class="flex cursor-pointer items-center gap-2 py-1">
+                    <input
+                      v-model="field.preferences.with_signature_id"
+                      type="checkbox"
+                      class="toggle toggle-xs"
+                      @change="[ensurePreferences(), save()]"
+                    />
+                    <span class="label-text text-xs">With stamp ID</span>
+                  </label>
+                </div>
+              </li>
+              <li v-if="['text', 'cells'].includes(field.type) && !defaultField" class="px-2 py-1" @click.stop>
+                <div class="space-y-1">
+                  <label class="label text-xs py-0"><span>Validation</span></label>
+                  <select
+                    v-model="validationType"
+                    class="select select-xs w-full"
+                    @change="applyValidationPreset"
+                  >
+                    <option value="">None</option>
+                    <option value="length">Length</option>
+                    <option value="email">Email</option>
+                    <option value="ssn">SSN</option>
+                    <option value="ein">EIN</option>
+                    <option value="url">URL</option>
+                    <option value="zip">ZIP</option>
+                    <option value="numbers_only">Numbers only</option>
+                    <option value="letters_only">Letters only</option>
+                    <option value="custom">Custom pattern</option>
+                  </select>
+                  <template v-if="validationType === 'length'">
+                    <label class="label text-xs py-0 mt-1"><span>Min length</span></label>
+                    <input
+                      v-model.number="field.validation.min"
+                      type="number"
+                      class="input input-xs w-full"
+                      @change="[ensureValidation(), save()]"
+                    />
+                    <label class="label text-xs py-0 mt-1"><span>Max length</span></label>
+                    <input
+                      v-model.number="field.validation.max"
+                      type="number"
+                      class="input input-xs w-full"
+                      @change="[ensureValidation(), save()]"
+                    />
+                  </template>
+                  <template v-if="validationType === 'custom'">
+                    <label class="label text-xs py-0 mt-1"><span>Pattern</span></label>
+                    <input
+                      v-model="field.validation.pattern"
+                      type="text"
+                      placeholder="^[0-9]{3}-[0-9]{2}-[0-9]{4}$"
+                      class="input input-xs w-full font-mono text-xs"
+                      @change="[ensureValidation(), save()]"
+                    />
+                    <label class="label text-xs py-0 mt-1"><span>Error message</span></label>
+                    <input
+                      v-model="field.validation.message"
+                      type="text"
+                      class="input input-xs w-full"
+                      @change="[ensureValidation(), save()]"
+                    />
+                  </template>
+                </div>
+              </li>
               <li v-if="field.type != 'phone'" @click.stop>
                 <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.required" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Required</span>
                 </label>
               </li>
-              <li v-if="field.type === 'text' && !defaultField" @click.stop>
+              <li v-if="(field.type === 'text' || field.type === 'stamp') && !defaultField" @click.stop>
                 <label class="flex cursor-pointer items-center gap-2 py-1.5">
                   <input v-model="field.readonly" type="checkbox" class="toggle toggle-xs" @update:model-value="save" />
                   <span class="label-text">Read only</span>
@@ -358,6 +527,29 @@ const showFormulaBuilder = ref(false);
 
 const { isOpen: renderDropdown, close: closeDropdown } = useDropdown(dropdownRef);
 
+const validationType = ref("");
+const validationPresets: Record<string, { pattern: string; message: string }> = {
+  email: { pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", message: "Please enter a valid email address" },
+  ssn: { pattern: "^[0-9]{3}-[0-9]{2}-[0-9]{4}$", message: "Please enter a valid SSN (XXX-XX-XXXX)" },
+  ein: { pattern: "^[0-9]{2}-[0-9]{7}$", message: "Please enter a valid EIN (XX-XXXXXXX)" },
+  url: { pattern: "^https?:\\/\\/.+", message: "Please enter a valid URL" },
+  zip: { pattern: "^[0-9]{5}(-[0-9]{4})?$", message: "Please enter a valid ZIP code" },
+  numbers_only: { pattern: "^[0-9]+$", message: "Please enter numbers only" },
+  letters_only: { pattern: "^[a-zA-Z]+$", message: "Please enter letters only" }
+};
+
+function applyValidationPreset(): void {
+  ensureValidation();
+  if (validationType.value && validationType.value !== "length" && validationType.value !== "custom") {
+    const preset = validationPresets[validationType.value];
+    if (preset) {
+      props.field.validation.pattern = preset.pattern;
+      props.field.validation.message = preset.message;
+    }
+  }
+  save();
+}
+
 const fieldNames: any = computed(() => fieldNamesConst);
 const submitterIndex = computed(() => {
   return template.value.submitters.findIndex((s: any) => s.id === props.field.submitter_id);
@@ -439,9 +631,31 @@ watch(
         ? "MM/DD/YYYY"
         : "DD/MM/YYYY";
     }
+    if (newType === "payment") {
+      if (props.field.preferences.price == null) props.field.preferences.price = 0;
+      if (!props.field.preferences.currency) props.field.preferences.currency = "USD";
+    }
+    if (newType === "number" && (!props.field.validation || typeof props.field.validation !== "object")) {
+      props.field.validation = {};
+    }
+    if (["text", "cells"].includes(newType) && (!props.field.validation || typeof props.field.validation !== "object")) {
+      props.field.validation = {};
+    }
   },
   { immediate: true }
 );
+
+function ensurePreferences(): void {
+  if (!props.field.preferences) {
+    props.field.preferences = {};
+  }
+}
+
+function ensureValidation(): void {
+  if (!props.field.validation || typeof props.field.validation !== "object") {
+    props.field.validation = {};
+  }
+}
 
 // Methods should be converted into standalone functions or use `use` functions if they are composable.
 function formatDate(date: Date, format: string): string {
@@ -544,8 +758,32 @@ function removeOption(option: any): void {
   save();
 }
 
+function getEffectiveCellW(area: { w: number; h: number; cell_w?: number }): number {
+  if (area.cell_w != null && area.cell_w > 0) return area.cell_w;
+  if (area.w <= 0) return 0;
+  if (area.h > 0) {
+    const denom = Math.floor(area.w / area.h);
+    return denom > 0 ? (area.w * 2) / denom : area.w / 5;
+  }
+  return area.w / 5;
+}
+
+function getCellCountFromArea(area: { w: number; h: number; cell_w?: number }): number {
+  const cellWidth = getEffectiveCellW(area);
+  if (!cellWidth || cellWidth <= 0 || area.w <= 0) return 0;
+  let currentWidth = 0;
+  let count = 0;
+  while (currentWidth + (cellWidth + cellWidth / 4) < area.w) {
+    currentWidth += cellWidth;
+    count++;
+  }
+  return Math.max(count, 1);
+}
+
 function maybeUpdateOptions(): void {
-  delete props.field.default_value;
+  if (props.field.type !== "cells") {
+    delete props.field.default_value;
+  }
   if (!["radio", "multiple", "select"].includes(props.field.type)) {
     delete props.field.options;
   }
@@ -554,9 +792,16 @@ function maybeUpdateOptions(): void {
   }
   (props.field.areas || []).forEach((area: any) => {
     if (props.field.type === "cells") {
-      area.cell_w = (area.w * 2) / Math.floor(area.w / area.h);
+      const denom = area.h > 0 ? Math.floor(area.w / area.h) : 0;
+      if (denom > 0) {
+        area.cell_w = (area.w * 2) / denom;
+      } else if (area.w > 0 && (!area.cell_w || area.cell_w <= 0)) {
+        area.cell_w = area.w / 5;
+      }
+      area.cell_count = getCellCountFromArea(area);
     } else {
       delete area.cell_w;
+      delete area.cell_count;
     }
   });
 }
