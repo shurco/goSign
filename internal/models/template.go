@@ -192,6 +192,7 @@ type fieldPayload struct {
 	Name            string                `json:"name"`
 	Label           string                `json:"label,omitempty"`
 	Title           string                `json:"title,omitempty"`
+	Description     string                `json:"description,omitempty"`
 	Type            FieldType             `json:"type"`
 	Required        bool                  `json:"required"`
 	Readonly        bool                  `json:"readonly,omitempty"`
@@ -213,6 +214,7 @@ type Field struct {
 	Name            string                `json:"name"`
 	Label           string                `json:"label,omitempty"`
 	Title           string                `json:"title,omitempty"`
+	Description     string                `json:"description,omitempty"`
 	Type            FieldType             `json:"type"`
 	Required        bool                  `json:"required"`
 	Readonly        bool                  `json:"readonly,omitempty"`
@@ -238,6 +240,7 @@ func (f *Field) UnmarshalJSON(b []byte) error {
 	f.Name = p.Name
 	f.Label = p.Label
 	f.Title = p.Title
+	f.Description = p.Description
 	f.Type = p.Type
 	f.Required = p.Required
 	f.Readonly = p.Readonly

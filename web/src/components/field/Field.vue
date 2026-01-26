@@ -94,63 +94,88 @@
                 </select>
                 <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Format </label>
               </div>
-              <li v-if="field.type === 'number' && !defaultField" class="px-2 py-1" @click.stop>
+              <li v-if="field.type === 'number' && !defaultField" class="px-1 py-1" @click.stop>
                 <div class="space-y-1">
-                  <label class="label text-xs py-0">
-                    <span>Number format</span>
-                  </label>
-                  <select
-                    v-model="field.preferences.format"
-                    class="select select-xs w-full"
-                    @change="[ensurePreferences(), save()]"
-                  >
-                    <option value="">None</option>
-                    <option value="comma">1,000.00 (comma)</option>
-                    <option value="dot">1.000,00 (dot)</option>
-                    <option value="space">1 000,00 (space)</option>
-                    <option value="usd">$1,000.00 (USD)</option>
-                    <option value="eur">€1.000,00 (EUR)</option>
-                    <option value="gbp">£1,000.00 (GBP)</option>
-                  </select>
-                  <label class="label text-xs py-0 mt-1"><span>Min</span></label>
-                  <input
-                    v-model.number="field.validation.min"
-                    type="number"
-                    class="input input-xs w-full"
-                    @change="[ensureValidation(), save()]"
-                  />
-                  <label class="label text-xs py-0 mt-1"><span>Max</span></label>
-                  <input
-                    v-model.number="field.validation.max"
-                    type="number"
-                    class="input input-xs w-full"
-                    @change="[ensureValidation(), save()]"
-                  />
-                  <label class="label text-xs py-0 mt-1"><span>Step</span></label>
-                  <input
-                    v-model="field.validation.step"
-                    type="text"
-                    placeholder="any"
-                    class="input input-xs w-full"
-                    @change="[ensureValidation(), save()]"
-                  />
+                  <div class="relative py-1.5">
+                    <input
+                      v-model="field.default_value"
+                      type="text"
+                      inputmode="decimal"
+                      placeholder="Default value"
+                      dir="auto"
+                      class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                      @blur="save"
+                    />
+                    <label v-if="field.default_value" class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">
+                      Default value
+                    </label>
+                  </div>
+                  <div class="relative py-1.5">
+                    <select
+                      v-model="field.preferences.format"
+                      class="select-bordered select select-xs !h-7 w-full max-w-xs font-normal !outline-0"
+                      @change="[ensurePreferences(), save()]"
+                    >
+                      <option value="">None</option>
+                      <option value="comma">1,000.00 (comma)</option>
+                      <option value="dot">1.000,00 (dot)</option>
+                      <option value="space">1 000,00 (space)</option>
+                      <option value="usd">$1,000.00 (USD)</option>
+                      <option value="eur">€1.000,00 (EUR)</option>
+                      <option value="gbp">£1,000.00 (GBP)</option>
+                    </select>
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Number format</label>
+                  </div>
+                  <div class="flex items-center gap-1 py-1.5">
+                    <div class="relative flex-1 min-w-0 max-w-20">
+                      <input
+                        v-model.number="field.validation.min"
+                        type="number"
+                        class="input-bordered input input-xs h-7 w-full !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Min</label>
+                    </div>
+                    <span class="shrink-0 text-xs text-base-content/60"> – </span>
+                    <div class="relative flex-1 min-w-0 max-w-20">
+                      <input
+                        v-model.number="field.validation.max"
+                        type="number"
+                        class="input-bordered input input-xs h-7 w-full !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Max</label>
+                    </div>
+                  </div>
+                  <div class="relative py-1.5">
+                    <input
+                      v-model="field.validation.step"
+                      type="text"
+                      placeholder="any"
+                      class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                      @change="[ensureValidation(), save()]"
+                    />
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Step</label>
+                  </div>
                 </div>
               </li>
-              <li v-if="field.type === 'signature' && !defaultField" class="px-2 py-1" @click.stop>
+              <li v-if="field.type === 'signature' && !defaultField" class="px-1 py-1" @click.stop>
                 <div class="space-y-1">
-                  <label class="label text-xs py-0"><span>Signature format</span></label>
-                  <select
-                    v-model="signatureFormat"
-                    class="select select-xs w-full"
-                    @change="[ensurePreferences(), save()]"
-                  >
-                    <option value="any">Any</option>
-                    <option value="drawn">Drawn</option>
-                    <option value="typed">Typed</option>
-                    <option value="drawn_or_typed">Drawn or typed</option>
-                    <option value="drawn_or_upload">Drawn or upload</option>
-                    <option value="upload">Upload</option>
-                  </select>
+                  <div class="relative py-1.5">
+                    <select
+                      v-model="signatureFormat"
+                      class="select-bordered select select-xs !h-7 w-full max-w-xs font-normal !outline-0"
+                      @change="[ensurePreferences(), save()]"
+                    >
+                      <option value="any">Any</option>
+                      <option value="drawn">Drawn</option>
+                      <option value="typed">Typed</option>
+                      <option value="drawn_or_typed">Drawn or typed</option>
+                      <option value="drawn_or_upload">Drawn or upload</option>
+                      <option value="upload">Upload</option>
+                    </select>
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Signature format</label>
+                  </div>
                   <label class="flex cursor-pointer items-center gap-2 py-1">
                     <input
                       v-model="field.preferences.with_signature_id"
@@ -162,29 +187,33 @@
                   </label>
                 </div>
               </li>
-              <li v-if="field.type === 'payment' && editable && !defaultField" class="px-2 py-1" @click.stop>
+              <li v-if="field.type === 'payment' && editable && !defaultField" class="px-1 py-1" @click.stop>
                 <div class="space-y-1">
-                  <label class="label text-xs py-0"><span>Price</span></label>
-                  <input
-                    v-model.number="field.preferences.price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    class="input input-xs w-full"
-                    @change="[ensurePreferences(), save()]"
-                  />
-                  <label class="label text-xs py-0 mt-1"><span>Currency</span></label>
-                  <select
-                    v-model="field.preferences.currency"
-                    class="select select-xs w-full"
-                    @change="[ensurePreferences(), save()]"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="JPY">JPY</option>
-                    <option value="RUB">RUB</option>
-                  </select>
+                  <div class="relative py-1.5">
+                    <input
+                      v-model.number="field.preferences.price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                      @change="[ensurePreferences(), save()]"
+                    />
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Price</label>
+                  </div>
+                  <div class="relative py-1.5">
+                    <select
+                      v-model="field.preferences.currency"
+                      class="select-bordered select select-xs !h-7 w-full max-w-xs font-normal !outline-0"
+                      @change="[ensurePreferences(), save()]"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="JPY">JPY</option>
+                      <option value="RUB">RUB</option>
+                    </select>
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Currency</label>
+                  </div>
                 </div>
               </li>
               <li v-if="field.type === 'stamp' && !defaultField" @click.stop>
@@ -209,57 +238,67 @@
                   </label>
                 </div>
               </li>
-              <li v-if="['text', 'cells'].includes(field.type) && !defaultField" class="px-2 py-1" @click.stop>
+              <li v-if="['text', 'cells'].includes(field.type) && !defaultField" class="px-1 py-1" @click.stop>
                 <div class="space-y-1">
-                  <label class="label text-xs py-0"><span>Validation</span></label>
-                  <select
-                    v-model="validationType"
-                    class="select select-xs w-full"
-                    @change="applyValidationPreset"
-                  >
-                    <option value="">None</option>
-                    <option value="length">Length</option>
-                    <option value="email">Email</option>
-                    <option value="ssn">SSN</option>
-                    <option value="ein">EIN</option>
-                    <option value="url">URL</option>
-                    <option value="zip">ZIP</option>
-                    <option value="numbers_only">Numbers only</option>
-                    <option value="letters_only">Letters only</option>
-                    <option value="custom">Custom pattern</option>
-                  </select>
+                  <div class="relative py-1.5">
+                    <select
+                      v-model="validationType"
+                      class="select-bordered select select-xs !h-7 w-full max-w-xs font-normal !outline-0"
+                      @change="applyValidationPreset"
+                    >
+                      <option value="">None</option>
+                      <option value="length">Length</option>
+                      <option value="email">Email</option>
+                      <option value="ssn">SSN</option>
+                      <option value="ein">EIN</option>
+                      <option value="url">URL</option>
+                      <option value="zip">ZIP</option>
+                      <option value="numbers_only">Numbers only</option>
+                      <option value="letters_only">Letters only</option>
+                      <option value="custom">Custom pattern</option>
+                    </select>
+                    <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Validation</label>
+                  </div>
                   <template v-if="validationType === 'length'">
-                    <label class="label text-xs py-0 mt-1"><span>Min length</span></label>
-                    <input
-                      v-model.number="field.validation.min"
-                      type="number"
-                      class="input input-xs w-full"
-                      @change="[ensureValidation(), save()]"
-                    />
-                    <label class="label text-xs py-0 mt-1"><span>Max length</span></label>
-                    <input
-                      v-model.number="field.validation.max"
-                      type="number"
-                      class="input input-xs w-full"
-                      @change="[ensureValidation(), save()]"
-                    />
+                    <div class="relative py-1.5">
+                      <input
+                        v-model.number="field.validation.min"
+                        type="number"
+                        class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Min length</label>
+                    </div>
+                    <div class="relative py-1.5">
+                      <input
+                        v-model.number="field.validation.max"
+                        type="number"
+                        class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Max length</label>
+                    </div>
                   </template>
                   <template v-if="validationType === 'custom'">
-                    <label class="label text-xs py-0 mt-1"><span>Pattern</span></label>
-                    <input
-                      v-model="field.validation.pattern"
-                      type="text"
-                      placeholder="^[0-9]{3}-[0-9]{2}-[0-9]{4}$"
-                      class="input input-xs w-full font-mono text-xs"
-                      @change="[ensureValidation(), save()]"
-                    />
-                    <label class="label text-xs py-0 mt-1"><span>Error message</span></label>
-                    <input
-                      v-model="field.validation.message"
-                      type="text"
-                      class="input input-xs w-full"
-                      @change="[ensureValidation(), save()]"
-                    />
+                    <div class="relative py-1.5">
+                      <input
+                        v-model="field.validation.pattern"
+                        type="text"
+                        placeholder="^[0-9]{3}-[0-9]{2}-[0-9]{4}$"
+                        class="input-bordered input input-xs h-7 w-full max-w-xs font-mono text-xs !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Pattern</label>
+                    </div>
+                    <div class="relative py-1.5">
+                      <input
+                        v-model="field.validation.message"
+                        type="text"
+                        class="input-bordered input input-xs h-7 w-full max-w-xs !outline-0"
+                        @change="[ensureValidation(), save()]"
+                      />
+                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Error message</label>
+                    </div>
                   </template>
                 </div>
               </li>
@@ -321,6 +360,16 @@
                 >
                   <SvgIcon name="settings" width="18" height="18" />
                   Formula
+                </a>
+              </li>
+              <li v-if="editable && !defaultField" @click.stop>
+                <a
+                  href="#"
+                  class="px-2 py-1 text-sm"
+                  @click.prevent="openDescriptionModal"
+                >
+                  <SvgIcon name="settings" width="18" height="18" />
+                  Description
                 </a>
               </li>
               <li
@@ -455,6 +504,53 @@
         </div>
       </template>
     </Modal>
+
+    <!-- Description Modal -->
+    <Modal v-model="showDescriptionModal" size="md">
+      <template #header>
+        <h3 class="text-lg font-semibold">Description</h3>
+      </template>
+      <template #default>
+        <div class="space-y-4">
+          <div>
+            <label class="label text-xs py-0"><span>Description</span></label>
+            <textarea
+              v-model="field.description"
+              class="textarea textarea-bordered textarea-sm mt-1 w-full resize-y min-h-24 font-normal !outline-0"
+              placeholder="Field description or instructions"
+              rows="4"
+              @change="save"
+            />
+          </div>
+          <div>
+            <label class="label text-xs py-0"><span>Display title</span> <span class="text-base-content/60">(optional)</span></label>
+            <input
+              v-model="field.title"
+              type="text"
+              class="input-bordered input input-sm h-9 w-full font-normal !outline-0 mt-1"
+              placeholder="Optional display title"
+              @change="save"
+            />
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <button
+            class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
+            @click="closeDescriptionModal"
+          >
+            {{ t('common.close') }}
+          </button>
+          <button
+            class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
+            @click="saveDescriptionAndClose"
+          >
+            {{ t('common.save') }}
+          </button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -509,6 +605,7 @@ const formulaBuilderRef = ref<any>(null);
 const isNameFocus = ref(false);
 const showConditionBuilder = ref(false);
 const showFormulaBuilder = ref(false);
+const showDescriptionModal = ref(false);
 
 const { isOpen: renderDropdown, close: closeDropdown } = useDropdown(dropdownRef);
 
@@ -522,12 +619,26 @@ function openFormulaBuilder(): void {
   nextTick(() => closeDropdown());
 }
 
+function openDescriptionModal(): void {
+  showDescriptionModal.value = true;
+  nextTick(() => closeDropdown());
+}
+
 function closeConditionBuilder(): void {
   showConditionBuilder.value = false;
 }
 
 function closeFormulaBuilder(): void {
   showFormulaBuilder.value = false;
+}
+
+function closeDescriptionModal(): void {
+  showDescriptionModal.value = false;
+}
+
+function saveDescriptionAndClose(): void {
+  save();
+  showDescriptionModal.value = false;
 }
 
 function applyFormulaAndClose(): void {

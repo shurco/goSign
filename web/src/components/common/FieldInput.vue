@@ -13,7 +13,7 @@
     @update:modelValue="() => {}"
     @blur="$emit('blur')"
   />
-  <!-- Regular text input -->
+  <!-- Regular text input (includes number with min/max/step) -->
   <TextInput
     v-else-if="isTextType"
     :modelValue="stringValue"
@@ -23,6 +23,9 @@
     :readonly="readonly"
     :disabled="disabled"
     :error="error"
+    :min="type === 'number' ? numberMin : undefined"
+    :max="type === 'number' ? numberMax : undefined"
+    :step="type === 'number' ? numberStep : undefined"
     @update:modelValue="handleUpdate"
     @blur="$emit('blur')"
   />
@@ -136,6 +139,10 @@ interface Props {
   dateFormat?: string;
   /** Signature field format: '', drawn, typed, drawn_or_typed, drawn_or_upload, upload */
   signatureFormat?: string;
+  /** Number field: min, max, step for validation and input attributes */
+  numberMin?: number;
+  numberMax?: number;
+  numberStep?: string;
 }
 
 interface Emits {
@@ -156,7 +163,10 @@ const props = withDefaults(defineProps<Props>(), {
   price: 0,
   currency: "USD",
   dateFormat: undefined,
-  signatureFormat: ""
+  signatureFormat: "",
+  numberMin: undefined,
+  numberMax: undefined,
+  numberStep: undefined
 });
 
 const emit = defineEmits<Emits>();

@@ -178,8 +178,8 @@ All documentation follows these standards:
 - **API Authentication**: JWT tokens and API keys with rate limiting
 - **Embedded Signing**: JavaScript SDK for iframe integration
 - **Settings in Database**: Global settings (SMTP, SMS, storage, branding) stored in DB; Admin UI at `/_/` for configuration
-- **Field Model**: Field preferences (format, align, price, currency, date format, signature format), structured validation (pattern, min, max, message), readonly, title; number field type; Areas with cell_count/option_id
-- **Submitter Signing UX**: In-document field overlays with labels and filled values, expandable field form drawer, progress dots navigation, prev/next navigation, draft persistence, signature ID display
+- **Field Model**: Field preferences (format, align, price, currency, date format, signature format), structured validation (pattern, min, max, message), readonly, title, description; number field type with default_value; Areas with cell_count/option_id
+- **Submitter Signing UX**: In-document field overlays with labels and filled values (or field-type icon when empty), expandable field form drawer, progress dots navigation, prev/next navigation, draft persistence, signature ID display; number fields honor format/min/max and default value
 
 ### Advanced Features
 - **Bulk Operations**: CSV/XLSX import for mass submission creation

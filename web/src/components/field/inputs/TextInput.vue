@@ -7,6 +7,9 @@
       :required="required"
       :readonly="readonly"
       :disabled="disabled"
+      :min="min"
+      :max="max"
+      :step="step"
       @blur="handleBlur"
     />
     <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
@@ -25,6 +28,9 @@ interface Props {
   readonly?: boolean;
   disabled?: boolean;
   error?: string;
+  min?: number | string;
+  max?: number | string;
+  step?: string;
 }
 
 interface Emits {
@@ -39,7 +45,10 @@ const props = withDefaults(defineProps<Props>(), {
   required: false,
   readonly: false,
   disabled: false,
-  error: ""
+  error: "",
+  min: undefined,
+  max: undefined,
+  step: undefined
 });
 
 const emit = defineEmits<Emits>();

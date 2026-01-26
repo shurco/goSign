@@ -204,6 +204,14 @@
                               {{ getFieldDisplayValue(field) }}
                             </span>
                           </template>
+                          <SvgIcon
+                            v-else-if="fieldIcons[field.type]"
+                            :name="fieldIcons[field.type]"
+                            width="20"
+                            height="20"
+                            class="flex-shrink-0 opacity-50"
+                            stroke-width="1.6"
+                          />
                         </div>
                       </div>
                     </div>
@@ -285,7 +293,7 @@ import { useConditions } from "@/composables/useConditions";
 import { useFormulas } from "@/composables/useFormulas";
 import type { Field } from "@/models/template";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
-import { fieldNames, subNames } from "@/components/field/constants";
+import { fieldIcons, fieldNames, subNames } from "@/components/field/constants";
 import { formatDateByPattern } from "@/utils/time";
 
 const SIGNING_DRAFT_STORAGE_KEY_PREFIX = "signing-draft-";
@@ -633,7 +641,12 @@ function initializeFormData(): void {
       next[field.id] = [];
       return;
     }
-    // Default: empty string (text/number/date/signature/initials/etc.)
+    if (field.type === "number") {
+      const def = (field as any).default_value;
+      next[field.id] = def != null && String(def).trim() !== "" ? String(def).trim() : "";
+      return;
+    }
+    // Default: empty string (text/date/signature/initials/etc.)
     next[field.id] = "";
   });
 
@@ -687,6 +700,13 @@ function getFieldDisplayValue(field: Field): string {
     return formatDateByPattern(String(value), format);
   }
   if (Array.isArray(value)) return value.join(", ");
+  if (field.type === "number" && value !== "") {
+    const format = (field as any).preferences?.format;
+    const num = Number(value);
+    if (Number.isFinite(num) && format) {
+      return formatNumberForDisplay(num, format, (field as any).preferences?.currency);
+    }
+  }
   return String(value).slice(0, 200);
 }
 
@@ -1064,6 +1084,23 @@ function validateField(field: Field): void {
     }
   }
 
+  if (field.type === "number" && value != null && String(value).trim() !== "") {
+    const num = Number(value);
+    if (Number.isNaN(num)) {
+      fieldErrors.value[field.id] = t("signing.invalidNumber");
+      return;
+    }
+    const validation = (field as any).validation;
+    if (validation?.min != null && num < Number(validation.min)) {
+      fieldErrors.value[field.id] = t("signing.numberMin", { min: validation.min });
+      return;
+    }
+    if (validation?.max != null && num > Number(validation.max)) {
+      fieldErrors.value[field.id] = t("signing.numberMax", { max: validation.max });
+      return;
+    }
+  }
+
   delete fieldErrors.value[field.id];
 }
 
@@ -1180,6 +1217,28 @@ function formatDate(dateString?: string | null): string {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+/** Format number for overlay display (comma, dot, space, usd, eur, gbp). */
+function formatNumberForDisplay(
+  num: number,
+  format: string,
+  currency?: string
+): string {
+  if (format === "usd" || format === "eur" || format === "gbp") {
+    const cur = currency || (format === "eur" ? "EUR" : format === "gbp" ? "GBP" : "USD");
+    return new Intl.NumberFormat([], { style: "currency", currency: cur }).format(num);
+  }
+  if (format === "comma") {
+    return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
+  if (format === "dot") {
+    return new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
+  if (format === "space") {
+    return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
+  return String(num);
 }
 
 function validateSubmitterInfo(): void {

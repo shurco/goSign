@@ -38,6 +38,9 @@
                       :currency="field.preferences?.currency"
                       :date-format="field.type === 'date' ? (field.preferences as { format?: string })?.format : undefined"
                       :signature-format="getSignatureFormat(field)"
+                      :number-min="field.type === 'number' ? (field as any).validation?.min : undefined"
+                      :number-max="field.type === 'number' ? (field as any).validation?.max : undefined"
+                      :number-step="field.type === 'number' ? (field as any).validation?.step : undefined"
                       @update:model-value="(v) => onUpdate(field!.id, v)"
                       @blur="onBlur(field!)"
                     />

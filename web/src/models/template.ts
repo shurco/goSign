@@ -68,6 +68,8 @@ export type Field = Omit<BaseField, "areas"> & {
   readonly?: boolean;
   default_value?: string;
   label?: string;
+  title?: string;
+  description?: string;
   translations?: Record<string, string>;
   condition_groups?: FieldConditionGroup[];
   areas?: Area[];
