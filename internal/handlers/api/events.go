@@ -27,6 +27,7 @@ type EventItem struct {
 	CreatedAt    string `json:"created_at"`
 	IP           string `json:"ip,omitempty"`
 	Location     string `json:"location,omitempty"`
+	Reason       string `json:"reason,omitempty"`
 }
 
 // List returns paginated list of events
@@ -81,7 +82,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 					ss.created_at AS ts,
 					ss.document_name AS document_name,
 					host(e_created.ip) AS ip,
-					NULL AS location
+					NULL AS location,
+					NULL::text AS reason
 				FROM scoped_submissions ss
 				LEFT JOIN event e_created ON e_created.type = 'submission.created'
 					AND e_created.resource_type = 'submission'
@@ -100,7 +102,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					NULL::text AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_opened ON e_opened.type = 'submitter.opened'
@@ -122,7 +125,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					NULL::text AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_completed ON e_completed.type = 'submitter.completed'
@@ -144,7 +148,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					s.metadata->>'decline_reason' AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_declined ON e_declined.type = 'submitter.declined'
@@ -153,12 +158,12 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 					AND e_declined.metadata_json->>'submitter_id' = s.id::text
 				WHERE s.declined_at IS NOT NULL
 			)
-			SELECT id, type, ts, document_name, ip, location
+			SELECT id, type, ts, document_name, ip, location, reason
 			FROM activity
 			ORDER BY ts DESC
 			LIMIT $2
 		`, orgID, limit)
-	} else {
+} else {
 		rows, err = h.pool.Query(c.Context(), `
 			WITH scoped_submissions AS (
 				SELECT
@@ -177,7 +182,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 					ss.created_at AS ts,
 					ss.document_name AS document_name,
 					host(e_created.ip) AS ip,
-					NULL AS location
+					NULL AS location,
+					NULL::text AS reason
 				FROM scoped_submissions ss
 				LEFT JOIN event e_created ON e_created.type = 'submission.created'
 					AND e_created.resource_type = 'submission'
@@ -196,7 +202,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					NULL::text AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_opened ON e_opened.type = 'submitter.opened'
@@ -218,7 +225,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					NULL::text AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_completed ON e_completed.type = 'submitter.completed'
@@ -240,7 +248,8 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 						ELSE NULL
-					END AS location
+					END AS location,
+					s.metadata->>'decline_reason' AS reason
 				FROM submitter s
 				JOIN scoped_submissions ss ON ss.id = s.submission_id
 				LEFT JOIN event e_declined ON e_declined.type = 'submitter.declined'
@@ -249,7 +258,7 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 					AND e_declined.metadata_json->>'submitter_id' = s.id::text
 				WHERE s.declined_at IS NOT NULL
 			)
-			SELECT id, type, ts, document_name, ip, location
+			SELECT id, type, ts, document_name, ip, location, reason
 			FROM activity
 			ORDER BY ts DESC
 			LIMIT $2
@@ -269,8 +278,9 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 			docName   string
 			ip        *string
 			location  *string
+			reason    *string
 		)
-		if err := rows.Scan(&id, &typ, &createdAt, &docName, &ip, &location); err != nil {
+		if err := rows.Scan(&id, &typ, &createdAt, &docName, &ip, &location, &reason); err != nil {
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to parse events", nil)
 		}
 		ipStr := ""
@@ -281,6 +291,10 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 		if location != nil {
 			locationStr = *location
 		}
+		reasonStr := ""
+		if reason != nil {
+			reasonStr = *reason
+		}
 		items = append(items, EventItem{
 			ID:           id,
 			Type:         typ,
@@ -289,6 +303,7 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 			CreatedAt:    createdAt.Format(time.RFC3339),
 			IP:           ipStr,
 			Location:     locationStr,
+			Reason:       reasonStr,
 		})
 	}
 

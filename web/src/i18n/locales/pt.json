@@ -27,7 +27,8 @@
     "complete": "Completo",
     "optional": "Opcional",
     "download": "Baixar",
-    "deleted": "Excluído"
+    "deleted": "Excluído",
+    "reasonLabel": "Motivo:"
   },
   "status": {
     "draft": "Rascunho",
@@ -149,6 +150,8 @@
     "dangerTitle": "Zona de perigo",
     "declineWarning": "Recusar marcará este documento como recusado e talvez você não consiga continuar assinando.",
     "declineConfirm": "Tem certeza de que deseja recusar este documento?",
+    "declineReasonLabel": "Notifique o remetente com o motivo da recusa",
+    "declineReasonPlaceholder": "Informe o motivo (opcional)",
     "resetConfirm": "Redefinir todos os campos? Isso apagará seus dados nesta página.",
     "completedTitle": "Documento assinado!",
     "completedThanks": "Obrigado por assinar este documento.",
@@ -177,9 +180,7 @@
     "fillAllCells": "Preencha todas as células com um caractere em cada uma",
     "submissionNotFound": "Envio não encontrado",
     "submitFailed": "Falha ao enviar",
-    "declineFailed": "Falha ao recusar",
-    "resetStatus": "Redefinir status",
-    "resetStatusConfirm": "Redefinir este signatário para \"pendente\"? Ele poderá assinar novamente usando o mesmo link."
+    "declineFailed": "Falha ao recusar"
   },
   "signingMode": {
     "title": "Modo de assinatura",

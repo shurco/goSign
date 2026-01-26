@@ -27,7 +27,8 @@
     "complete": "Abgeschlossen",
     "optional": "Optional",
     "download": "Herunterladen",
-    "deleted": "Gelöscht"
+    "deleted": "Gelöscht",
+    "reasonLabel": "Grund:"
   },
   "status": {
     "draft": "Entwurf",
@@ -149,6 +150,8 @@
     "dangerTitle": "Gefahrenbereich",
     "declineWarning": "Durch das Ablehnen wird dieses Dokument als abgelehnt markiert und Sie können möglicherweise nicht weiter unterschreiben.",
     "declineConfirm": "Möchten Sie dieses Dokument wirklich ablehnen?",
+    "declineReasonLabel": "Benachrichtigen Sie den Absender mit dem Grund Ihrer Ablehnung",
+    "declineReasonPlaceholder": "Grund angeben (optional)",
     "resetConfirm": "Alle Felder zurücksetzen? Dadurch werden Ihre Eingaben auf dieser Seite gelöscht.",
     "completedTitle": "Dokument unterschrieben!",
     "completedThanks": "Vielen Dank, dass Sie dieses Dokument unterschrieben haben.",
@@ -178,9 +181,6 @@
     "submissionNotFound": "Einreichung nicht gefunden",
     "submitFailed": "Senden fehlgeschlagen",
     "declineFailed": "Ablehnen fehlgeschlagen",
-    "resetStatus": "Status zurücksetzen",
-    "resetStatusConfirm": "Diesen Unterzeichner wieder auf „ausstehend“ setzen? Er kann über denselben Link erneut unterschreiben.",
-    "resetStatusFailed": "Status konnte nicht zurückgesetzt werden",
     "links": "Unterschriftslinks",
     "linksTitleWithTemplate": "Unterschriftslinks — {template}",
     "copyLink": "Link kopieren",

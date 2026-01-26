@@ -27,7 +27,8 @@
     "complete": "Completo",
     "optional": "Opcional",
     "download": "Descargar",
-    "deleted": "Eliminado"
+    "deleted": "Eliminado",
+    "reasonLabel": "Motivo:"
   },
   "status": {
     "draft": "Borrador",
@@ -149,6 +150,8 @@
     "dangerTitle": "Zona de peligro",
     "declineWarning": "Rechazar marcará este documento como rechazado y es posible que no pueda continuar firmando.",
     "declineConfirm": "¿Está seguro de que desea rechazar este documento?",
+    "declineReasonLabel": "Notifique al remitente el motivo del rechazo",
+    "declineReasonPlaceholder": "Indique el motivo (opcional)",
     "resetConfirm": "¿Restablecer todos los campos? Esto borrará sus datos en esta página.",
     "completedTitle": "¡Documento firmado!",
     "completedThanks": "Gracias por firmar este documento.",
@@ -178,9 +181,6 @@
     "submissionNotFound": "Envío no encontrado",
     "submitFailed": "No se pudo enviar",
     "declineFailed": "No se pudo rechazar",
-    "resetStatus": "Restablecer estado",
-    "resetStatusConfirm": "¿Restablecer este firmante a pendiente? Podrá firmar de nuevo usando el mismo enlace.",
-    "resetStatusFailed": "No se pudo restablecer el estado",
     "links": "Enlaces de firma",
     "linksTitleWithTemplate": "Enlaces de firma — {template}",
     "copyLink": "Copiar enlace",

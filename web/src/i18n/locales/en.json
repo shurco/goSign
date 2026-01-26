@@ -28,7 +28,8 @@
     "optional": "Optional",
     "download": "Download",
     "continue": "Continue",
-    "deleted": "Deleted"
+    "deleted": "Deleted",
+    "reasonLabel": "Reason:"
   },
   "status": {
     "draft": "Draft",
@@ -152,6 +153,8 @@
     "dangerTitle": "Danger zone",
     "declineWarning": "Declining will mark this document as declined and you may not be able to continue signing.",
     "declineConfirm": "Are you sure you want to decline this document?",
+    "declineReasonLabel": "Notify the sender with the reason you declined",
+    "declineReasonPlaceholder": "Enter reason (optional)",
     "resetConfirm": "Reset all fields? This will clear your inputs on this page.",
     "completedTitle": "Document Signed!",
     "completedThanks": "Thank you for signing this document.",
@@ -181,9 +184,6 @@
     "submissionNotFound": "Submission not found",
     "submitFailed": "Failed to submit",
     "declineFailed": "Failed to decline",
-    "resetStatus": "Reset status",
-    "resetStatusConfirm": "Reset this signer back to pending? They will be able to sign again using the same link.",
-    "resetStatusFailed": "Failed to reset status",
     "links": "Signing links",
     "linksTitleWithTemplate": "Signing links — {template}",
     "copyLink": "Copy link",

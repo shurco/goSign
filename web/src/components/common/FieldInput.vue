@@ -64,7 +64,7 @@
   <SignatureInput
     v-else-if="isSignatureType || type === 'stamp'"
     :modelValue="stringValue"
-    :mode="type === 'initials' ? 'initials' : 'signature'"
+    :mode="type === 'initials' ? 'initials' : type === 'stamp' ? 'stamp' : 'signature'"
     :format="signatureFormat"
     :placeholder="placeholder"
     :required="required"

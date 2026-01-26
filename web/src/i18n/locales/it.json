@@ -27,7 +27,8 @@
     "complete": "Completo",
     "optional": "Opzionale",
     "download": "Scarica",
-    "deleted": "Eliminato"
+    "deleted": "Eliminato",
+    "reasonLabel": "Motivo:"
   },
   "status": {
     "draft": "Bozza",
@@ -149,6 +150,8 @@
     "dangerTitle": "Zona di pericolo",
     "declineWarning": "Rifiutare contrassegnerà questo documento come rifiutato e potresti non essere in grado di continuare a firmare.",
     "declineConfirm": "Sei sicuro di voler rifiutare questo documento?",
+    "declineReasonLabel": "Comunica al mittente il motivo del rifiuto",
+    "declineReasonPlaceholder": "Inserisci il motivo (facoltativo)",
     "resetConfirm": "Reimpostare tutti i campi? Questo cancellerà i tuoi dati in questa pagina.",
     "completedTitle": "Documento firmato!",
     "completedThanks": "Grazie per aver firmato questo documento.",
@@ -177,9 +180,7 @@
     "fillAllCells": "Compila tutte le celle con un carattere in ciascuna",
     "submissionNotFound": "Invio non trovato",
     "submitFailed": "Invio non riuscito",
-    "declineFailed": "Rifiuto non riuscito",
-    "resetStatus": "Reimposta stato",
-    "resetStatusConfirm": "Reimpostare questo firmatario su \"in attesa\"? Potrà firmare di nuovo usando lo stesso link."
+    "declineFailed": "Rifiuto non riuscito"
   },
   "signingMode": {
     "title": "Modalità di firma",

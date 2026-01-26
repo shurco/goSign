@@ -58,6 +58,7 @@
                     </span>
                   </div>
                   <div class="text-sm text-gray-500">{{ formatDate(e.at) }}</div>
+                  <div v-if="e.reason" class="text-sm text-gray-500 font-mono">{{ t('common.reasonLabel') }} {{ e.reason }}</div>
                   <div v-if="e.ip" class="text-sm text-gray-500 font-mono">IP address: {{ e.ip }}</div>
                   <div v-if="e.location" class="text-sm text-gray-500">Location: {{ e.location }}</div>
                 </div>
@@ -129,6 +130,9 @@ type SigningLinkDetail = {
   completed_count: number;
   total_count: number;
   submitters: Array<Record<string, any>>;
+  decline_events?: Array<{ at: string; submitter_id: string; submitter_name: string; ip?: string; reason?: string }>;
+  opened_events?: Array<{ at: string; submitter_id: string; submitter_name: string; ip?: string }>;
+  completed_events?: Array<{ at: string; submitter_id: string; submitter_name: string; ip?: string }>;
 };
 
 type TimelineItem = {
@@ -139,6 +143,7 @@ type TimelineItem = {
   signer?: string;
   ip?: string;
   location?: string;
+  reason?: string;
 };
 
 const route = useRoute();
@@ -171,10 +176,6 @@ async function load(): Promise<void> {
     }
     const json = await res.json();
     detail.value = (json?.data || json) as SigningLinkDetail;
-    // Debug: log submitters data to check location
-    if (detail.value?.submitters) {
-      console.log("Submitters data:", detail.value.submitters);
-    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : t("submissionStatus.errors.failedToLoad");
     detail.value = null;
@@ -190,6 +191,7 @@ const timeline = computed<TimelineItem[]>(() => {
   }
 
   const items: TimelineItem[] = [];
+
   if (d.created_at) {
     items.push({
       key: `created:${d.submission_id}`,
@@ -200,40 +202,80 @@ const timeline = computed<TimelineItem[]>(() => {
     });
   }
 
-  for (const s of d.submitters || []) {
-    const signerName = String(s.name || t("submissionStatus.signerFallback"));
-    if (s.opened_at) {
-      items.push({
-        key: `opened:${String(s.id)}`,
-        at: String(s.opened_at),
-        title: t("submissionStatus.timeline.events.opened"),
-        icon: "👀",
-        signer: signerName,
-        ip: s.opened_ip,
-        location: s.opened_location || null
-      });
-    }
-    if (s.completed_at) {
-      items.push({
-        key: `completed:${String(s.id)}`,
-        at: String(s.completed_at),
-        title: t("submissionStatus.timeline.events.completed"),
-        icon: "✅",
-        signer: signerName,
-        ip: s.completed_ip,
-        location: s.completed_location || null
-      });
-    }
-    if (s.declined_at) {
-      items.push({
-        key: `declined:${String(s.id)}`,
-        at: String(s.declined_at),
-        title: t("submissionStatus.timeline.events.declined"),
-        icon: "✕",
-        signer: signerName,
-        ip: s.declined_ip,
-        location: s.declined_location || null
-      });
+  for (const e of d.opened_events || []) {
+    items.push({
+      key: `opened:${String(e.submitter_id)}:${String(e.at)}`,
+      at: String(e.at),
+      title: t("submissionStatus.timeline.events.opened"),
+      icon: "👀",
+      signer: e.submitter_name || t("submissionStatus.signerFallback"),
+      ip: e.ip
+    });
+  }
+
+  for (const e of d.completed_events || []) {
+    items.push({
+      key: `completed:${String(e.submitter_id)}:${String(e.at)}`,
+      at: String(e.at),
+      title: t("submissionStatus.timeline.events.completed"),
+      icon: "✅",
+      signer: e.submitter_name || t("submissionStatus.signerFallback"),
+      ip: e.ip
+    });
+  }
+
+  for (const e of d.decline_events || []) {
+    items.push({
+      key: `declined:${String(e.submitter_id)}:${String(e.at)}`,
+      at: String(e.at),
+      title: t("submissionStatus.timeline.events.declined"),
+      icon: "✕",
+      signer: e.submitter_name || t("submissionStatus.signerFallback"),
+      ip: e.ip,
+      reason: e.reason || undefined
+    });
+  }
+
+  const hasOpened = (d.opened_events?.length ?? 0) > 0;
+  const hasCompleted = (d.completed_events?.length ?? 0) > 0;
+  const hasDeclined = (d.decline_events?.length ?? 0) > 0;
+  if (!hasOpened || !hasCompleted || !hasDeclined) {
+    for (const s of d.submitters || []) {
+      const signerName = String(s.name || t("submissionStatus.signerFallback"));
+      if (!hasOpened && s.opened_at) {
+        items.push({
+          key: `opened:${String(s.id)}:${String(s.opened_at)}`,
+          at: String(s.opened_at),
+          title: t("submissionStatus.timeline.events.opened"),
+          icon: "👀",
+          signer: signerName,
+          ip: s.opened_ip,
+          location: s.opened_location || null
+        });
+      }
+      if (!hasCompleted && s.completed_at) {
+        items.push({
+          key: `completed:${String(s.id)}:${String(s.completed_at)}`,
+          at: String(s.completed_at),
+          title: t("submissionStatus.timeline.events.completed"),
+          icon: "✅",
+          signer: signerName,
+          ip: s.completed_ip,
+          location: s.completed_location || null
+        });
+      }
+      if (!hasDeclined && s.declined_at) {
+        items.push({
+          key: `declined:${String(s.id)}:${String(s.declined_at)}`,
+          at: String(s.declined_at),
+          title: t("submissionStatus.timeline.events.declined"),
+          icon: "✕",
+          signer: signerName,
+          ip: s.declined_ip,
+          location: s.declined_location || null,
+          reason: s.decline_reason || undefined
+        });
+      }
     }
   }
 
@@ -277,6 +319,7 @@ const signers = computed(() => {
     opened_at: s.opened_at,
     completed_at: s.completed_at,
     declined_at: s.declined_at,
+    decline_reason: s.decline_reason,
     slug: s.slug
   }));
 });

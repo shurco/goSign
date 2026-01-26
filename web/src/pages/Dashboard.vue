@@ -117,6 +117,7 @@
                   </span>
                 </div>
                 <div class="text-sm text-gray-500">{{ formatEventDate(event.created_at) }}</div>
+                <div v-if="event.reason" class="text-sm text-gray-500 font-mono">{{ $t('common.reasonLabel') }} {{ event.reason }}</div>
                 <div v-if="event.ip" class="text-sm text-gray-500 font-mono">IP address: {{ event.ip }}</div>
                 <div v-if="event.location" class="text-sm text-gray-500">Location: {{ event.location }}</div>
               </div>
@@ -156,6 +157,7 @@ interface Event {
   created_at: string;
   ip?: string;
   location?: string;
+  reason?: string;
 }
 
 const router = useRouter();

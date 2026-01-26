@@ -6,7 +6,7 @@
     >
       <div class="mb-2 flex items-center justify-between gap-3">
         <div class="text-sm font-medium text-[--color-base-content]">
-          {{ mode === "initials" ? t('fields.initials') : t('fields.signature') }}
+          {{ mode === "initials" ? t('fields.initials') : mode === "stamp" ? t('fields.stamp') : t('fields.signature') }}
         </div>
         <button
           type="button"
@@ -122,8 +122,8 @@ export type SignatureFormat =
 
 interface Props {
   modelValue?: string;
-  mode?: "signature" | "initials";
-  /** Format from template: '', drawn, typed, drawn_or_typed, drawn_or_upload, upload */
+  mode?: "signature" | "initials" | "stamp";
+  /** Format from template: '', drawn, typed, drawn_or_typed, drawn_or_upload, upload. Stamp uses upload only. */
   format?: SignatureFormat | string;
   placeholder?: string;
   required?: boolean;

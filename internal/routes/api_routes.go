@@ -96,7 +96,6 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 		signingLinks.Get("/:submission_id/document", handlers.SigningLinks.DownloadCompletedDocument)
 		signingLinks.Get("/:submission_id", handlers.SigningLinks.Get)
 		signingLinks.Post("/", handlers.SigningLinks.Create)
-		signingLinks.Post("/submitters/:id/reset", handlers.SigningLinks.ResetSubmitter)
 	}
 
 	// Submitters API

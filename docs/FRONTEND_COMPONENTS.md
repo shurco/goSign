@@ -1,6 +1,6 @@
 # Frontend Component Architecture
 
-**Last Updated**: 2026-01-25
+**Last Updated**: 2026-01-26
 
 ## Overview
 
@@ -11,8 +11,9 @@ goSign frontend follows a component-based architecture with Vue 3 Composition AP
 ```
 web/src/components/
 ├── ui/                    # 21 primitive UI components
-├── common/                # 3 generic composite components
+├── common/                # 4 generic composite components
 ├── field/                 # Field-specific components
+├── signing/               # Signing portal components
 └── template/              # Document template components
 ```
 
@@ -57,7 +58,7 @@ All UI components follow consistent design principles:
 
 ## Common Layer (Composites)
 
-Located in `web/src/components/common/`, these 3 components compose UI primitives into powerful, reusable patterns.
+Located in `web/src/components/common/`, these 4 components compose UI primitives into powerful, reusable patterns.
 
 ### FieldInput
 
@@ -126,6 +127,10 @@ Universal table with search, sorting, pagination, and actions.
 </ResourceTable>
 ```
 
+### FieldProgressDots
+
+Progress indicator for the signing flow: clickable dots per field with states (filled, current, pending). Used on the submitter signing page for quick field navigation.
+
 ### FormModal
 
 Universal modal for forms with validation.
@@ -167,6 +172,11 @@ Components specific to document field management:
 - **List** - Field list with grouping
 - **Contenteditable** - Inline text editing
 - **SigningModeSelector** - Signing mode (Parallel / Sequential) with i18n. Always visible (no collapse). Optional `hideOrderList` to control order via parent (e.g. draggable signer cards on Submissions page).
+
+### Signing Components (`web/src/components/signing/`)
+
+Components for the public signing portal (`/s/:slug`):
+- **FieldFormDrawer** - Bottom drawer with current field form, progress dots, and prev/next navigation; expandable/collapsible with keyboard support.
 
 ### Template Components (`web/src/components/template/`)
 

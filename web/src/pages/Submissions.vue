@@ -43,7 +43,7 @@
       </template>
 
       <template #cell-progress="{ item }">
-        <div class="flex items-center gap-2">
+        <button type="button" class="flex cursor-pointer items-center gap-2 text-left" @click="openStatusHistory(item as Signing)">
           <progress
             class="progress progress-primary w-20"
             :value="(item as Signing).completed_count"
@@ -52,7 +52,7 @@
           <span class="text-xs text-[--color-base-content]/60">
             {{ (item as Signing).completed_count }}/{{ (item as Signing).total_count }}
           </span>
-        </div>
+        </button>
       </template>
 
       <template #actions="{ item }">
@@ -307,16 +307,6 @@
             >
               <SvgIcon name="copy" :class="ICON_SVG_CLASS" />
             </button>
-            <button
-              v-if="String((item as any).status || '').toLowerCase() === 'declined'"
-              :class="ICON_BUTTON_CLASS"
-              type="button"
-              :title="t('signing.resetStatus')"
-              :aria-label="t('signing.resetStatus')"
-              @click="resetSignerStatus(item as any)"
-            >
-              <SvgIcon name="no-symbol" :class="ICON_SVG_CLASS" />
-            </button>
             </div>
           </template>
         </ResourceTable>
@@ -467,34 +457,6 @@ async function loadSubmissions(): Promise<void> {
   })();
 
   return loadSubmissionsPromise;
-}
-
-async function resetSignerStatus(submitter: any): Promise<void> {
-  const submitterId = String(submitter?.id || "");
-  if (!submitterId) {
-    return;
-  }
-
-  const confirmed = confirm(String(t("signing.resetStatusConfirm")));
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    const res = await fetchWithAuth(`/api/v1/signing-links/submitters/${submitterId}/reset`, {
-      method: "POST"
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      alert(data?.message || String(t("signing.resetStatusFailed")));
-      return;
-    }
-
-    await loadSubmissions();
-  } catch (e) {
-    console.error("Failed to reset signer status:", e);
-    alert(String(t("signing.resetStatusFailed")));
-  }
 }
 
 async function loadTemplates(): Promise<void> {

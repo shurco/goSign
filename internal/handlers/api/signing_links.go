@@ -84,6 +84,9 @@ type SigningLinkDetail struct {
 	TotalCount     int                    `json:"total_count"`
 	Submitters     []map[string]any       `json:"submitters"`
 	Links          []CreatedSubmitterLink `json:"links"`
+	DeclineEvents  []map[string]any       `json:"decline_events,omitempty"`
+	OpenedEvents   []map[string]any       `json:"opened_events,omitempty"`
+	CompletedEvents []map[string]any      `json:"completed_events,omitempty"`
 }
 
 // Create creates a new submission and N submitters (defined by template), and returns public signing URLs.
@@ -419,7 +422,8 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 							ELSE NULL
-						END
+						END,
+						'decline_reason', s.metadata->>'decline_reason'
 					)
 					ORDER BY s.created_at ASC
 				) AS submitters
@@ -429,18 +433,21 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 			LEFT JOIN event created_event ON created_event.type = 'submission.created'
 				AND created_event.resource_type = 'submission'
 				AND created_event.resource_id = sub.id
-			LEFT JOIN event opened_event ON opened_event.type = 'submitter.opened'
-				AND opened_event.resource_type = 'submission'
-				AND opened_event.resource_id = sub.id
-				AND opened_event.metadata_json->>'submitter_id' = s.id::text
-			LEFT JOIN event completed_event ON completed_event.type = 'submitter.completed'
-				AND completed_event.resource_type = 'submission'
-				AND completed_event.resource_id = sub.id
-				AND completed_event.metadata_json->>'submitter_id' = s.id::text
-			LEFT JOIN event declined_event ON declined_event.type = 'submitter.declined'
-				AND declined_event.resource_type = 'submission'
-				AND declined_event.resource_id = sub.id
-				AND declined_event.metadata_json->>'submitter_id' = s.id::text
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) opened_event ON true
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) completed_event ON true
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) declined_event ON true
 			WHERE sub.id = $1
 			  AND COALESCE(sub.source, '') = 'direct_link'
 			  AND t.organization_id = $2
@@ -494,7 +501,8 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
 							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
 							ELSE NULL
-						END
+						END,
+						'decline_reason', s.metadata->>'decline_reason'
 					)
 					ORDER BY s.created_at ASC
 				) AS submitters
@@ -504,18 +512,21 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 			LEFT JOIN event created_event ON created_event.type = 'submission.created'
 				AND created_event.resource_type = 'submission'
 				AND created_event.resource_id = sub.id
-			LEFT JOIN event opened_event ON opened_event.type = 'submitter.opened'
-				AND opened_event.resource_type = 'submission'
-				AND opened_event.resource_id = sub.id
-				AND opened_event.metadata_json->>'submitter_id' = s.id::text
-			LEFT JOIN event completed_event ON completed_event.type = 'submitter.completed'
-				AND completed_event.resource_type = 'submission'
-				AND completed_event.resource_id = sub.id
-				AND completed_event.metadata_json->>'submitter_id' = s.id::text
-			LEFT JOIN event declined_event ON declined_event.type = 'submitter.declined'
-				AND declined_event.resource_type = 'submission'
-				AND declined_event.resource_id = sub.id
-				AND declined_event.metadata_json->>'submitter_id' = s.id::text
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) opened_event ON true
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) completed_event ON true
+			LEFT JOIN LATERAL (
+				SELECT e.ip FROM event e
+				WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+				ORDER BY e.created_at DESC LIMIT 1
+			) declined_event ON true
 			WHERE sub.id = $1
 			  AND COALESCE(sub.source, '') = 'direct_link'
 			  AND sub.created_by_user_id = $2
@@ -544,6 +555,93 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 		})
 	}
 
+	openedEvents := make([]map[string]any, 0)
+	if rowsOpened, errOpen := h.pool.Query(c.Context(), `
+		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip)
+		FROM event e
+		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
+		WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
+		ORDER BY e.created_at ASC
+	`, submissionID, submissionID); errOpen == nil {
+		for rowsOpened.Next() {
+			var at, subID, name string
+			var ip *string
+			if rowsOpened.Scan(&at, &subID, &name, &ip) == nil {
+				ipStr := ""
+				if ip != nil {
+					ipStr = *ip
+				}
+				openedEvents = append(openedEvents, map[string]any{
+					"at":             at,
+					"submitter_id":   subID,
+					"submitter_name": name,
+					"ip":             ipStr,
+				})
+			}
+		}
+		rowsOpened.Close()
+	}
+
+	completedEvents := make([]map[string]any, 0)
+	if rowsCompleted, errComp := h.pool.Query(c.Context(), `
+		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip)
+		FROM event e
+		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
+		WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
+		ORDER BY e.created_at ASC
+	`, submissionID, submissionID); errComp == nil {
+		for rowsCompleted.Next() {
+			var at, subID, name string
+			var ip *string
+			if rowsCompleted.Scan(&at, &subID, &name, &ip) == nil {
+				ipStr := ""
+				if ip != nil {
+					ipStr = *ip
+				}
+				completedEvents = append(completedEvents, map[string]any{
+					"at":             at,
+					"submitter_id":   subID,
+					"submitter_name": name,
+					"ip":             ipStr,
+				})
+			}
+		}
+		rowsCompleted.Close()
+	}
+
+	declineEvents := make([]map[string]any, 0)
+	rowsDecline, errDecline := h.pool.Query(c.Context(), `
+		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip), e.metadata_json->>'reason'
+		FROM event e
+		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
+		WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
+		ORDER BY e.created_at ASC
+	`, submissionID, submissionID)
+	if errDecline == nil {
+		defer rowsDecline.Close()
+		for rowsDecline.Next() {
+			var at, subID, name string
+			var ip, reason *string
+			if rowsDecline.Scan(&at, &subID, &name, &ip, &reason) == nil {
+				ipStr := ""
+				if ip != nil {
+					ipStr = *ip
+				}
+				reasonStr := ""
+				if reason != nil {
+					reasonStr = *reason
+				}
+				declineEvents = append(declineEvents, map[string]any{
+					"at":             at,
+					"submitter_id":   subID,
+					"submitter_name": name,
+					"ip":             ipStr,
+					"reason":         reasonStr,
+				})
+			}
+		}
+	}
+
 	createdIPStr := ""
 	if createdIP != nil {
 		createdIPStr = *createdIP
@@ -558,72 +656,12 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 		CompletedCount: completedCount,
 		TotalCount:     totalCount,
 		Submitters:     submitters,
-		Links:          links,
+		Links:            links,
+		DeclineEvents:    declineEvents,
+		OpenedEvents:     openedEvents,
+		CompletedEvents:  completedEvents,
 	}
 	return webutil.Response(c, fiber.StatusOK, "signing_link", detail)
-}
-
-// ResetSubmitter resets a declined/completed/opened submitter back to pending.
-// This is intended for owners/admins to allow a signer to retry using the same link.
-//
-// It:
-// - sets status = 'pending'
-// - clears opened_at/completed_at/declined_at
-// - clears signer-entered metadata (fields/signature/decline_reason)
-//
-// @Summary Reset submitter status
-// @Tags signing-links
-// @Param id path string true "Submitter ID"
-// @Success 200 {object} map[string]any
-// @Failure 403 {object} map[string]any
-// @Failure 404 {object} map[string]any
-// @Router /api/v1/signing-links/submitters/{id}/reset [post]
-func (h *SigningLinkHandler) ResetSubmitter(c *fiber.Ctx) error {
-	userID, err := GetUserID(c)
-	if err != nil {
-		return err
-	}
-
-	submitterID := c.Params("id")
-	if submitterID == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "submitter id is required", nil)
-	}
-
-	// Only allow resetting submitters for submissions created by this user.
-	// (This matches how /api/v1/signing-links list is scoped today.)
-	var submissionID string
-	err = h.pool.QueryRow(c.Context(), `
-		SELECT s.submission_id
-		FROM submitter s
-		JOIN submission sub ON sub.id = s.submission_id
-		WHERE s.id = $1
-		  AND sub.created_by_user_id = $2
-		LIMIT 1
-	`, submitterID, userID).Scan(&submissionID)
-	if err != nil || submissionID == "" {
-		// Hide existence details to non-owners.
-		return webutil.Response(c, fiber.StatusNotFound, "Submitter not found", nil)
-	}
-
-	_, err = h.pool.Exec(c.Context(), `
-		UPDATE submitter
-		SET status = 'pending',
-		    opened_at = NULL,
-		    completed_at = NULL,
-		    declined_at = NULL,
-		    metadata = (COALESCE(metadata, '{}'::jsonb) - 'fields' - 'signature' - 'decline_reason'),
-		    updated_at = NOW()
-		WHERE id = $1
-	`, submitterID)
-	if err != nil {
-		return webutil.Response(c, fiber.StatusInternalServerError, fmt.Sprintf("Failed to reset submitter: %v", err), nil)
-	}
-
-	return webutil.Response(c, fiber.StatusOK, "submitter_reset", map[string]any{
-		"submitter_id": submitterID,
-		"submission_id": submissionID,
-		"status":       "pending",
-	})
 }
 
 // DownloadCompletedDocument downloads the final PDF for a completed submission.

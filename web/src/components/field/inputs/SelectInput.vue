@@ -9,14 +9,14 @@
       @blur="handleBlur"
     >
       <option value="">{{ placeholder || "Select..." }}</option>
-      <option v-for="option in options" :key="option.id || option.value" :value="option.value || option.id">
+      <option v-for="option in normalizedOptions" :key="option.id || option.value" :value="option.value || option.id">
         {{ option.label || option.value }}
       </option>
     </Select>
 
     <div v-else-if="type === 'radio'" class="space-y-2">
       <label
-        v-for="option in options"
+        v-for="option in normalizedOptions"
         :key="option.id || option.value"
         class="flex cursor-pointer items-center gap-2"
       >
@@ -37,7 +37,7 @@
 
     <div v-else-if="type === 'multiple'" class="space-y-2">
       <label
-        v-for="option in options"
+        v-for="option in normalizedOptions"
         :key="option.id || option.value"
         class="flex cursor-pointer items-center gap-2"
       >
@@ -72,7 +72,8 @@ interface Props {
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
-  options?: Option[];
+  /** Options: array of { id?, value?, label? } or strings (normalized to objects) */
+  options?: (Option | string)[];
   error?: string;
 }
 
@@ -94,6 +95,24 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const radioGroupName = useId();
+
+// Normalize options: accept objects { id?, value?, label? } or strings
+const normalizedOptions = computed((): Option[] => {
+  const raw = props.options ?? [];
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item): Option => {
+    if (typeof item === "string") {
+      return { id: item, value: item, label: item };
+    }
+    const o = item as Option;
+    const value = String(o.value ?? o.id ?? "");
+    return {
+      id: o.id ?? value,
+      value,
+      label: o.label ?? value
+    };
+  });
+});
 
 const localValue = ref(props.modelValue);
 const selectedValues = ref<string[]>(Array.isArray(props.modelValue) ? props.modelValue : []);

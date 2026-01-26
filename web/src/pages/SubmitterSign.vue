@@ -124,7 +124,7 @@
     </div>
 
     <!-- Signing Form -->
-    <div v-else class="container mx-auto px-4 py-8">
+    <div v-else class="container mx-auto px-4">
       <!-- Header -->
       <div class="mb-6 bg-white">
         <div class="px-6 py-5">
@@ -138,24 +138,29 @@
               </div>
             </div>
 
-            <!-- Signing language selector: default to browser language, user can override -->
-            <div v-if="showLanguageSelector" class="w-full sm:w-48">
-              <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('settings.language') }}</label>
-              <select class="select select-bordered select-sm w-full" :value="signingLocale" @change="onSigningLocaleChange">
-                <option v-for="(name, code) in SUPPORTED_LOCALES" :key="code" :value="code">
-                  {{ name }}
-                </option>
-              </select>
+            <!-- Language + Decline -->
+            <div class="flex flex-wrap items-end gap-3">
+              <div v-if="showLanguageSelector" class="w-full sm:w-48">
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('settings.language') }}</label>
+                <select class="select select-bordered select-sm w-full" :value="signingLocale" @change="onSigningLocaleChange">
+                  <option v-for="(name, code) in SUPPORTED_LOCALES" :key="code" :value="code">
+                    {{ name }}
+                  </option>
+                </select>
+              </div>
+              <Button type="button" variant="ghost" size="sm" class="border-red-300 text-red-700 hover:bg-red-50" :disabled="isSubmitting" @click="openDeclineModal">
+                {{ t('signing.decline') }}
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <!-- Document Preview -->
-        <div class="lg:col-span-2 relative">
-          <div class="bg-white">
-            <div class="px-6 py-5">
+      <!-- Full-width document preview (padding for fixed bottom panel) -->
+      <div
+        class="relative"
+        @click="onSigningAreaClick"
+      >
               <div class="overflow-hidden">
                 <div v-for="(doc, docIndex) in sortedDocuments" :key="doc.id">
                   <div v-for="(page, pageIndex) in getSortedPreviewImages(doc)" :key="page.id" class="relative mb-4">
@@ -205,136 +210,76 @@
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Bottom bar: prev/next, status, reset & sign -->
-          <div
-            class="signing-bottom-bar sticky bottom-0 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-t-lg border border-b-0 border-[var(--color-base-300)] bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm"
-          >
-            <div class="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                :disabled="prevUnfilledIndex < 0"
-                @click="goToPrevField"
-              >
-                {{ t('common.previous') }}
-              </Button>
-              <template v-if="isFormValid">
-                <Button type="button" variant="ghost" size="sm" :disabled="isSubmitting" @click="handleReset">
-                  {{ t('common.reset') }}
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  :loading="isSubmitting"
-                  :disabled="isSubmitting"
-                  @click="handleSubmit"
-                >
-                  {{ t('signing.sign') }}
-                </Button>
-              </template>
-              <span v-else class="shrink-0 text-sm font-medium text-[--color-base-content]/80">
-                {{ t('signing.fieldsProgress', { completed: completedFieldsCount, total: visibleFields.length }) }}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                :disabled="nextUnfilledIndex < 0"
-                @click="goToNextField"
-              >
-                {{ t('common.next') }}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Form Fields -->
-        <div class="lg:col-span-1">
-          <div class="sticky top-4 rounded-lg border border-[var(--color-base-300)] bg-white">
-            <div class="px-6 py-5">
-              <div class="space-y-4">
-                <div v-for="field in visibleFields" :id="`field-${field.id}`" :key="field.id" class="form-control">
-                  <!-- Header row: checkbox icon + label + (filled); click expands this block and scrolls to document -->
-                  <div
-                    class="label flex cursor-pointer items-center gap-2 py-2"
-                    :class="{ 'rounded ring-2 ring-primary': expandedFieldId === field.id }"
-                    @click="expandFieldAndScrollToDocument(field.id)"
-                  >
-                    <span class="shrink-0 select-none text-lg leading-none" aria-hidden="true">
-                      {{ isFieldFilled(field) ? '✅' : '⬜️' }}
-                    </span>
-                    <span class="label-text min-w-0 flex-1 font-semibold">
-                      {{ getFieldLabel(field) }}
-                      <span v-if="fieldStates[field.id]?.required || field.required" class="text-error">*</span>
-                    </span>
-                  </div>
-
-                  <!-- Field input: only when this block is expanded -->
-                  <template v-if="expandedFieldId === field.id">
-                    <FieldInput
-                      v-model="formData[field.id]"
-                      :type="field.type as any"
-                      :required="fieldStates[field.id]?.required || field.required"
-                      :readonly="field.readonly"
-                      :disabled="fieldStates[field.id]?.disabled"
-                      :options="field.options"
-                      :placeholder="getFieldLabel(field)"
-                      :error="fieldErrors[field.id]"
-                      :formula="field.formula"
-                      :calculationType="field.calculationType as 'number' | 'currency' | undefined"
-                      :calculatedValue="calculatedValues[field.id]"
-                      :cell-count="getCellCount(field)"
-                      :price="field.preferences?.price"
-                      :currency="field.preferences?.currency"
-                      :date-format="field.type === 'date' ? (field.preferences as { format?: string })?.format : undefined"
-                      :signature-format="getSignatureFormat(field)"
-                      @blur="validateField(field)"
-                    />
-                    <p
-                      v-if="hasWithSignatureId(field) && isFieldFilled(field) && signatureIds[field.id]"
-                      class="mt-2 text-xs text-[--color-base-content]/70"
-                    >
-                      {{ field.type === 'stamp' ? t('signing.stampId') : t('signing.signatureId') }}: <span class="font-mono font-medium">{{ signatureIds[field.id] }}</span>
-                    </p>
-                  </template>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <!-- Single floating panel: drawer (when field open) + action bar (always) -->
+          <FieldFormDrawer
+            ref="drawerRef"
+            :is-open="expandedFieldId !== null"
+            :field="activeField"
+            :model-value="activeField ? formData[activeField.id] : undefined"
+            :all-fields="visibleFields"
+            :filled-field-ids="filledFieldIds"
+            :field-states="fieldStates"
+            :field-errors="fieldErrors"
+            :calculated-values="calculatedValues"
+            :signature-ids="signatureIds"
+            :get-field-label="getFieldLabel"
+            :get-cell-count="getCellCount"
+            :get-signature-format="getSignatureFormat"
+            :has-with-signature-id="hasWithSignatureId"
+            :is-field-filled="isFieldFilled"
+            :can-go-prev="prevUnfilledIndex >= 0"
+            :can-go-next="nextUnfilledIndex >= 0"
+            :is-form-valid="isFormValid"
+            :is-submitting="isSubmitting"
+            :prev-unfilled-index="prevUnfilledIndex"
+            :next-unfilled-index="nextUnfilledIndex"
+            @update:model-value="onDrawerUpdateValue"
+            @close="closeDrawer"
+            @navigate="onDrawerNavigate"
+            @field-select="onDrawerFieldSelect"
+            @blur="validateField"
+            @reset="handleReset"
+            @submit="handleSubmit"
+          />
       </div>
 
-      <!-- Danger zone -->
-      <div class="mt-8 rounded-lg border border-red-200 bg-red-50">
-        <div class="px-6 py-5">
-          <h3 class="text-base font-semibold text-red-900">{{ t('signing.dangerTitle') }}</h3>
-          <p class="mt-1 text-sm text-red-800">
-            {{ t('signing.declineWarning') }}
-          </p>
-
-          <div class="mt-4">
-            <Button type="button" variant="error" :disabled="isSubmitting" @click="handleDecline">
+      <!-- Decline modal -->
+      <Modal v-model="declineModalOpen" :title="t('signing.decline')" size="md" @close="declineModalOpen = false">
+        <div class="space-y-3">
+          <label class="block text-sm font-medium text-[--color-base-content]">
+            {{ t('signing.declineReasonLabel') }}
+          </label>
+          <textarea
+            v-model="declineReason"
+            class="textarea textarea-bordered w-full min-h-[100px] resize-y"
+            :placeholder="t('signing.declineReasonPlaceholder')"
+            rows="4"
+          />
+        </div>
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <Button type="button" variant="ghost" :disabled="isSubmitting" @click="declineModalOpen = false">
+              {{ t('common.cancel') }}
+            </Button>
+            <Button type="button" variant="error" :loading="isSubmitting" :disabled="isSubmitting" @click="handleDeclineSubmit">
               {{ t('signing.decline') }}
             </Button>
           </div>
-        </div>
-      </div>
+        </template>
+      </Modal>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
-import FieldInput from "@/components/common/FieldInput.vue";
+import FieldFormDrawer from "@/components/signing/FieldFormDrawer.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
 import Button from "@/components/ui/Button.vue";
+import Modal from "@/components/ui/Modal.vue";
 // Public signer-facing endpoints do not require authentication.
 import { useConditions } from "@/composables/useConditions";
 import { useFormulas } from "@/composables/useFormulas";
@@ -420,6 +365,8 @@ const SIGNING_LOCALE_STORAGE_KEY = "signing_locale";
 const previousLocale = ref<string | null>(null);
 const signingLocale = ref(locale.value as string);
 const showLanguageSelector = ref(true);
+const declineModalOpen = ref(false);
+const declineReason = ref("");
 
 const template = ref<Template | null>(null);
 const submitter = ref<Submitter | null>(null);
@@ -463,6 +410,17 @@ const visibleFields = computed(() => {
     const state = fieldStates.value[field.id]
     return state ? state.visible : true
   })
+});
+
+const filledFieldIds = computed(() => {
+  void formData.value;
+  void fieldStates.value;
+  return visibleFields.value.filter((f) => isFieldFilled(f)).map((f) => f.id);
+});
+
+const activeField = computed(() => {
+  if (!expandedFieldId.value) return null;
+  return visibleFields.value.find((f) => f.id === expandedFieldId.value) ?? null;
 });
 
 const completedFieldsCount = computed(() => {
@@ -512,9 +470,9 @@ const sortedDocuments = computed(() => {
     return [];
   }
   if (template.value.schema && template.value.schema.length > 0) {
-    return template.value.schema.map((item: any) => {
-      return template.value?.documents.find((doc: any) => doc.id === item.attachment_id);
-    }).filter(Boolean);
+    return template.value.schema
+      .map((item: any) => template.value?.documents.find((d: any) => d.id === item.attachment_id))
+      .filter((d): d is NonNullable<typeof d> => Boolean(d));
   }
   // Fallback to original order if no schema
   return template.value.documents;
@@ -600,6 +558,16 @@ onMounted(async () => {
   previousLocale.value = locale.value as string;
   applySigningLocale(initialSigningLocale());
   await loadSubmission();
+  // Auto-open drawer for first unfilled field when signing form is shown
+  await nextTick();
+  if (submitter.value && submitter.value.status !== "completed" && submitter.value.status !== "declined" && !needsEmailOrName && visibleFields.value.length > 0) {
+    const firstUnfilled = visibleFields.value.find((f) => !isFieldFilled(f));
+    if (firstUnfilled) {
+      expandedFieldId.value = firstUnfilled.id;
+      currentFieldIndex.value = visibleFields.value.findIndex((f) => f.id === firstUnfilled.id);
+      scrollToFieldOnDocument(firstUnfilled.id);
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -733,7 +701,8 @@ function generateDefaultFieldName(field: Field): string {
   }
 
   // Get submitter index for party name
-  const submitterIndex = template.value.submitters.findIndex((s: any) => s.id === submitter.value?.id);
+  const submitters = (template.value as { submitters?: { id: string }[] })?.submitters ?? [];
+  const submitterIndex = submitters.findIndex((s: any) => s.id === submitter.value?.id);
   const partyName = subNames[submitterIndex]?.replace(" Party", "") || "First";
 
   // Get type name from constants
@@ -958,11 +927,7 @@ function clearAllFieldHighlights(): void {
     highlightTimeout = null;
   }
   document.querySelectorAll(".doc-field-overlay").forEach((el) => {
-    el.classList.remove("ring-2", "ring-primary");
-  });
-  visibleFields.value.forEach((f) => {
-    const el = document.getElementById(`field-${f.id}`);
-    if (el) el.classList.remove("ring-2", "ring-primary", "rounded");
+    el.classList.remove("ring-2", "ring-primary", "rounded");
   });
 }
 
@@ -974,19 +939,10 @@ function scrollToField(fieldId: string, documentOnly = false): void {
   }
   clearAllFieldHighlights();
   const docEl = document.querySelector(`[data-field-id="${fieldId}"].doc-field-overlay`);
-  const formEl = document.getElementById(`field-${fieldId}`);
 
-  if (documentOnly) {
-    if (docEl) {
-      docEl.scrollIntoView({ behavior: "smooth", block: "center" });
-      docEl.classList.add("ring-2", "ring-primary", "rounded");
-    }
-    if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (formEl) formEl.classList.add("ring-2", "ring-primary", "rounded");
-  } else {
-    if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (docEl) docEl.classList.add("ring-2", "ring-primary", "rounded");
-    if (formEl) formEl.classList.add("ring-2", "ring-primary", "rounded");
+  if (docEl) {
+    docEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    docEl.classList.add("ring-2", "ring-primary", "rounded");
   }
   highlightTimeout = setTimeout(clearAllFieldHighlights, 2000);
 }
@@ -1049,8 +1005,35 @@ function scrollToFieldOnDocument(fieldId: string): void {
     element.classList.add("ring-2", "ring-primary", "rounded");
     highlightTimeout = setTimeout(clearAllFieldHighlights, 2000);
   }
-  const formEl = document.getElementById(`field-${fieldId}`);
-  if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+const drawerRef = ref<InstanceType<typeof FieldFormDrawer> | null>(null);
+
+function onSigningAreaClick(e: MouseEvent): void {
+  if (!expandedFieldId.value) return;
+  const target = e.target as HTMLElement;
+  if (drawerRef.value?.$el?.contains(target)) return;
+  if (target.closest(".doc-field-overlay")) return;
+  closeDrawer();
+}
+
+function closeDrawer(): void {
+  expandedFieldId.value = null;
+}
+
+function onDrawerUpdateValue(value: any): void {
+  if (activeField.value) {
+    formData.value[activeField.value.id] = value;
+  }
+}
+
+function onDrawerNavigate(direction: "prev" | "next"): void {
+  if (direction === "prev") goToPrevField();
+  else goToNextField();
+}
+
+function onDrawerFieldSelect(fieldId: string): void {
+  scrollToField(fieldId);
 }
 
 function validateField(field: Field): void {
@@ -1135,13 +1118,13 @@ async function handleSubmit(): Promise<void> {
   }
 }
 
-async function handleDecline(): Promise<void> {
-  if (!submitter.value || isSubmitting.value) {
-    return;
-  }
+function openDeclineModal(): void {
+  declineReason.value = "";
+  declineModalOpen.value = true;
+}
 
-  const confirmed = confirm(t("signing.declineConfirm"));
-  if (!confirmed) {
+async function handleDeclineSubmit(): Promise<void> {
+  if (!submitter.value || isSubmitting.value) {
     return;
   }
 
@@ -1149,7 +1132,9 @@ async function handleDecline(): Promise<void> {
 
   try {
     const response = await fetch(`/public/sign/${slug.value}/decline`, {
-      method: "POST"
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: declineReason.value.trim() || undefined })
     });
 
     if (!response.ok) {
@@ -1157,7 +1142,8 @@ async function handleDecline(): Promise<void> {
     }
 
     clearDraftStorage(slug.value);
-    // Reload to show declined state
+    declineModalOpen.value = false;
+    declineReason.value = "";
     await loadSubmission();
   } catch (err) {
     error.value = (err as Error).message;

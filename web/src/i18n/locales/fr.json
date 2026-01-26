@@ -27,7 +27,8 @@
     "complete": "Terminé",
     "optional": "Optionnel",
     "download": "Télécharger",
-    "deleted": "Supprimé"
+    "deleted": "Supprimé",
+    "reasonLabel": "Raison :"
   },
   "status": {
     "draft": "Brouillon",
@@ -149,6 +150,8 @@
     "dangerTitle": "Zone de danger",
     "declineWarning": "Refuser marquera ce document comme refusé et vous pourriez ne plus pouvoir continuer à signer.",
     "declineConfirm": "Êtes-vous sûr de vouloir refuser ce document ?",
+    "declineReasonLabel": "Informer l'expéditeur de la raison du refus",
+    "declineReasonPlaceholder": "Indiquer la raison (facultatif)",
     "resetConfirm": "Réinitialiser tous les champs ? Cela effacera vos saisies sur cette page.",
     "completedTitle": "Document signé !",
     "completedThanks": "Merci d'avoir signé ce document.",
@@ -177,9 +180,7 @@
     "fillAllCells": "Remplissez toutes les cellules avec un caractère dans chacune",
     "submissionNotFound": "Soumission introuvable",
     "submitFailed": "Échec de l'envoi",
-    "declineFailed": "Échec du refus",
-    "resetStatus": "Réinitialiser le statut",
-    "resetStatusConfirm": "Réinitialiser ce signataire à « en attente » ? Il pourra signer à nouveau via le même lien."
+    "declineFailed": "Échec du refus"
   },
   "signingMode": {
     "title": "Mode de signature",
