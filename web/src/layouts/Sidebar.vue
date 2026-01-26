@@ -229,7 +229,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { logout } from "@/utils/auth";
@@ -237,32 +237,13 @@ import { apiGet, apiPost } from "@/services/api";
 import SvgIcon from "@/components/SvgIcon.vue";
 import Select from "@/components/ui/Select.vue";
 import { Organization } from "@/models";
+import { useCurrentUser } from "@/composables/useCurrentUser";
 
 const { t } = useI18n();
+const { userData, isAdmin, loadUserData, clearUser } = useCurrentUser();
 
 const route = useRoute();
 const isCollapsed = ref(false);
-
-// User data
-interface UserData {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: number;
-}
-
-const userData = ref<UserData | null>(null);
-
-// Cache user role to prevent flickering
-const cachedUserRole = ref<number | null>(null);
-
-// Check if user is admin (role === 3)
-// Use cached role if userData is not loaded yet to prevent flickering
-const isAdmin = computed(() => {
-  const role = userData.value?.role ?? cachedUserRole.value;
-  return role === 3;
-});
 
 // Organizations data
 const organizations = ref<Organization[]>([]);
@@ -347,29 +328,6 @@ const handleOrganizationChange = async (orgId: string) => {
   }
 };
 
-// Load current user data
-const loadUserData = async () => {
-  try {
-    // Try to load cached role from localStorage first
-    const cachedRole = localStorage.getItem("user_role");
-    if (cachedRole) {
-      cachedUserRole.value = parseInt(cachedRole, 10);
-    }
-    
-    const response = await apiGet("/api/v1/users/me");
-    if (response && response.data) {
-      userData.value = response.data as UserData;
-      // Cache role in localStorage and ref
-      if (response.data.role !== undefined) {
-        cachedUserRole.value = response.data.role;
-        localStorage.setItem("user_role", String(response.data.role));
-      }
-    }
-  } catch (error) {
-    console.error("Failed to load user data:", error);
-  }
-};
-
 // Watch for localStorage changes
 const watchStorage = () => {
   window.addEventListener("storage", updateCurrentOrganization);
@@ -402,6 +360,7 @@ function toggleSidebar(): void {
  * Handle logout - clear tokens and redirect to login
  */
 async function handleLogout(): Promise<void> {
+  clearUser();
   await logout();
 }
 </script>

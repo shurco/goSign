@@ -161,6 +161,14 @@ Universal modal for forms with validation.
 </FormModal>
 ```
 
+## Composables
+
+Located in `web/src/composables/`, shared logic used across components.
+
+### useCurrentUser
+
+Provides shared current user state for layout components (Sidebar, SettingsSidebar). User data and role are stored in a module-level ref and optionally restored from sessionStorage so that switching between Dashboard (Sidebar layout) and Settings (SettingsSidebar layout) does not re-fetch or flicker the user block. Exposes `userData`, `isAdmin`, `loadUserData`, and `clearUser` (call on logout).
+
 ## Domain Layer
 
 ### Field Components (`web/src/components/field/`)

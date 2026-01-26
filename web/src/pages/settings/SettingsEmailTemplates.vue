@@ -128,6 +128,7 @@
 import { computed, onMounted, ref, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { SUPPORTED_LOCALES } from "@/i18n";
+import { apiGet } from "@/services/api";
 import { fetchWithAuth } from "@/utils/auth";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import FormControl from "@/components/ui/FormControl.vue";
@@ -172,29 +173,14 @@ onMounted(async () => {
 
 async function loadTemplates(): Promise<void> {
   try {
-    // Use fetchWithAuth directly like other settings pages
     const url = `/api/v1/email-templates?locale=${selectedLocale.value}`;
-    const response = await fetchWithAuth(url);
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Email templates API response:", data);
-      
-      // API returns: { success: true, message: "...", data: { templates: [...] } }
-      if (data.data && data.data.templates && Array.isArray(data.data.templates)) {
-        templates.value = data.data.templates;
-      } else if (data.templates && Array.isArray(data.templates)) {
-        // Fallback: if templates are directly in data
-        templates.value = data.templates;
-      } else if (Array.isArray(data.data)) {
-        // Fallback: if data is directly an array
-        templates.value = data.data;
-      } else {
-        console.warn("Unexpected response structure:", data);
-        templates.value = [];
-      }
+    const response = await apiGet<{ templates?: EmailTemplate[] }>(url);
+    const raw = response?.data;
+    if (raw && typeof raw === "object" && "templates" in raw && Array.isArray(raw.templates)) {
+      templates.value = raw.templates;
+    } else if (Array.isArray(raw)) {
+      templates.value = raw;
     } else {
-      const errorText = await response.text().catch(() => "");
-      console.error("Failed to load email templates:", response.status, response.statusText, errorText);
       templates.value = [];
     }
   } catch (error) {

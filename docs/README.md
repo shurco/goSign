@@ -268,6 +268,7 @@ goSign v2.4 adds comprehensive enterprise-grade improvements:
 - **Organizations**: Moved to Administrator section (`/admin/organizations`). Only administrators can access the page and switch or exit organization context (API returns 403 for non-admins). Organization dropdown removed from sidebar.
 - **Email Templates**: Moved from Admin settings to user Settings (`/settings/email/templates`). Each organization can have its own templates; scope is determined by JWT (organization_id or account). Settings tab order: General, Email templates, Webhooks, API keys, Branding.
 - **Database**: `email_template` table extended with `organization_id` for per-organization templates (migration `20260125000001_email_template_organization.sql`).
+- **Layout UX**: Shared current user state via `useCurrentUser` composable so sidebar user block (name, email) does not flicker when switching between Dashboard and Settings. Email templates page uses `apiGet` for consistent API response handling.
 
 ### v2.3.0 - Organization Management
 goSign v2.3 adds comprehensive organization and team management:
