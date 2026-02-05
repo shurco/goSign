@@ -17,7 +17,7 @@ require (
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.26.0
-	github.com/redis/go-redis/v9 v9.17.2
+	github.com/redis/go-redis/v9 v9.17.3
 	github.com/rs/zerolog v1.34.0
 	github.com/signintech/gopdf v0.35.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
