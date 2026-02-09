@@ -19,7 +19,7 @@ require (
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/rs/zerolog v1.34.0
-	github.com/signintech/gopdf v0.35.0
+	github.com/signintech/gopdf v0.36.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.11.1
 	github.com/wneessen/go-mail v0.7.2
