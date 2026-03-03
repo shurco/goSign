@@ -31,7 +31,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-vue": "^6.0.3",
-    "@vue/tsconfig": "^0.8.1",
+    "@vue/tsconfig": "^0.9.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
