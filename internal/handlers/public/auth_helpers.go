@@ -16,7 +16,7 @@ import (
 )
 
 // parseAndValidate parses request body and validates it
-func parseAndValidate(c *fiber.Ctx, v interface{}) error {
+func parseAndValidate(c *fiber.Ctx, v any) error {
 	if err := c.BodyParser(v); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}

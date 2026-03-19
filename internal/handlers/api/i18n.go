@@ -112,7 +112,7 @@ func (h *I18nHandler) UpdateUserLocale(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update locale", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Locale updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Locale updated successfully", map[string]any{
 		"locale": req.Locale,
 	})
 }
@@ -135,16 +135,9 @@ type UpdateAccountLocaleRequest struct {
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/account/locale [put]
 func (h *I18nHandler) UpdateAccountLocale(c *fiber.Ctx) error {
-	userID, err := GetUserID(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
-	}
-
-	// Get account ID from user
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userID)
-	if err != nil {
-		log.Error().Err(err).Str("user_id", userID).Msg("Failed to get user account")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get account", nil)
 	}
 
 	var req UpdateAccountLocaleRequest
@@ -167,7 +160,7 @@ func (h *I18nHandler) UpdateAccountLocale(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to update locale", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Locale updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Locale updated successfully", map[string]any{
 		"locale": req.Locale,
 	})
 }

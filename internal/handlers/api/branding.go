@@ -13,11 +13,11 @@ import (
 type BrandingHandler struct {
 	accountQueries *queries.AccountQueries
 	userQueries    *queries.UserQueries
-	storage        interface{} // TODO: implement storage interface
+	storage        any // TODO: implement storage interface
 }
 
 // NewBrandingHandler creates a new branding handler
-func NewBrandingHandler(accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, storage interface{}) *BrandingHandler {
+func NewBrandingHandler(accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, storage any) *BrandingHandler {
 	return &BrandingHandler{
 		accountQueries: accountQueries,
 		userQueries:    userQueries,
@@ -43,7 +43,7 @@ func (h *BrandingHandler) GetBranding(c *fiber.Ctx) error {
 		ShowPoweredBy: true,
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Branding retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Branding retrieved successfully", map[string]any{
 		"branding": branding,
 	})
 }
@@ -76,7 +76,7 @@ func (h *BrandingHandler) UpdateBranding(c *fiber.Ctx) error {
 	// TODO: Save to account.settings_jsonb
 	log.Info().Str("account_id", accountID).Msg("Branding settings updated")
 
-	return webutil.Response(c, fiber.StatusOK, "Branding updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Branding updated successfully", map[string]any{
 		"branding": req.Branding,
 	})
 }
@@ -239,7 +239,7 @@ func (h *BrandingHandler) PreviewBranding(c *fiber.Ctx) error {
 	}
 
 	// TODO: Load branding and return preview data
-	preview := map[string]interface{}{
+	preview := map[string]any{
 		"theme": "default",
 		"colors": map[string]string{
 			"primary": "#4F46E5",

@@ -29,17 +29,17 @@ function redirectToLogin(): void {
     return;
   }
 
-    if (routerInstance) {
-      try {
-        routerInstance.push("/auth/signin");
-        return;
-      } catch {
-        // Fall through to window.location
-      }
+  if (routerInstance) {
+    try {
+      routerInstance.push("/auth/signin");
+      return;
+    } catch {
+      // Fall through to window.location
     }
-
-    window.location.href = "/auth/signin";
   }
+
+  window.location.href = "/auth/signin";
+}
 
 /**
  * Clear tokens and redirect to login
@@ -54,12 +54,17 @@ function clearTokensAndRedirect(): void {
  * Logout user - clear tokens and redirect to login
  * Optionally invalidate refresh token on server
  */
+export function clearAdminCache(): void {
+  window.dispatchEvent(new CustomEvent("gosign:clear-admin-cache"));
+}
+
 export async function logout(): Promise<void> {
   const refreshToken = localStorage.getItem("refresh_token");
 
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("user_role");
+  clearAdminCache();
 
   // Try to invalidate refresh token on server (optional, don't wait for response)
   if (refreshToken) {
@@ -173,25 +178,25 @@ export function getAuthHeaders(): Record<string, string> {
  * Merge headers from options into new Headers object
  */
 function mergeHeaders(options: RequestInit): Headers {
-    const headers = new Headers();
+  const headers = new Headers();
 
-    if (options.headers) {
-      if (options.headers instanceof Headers) {
-        options.headers.forEach((value, key) => {
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        headers.set(key, value);
+      });
+    } else if (Array.isArray(options.headers)) {
+      options.headers.forEach(([key, value]) => {
+        headers.set(key, value);
+      });
+    } else {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (typeof value === "string") {
           headers.set(key, value);
-        });
-      } else if (Array.isArray(options.headers)) {
-        options.headers.forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-      } else {
-        Object.entries(options.headers).forEach(([key, value]) => {
-          if (typeof value === "string") {
-            headers.set(key, value);
-          }
-        });
-      }
+        }
+      });
     }
+  }
 
   return headers;
 }

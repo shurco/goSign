@@ -10,11 +10,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
-var mySigningKey = []byte("mysecretkey")
+func signingKey() []byte {
+	return []byte(config.Data().JWTSecret)
+}
 
 // AuthType defines the type of authentication used
 type AuthType string
@@ -75,8 +78,7 @@ func CreateTokenWithOrg(user *models.User, organizationID string) (string, error
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, err := token.SignedString(mySigningKey)
-	return accessToken, err
+	return token.SignedString(signingKey())
 }
 
 // CreateRefreshToken generates JWT refresh token (7 days)
@@ -89,14 +91,13 @@ func CreateRefreshToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	refreshToken, err := token.SignedString(mySigningKey)
-	return refreshToken, err
+	return token.SignedString(signingKey())
 }
 
 // ValidateRefreshToken validates refresh token and returns user ID
 func ValidateRefreshToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
-		return mySigningKey, nil
+		return signingKey(), nil
 	})
 	if err != nil {
 		return "", errors.New("invalid refresh token")
@@ -113,7 +114,7 @@ func ValidateRefreshToken(tokenString string) (string, error) {
 // ValidateToken parses and validates JWT token
 func ValidateToken(tokenString string) (*MyCustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &MyCustomClaims{}, func(token *jwt.Token) (any, error) {
-		return mySigningKey, nil
+		return signingKey(), nil
 	})
 	if err != nil {
 		return nil, errors.New("unauthorized")
@@ -157,8 +158,9 @@ func Protected() fiber.Handler {
 				return webutil.Response(c, fiber.StatusForbidden, "API key has expired", nil)
 			}
 
-			// Update last used timestamp (async, don't block request)
-			go apiKeyValidator.UpdateLastUsed(keyModel.ID)
+		go func(id string) {
+			_ = apiKeyValidator.UpdateLastUsed(id)
+		}(keyModel.ID)
 
 			// Store auth context
 			c.Locals("auth", &AuthContext{
@@ -176,7 +178,7 @@ func Protected() fiber.Handler {
 			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
-		accessToken = strings.Replace(accessToken, "Bearer ", "", 1)
+		accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 		claims, err := ValidateToken(accessToken)
 		if err != nil {
 			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)

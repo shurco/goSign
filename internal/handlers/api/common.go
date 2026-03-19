@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/shurco/gosign/internal/queries"
 )
 
 // GetUserID extracts user ID from request context
@@ -51,6 +53,26 @@ func GetAccountID(c *fiber.Ctx) (string, error) {
 	// This requires UserQueries, so we'll handle it in the handler
 	// For now, return error - middleware should set account_id
 	return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found in context")
+}
+
+// ResolveAccountID extracts user_id from context and resolves account_id via DB.
+// Eliminates the repeated GetUserID → GetUserAccountID pattern across handlers.
+func ResolveAccountID(c *fiber.Ctx, uq *queries.UserQueries) (string, error) {
+	if uq == nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "User queries not initialized")
+	}
+	userID, err := GetUserID(c)
+	if err != nil {
+		return "", err
+	}
+	accountID, err := uq.GetUserAccountID(c.Context(), userID)
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusInternalServerError, "Failed to resolve account")
+	}
+	if strings.TrimSpace(accountID) == "" {
+		return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found")
+	}
+	return accountID, nil
 }
 
 // GetClientIP extracts the real client IP address from the request

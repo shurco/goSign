@@ -1,9 +1,7 @@
 package api
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -22,6 +20,7 @@ import (
 	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage"
+	"github.com/shurco/gosign/pkg/utils"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -65,12 +64,12 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 			// Email/SMTP settings
 			if smtpMap, ok := globalSettings["smtp"]; ok {
 				safSettings["email"] = map[string]any{
-					"provider":   getString(smtpMap, "provider", ""),
-					"smtp_host":  getString(smtpMap, "smtp_host", ""),
-					"smtp_port":  getString(smtpMap, "smtp_port", ""),
-					"smtp_user":  getString(smtpMap, "smtp_user", ""),
-					"from_email": getString(smtpMap, "from_email", ""),
-					"from_name":  getString(smtpMap, "from_name", ""),
+					"provider":   utils.GetStringFromMap(smtpMap, "provider", ""),
+					"smtp_host":  utils.GetStringFromMap(smtpMap, "smtp_host", ""),
+					"smtp_port":  utils.GetStringFromMap(smtpMap, "smtp_port", ""),
+					"smtp_user":  utils.GetStringFromMap(smtpMap, "smtp_user", ""),
+					"from_email": utils.GetStringFromMap(smtpMap, "from_email", ""),
+					"from_name":  utils.GetStringFromMap(smtpMap, "from_name", ""),
 					// hide smtp_pass
 				}
 			}
@@ -78,19 +77,19 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 			// SMS settings
 			if smsMap, ok := globalSettings["sms"]; ok {
 				safSettings["sms"] = map[string]any{
-					"twilio_enabled":        getBool(smsMap, "twilio_enabled", false),
-					"twilio_account_sid":     getString(smsMap, "twilio_account_sid", ""),
-					"twilio_from_number":     getString(smsMap, "twilio_from_number", ""),
-					"twilio_auth_token_set":  getString(smsMap, "twilio_auth_token", "") != "",
+					"twilio_enabled":        utils.GetBoolFromMap(smsMap, "twilio_enabled", false),
+					"twilio_account_sid":     utils.GetStringFromMap(smsMap, "twilio_account_sid", ""),
+					"twilio_from_number":     utils.GetStringFromMap(smsMap, "twilio_from_number", ""),
+					"twilio_auth_token_set":  utils.GetStringFromMap(smsMap, "twilio_auth_token", "") != "",
 				}
 			}
 
 			// Storage settings (local path is fixed ./lc_uploads, not exposed)
 			if storageMap, ok := globalSettings["storage"]; ok {
 				safSettings["storage"] = map[string]any{
-					"provider": getString(storageMap, "provider", ""),
-					"bucket":   getString(storageMap, "bucket", ""),
-					"region":   getString(storageMap, "region", ""),
+					"provider": utils.GetStringFromMap(storageMap, "provider", ""),
+					"bucket":   utils.GetStringFromMap(storageMap, "bucket", ""),
+					"region":   utils.GetStringFromMap(storageMap, "region", ""),
 					// hide access_key_id and secret_access_key
 				}
 			}
@@ -100,13 +99,13 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 				safSettings["geolocation"] = map[string]any{
 					"base_dir": appdir.Base(),
 					"db_path":  filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
-					"maxmind_license_key_set": getString(geolocMap, "maxmind_license_key", "") != "",
-					"download_url": getString(geolocMap, "download_url", ""),
-					"download_method": getString(geolocMap, "download_method", ""),
-					"last_updated_at":   getString(geolocMap, "last_updated_at", ""),
-					"last_updated_source": getString(geolocMap, "last_updated_source", ""),
+					"maxmind_license_key_set": utils.GetStringFromMap(geolocMap, "maxmind_license_key", "") != "",
+					"download_url": utils.GetStringFromMap(geolocMap, "download_url", ""),
+					"download_method": utils.GetStringFromMap(geolocMap, "download_method", ""),
+					"last_updated_at":   utils.GetStringFromMap(geolocMap, "last_updated_at", ""),
+					"last_updated_source": utils.GetStringFromMap(geolocMap, "last_updated_source", ""),
 				}
-				if licenseKey := getString(geolocMap, "maxmind_license_key", ""); licenseKey != "" {
+				if licenseKey := utils.GetStringFromMap(geolocMap, "maxmind_license_key", ""); licenseKey != "" {
 					if geolocSettings, ok := safSettings["geolocation"].(map[string]any); ok {
 						geolocSettings["maxmind_license_key_masked"] = maskSecretFirstLast4(licenseKey)
 					}
@@ -142,7 +141,7 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 	}
 
 	// Get organization-specific settings from account.settings (webhooks, branding, etc.)
-	accountID, err := h.getAccountIDFromUser(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err == nil && h.accountQueries != nil && accountID != "" {
 		accountSettings, err := h.accountQueries.GetAccountSettings(c.Context(), accountID)
 		if err == nil {
@@ -159,10 +158,10 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 			// Merge geolocation last update info from account (set after download from URL/MaxMind)
 			if geolocAccount, ok := accountSettings["geolocation"].(map[string]any); ok {
 				if g, ok := safSettings["geolocation"].(map[string]any); ok {
-					if v := getString(geolocAccount, "last_updated_at", ""); v != "" {
+					if v := utils.GetStringFromMap(geolocAccount, "last_updated_at", ""); v != "" {
 						g["last_updated_at"] = v
 					}
-					if v := getString(geolocAccount, "last_updated_source", ""); v != "" {
+					if v := utils.GetStringFromMap(geolocAccount, "last_updated_source", ""); v != "" {
 						g["last_updated_source"] = v
 					}
 				}
@@ -173,27 +172,6 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "settings", safSettings)
 }
 
-// Helper functions
-func getString(m map[string]any, key string, defaultValue string) string {
-	if v, ok := m[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-	return defaultValue
-}
-
-func getBool(m map[string]any, key string, defaultValue bool) bool {
-	if v, ok := m[key]; ok {
-		if b, ok := v.(bool); ok {
-			return b
-		}
-		if s, ok := v.(string); ok {
-			return s == "true"
-		}
-	}
-	return defaultValue
-}
 
 // maskSecretFirstLast4 returns the first 4 and last 4 characters of a secret.
 // Example: "abcd1234WXYZ" -> "abcd…WXYZ"
@@ -298,21 +276,21 @@ func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
 
 	// Update provider instance
 	if h.notificationSvc != nil {
-		provider := getString(currentSettings, "provider", "smtp")
+		provider := utils.GetStringFromMap(currentSettings, "provider", "smtp")
 		if provider == "smtp" {
 			var port int
-			portStr := getString(currentSettings, "smtp_port", "1025")
+			portStr := utils.GetStringFromMap(currentSettings, "smtp_port", "1025")
 			_, _ = fmt.Sscanf(portStr, "%d", &port)
 			if port == 0 {
 				port = 1025
 			}
 			h.notificationSvc.RegisterProvider(notification.NewEmailProvider(notification.SMTPConfig{
-				Host:      getString(currentSettings, "smtp_host", ""),
+				Host:      utils.GetStringFromMap(currentSettings, "smtp_host", ""),
 				Port:      port,
-				User:      getString(currentSettings, "smtp_user", ""),
-				Password:  getString(currentSettings, "smtp_pass", ""),
-				FromEmail: getString(currentSettings, "from_email", ""),
-				FromName:  getString(currentSettings, "from_name", ""),
+				User:      utils.GetStringFromMap(currentSettings, "smtp_user", ""),
+				Password:  utils.GetStringFromMap(currentSettings, "smtp_pass", ""),
+				FromEmail: utils.GetStringFromMap(currentSettings, "from_email", ""),
+				FromName:  utils.GetStringFromMap(currentSettings, "from_name", ""),
 			}))
 		}
 	}
@@ -370,10 +348,10 @@ func (h *SettingsHandler) UpdateSMS(c *fiber.Ctx) error {
 	// Update provider instance
 	if h.notificationSvc != nil {
 		h.notificationSvc.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
-			AccountSID: getString(currentSettings, "twilio_account_sid", ""),
-			AuthToken:  getString(currentSettings, "twilio_auth_token", ""),
-			FromNumber: getString(currentSettings, "twilio_from_number", ""),
-			Enabled:    getBool(currentSettings, "twilio_enabled", false),
+			AccountSID: utils.GetStringFromMap(currentSettings, "twilio_account_sid", ""),
+			AuthToken:  utils.GetStringFromMap(currentSettings, "twilio_auth_token", ""),
+			FromNumber: utils.GetStringFromMap(currentSettings, "twilio_from_number", ""),
+			Enabled:    utils.GetBoolFromMap(currentSettings, "twilio_enabled", false),
 		}))
 	}
 
@@ -501,7 +479,7 @@ type UpdateBrandingRequest struct {
 // @Success 200 {object} map[string]any
 // @Router /api/settings/branding [put]
 func (h *SettingsHandler) UpdateBranding(c *fiber.Ctx) error {
-	accountID, err := h.getAccountIDFromUser(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
@@ -950,7 +928,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 
 		// Extract GeoLite2-City.mmdb from archive
 		if isTarGz {
-			if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
 				log.Error().Err(err).Msg("Failed to extract database from tar.gz")
 				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from tar.gz", map[string]any{
 					"error": err.Error(),
@@ -958,7 +936,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 			}
 		} else if isGzipMMDB {
 			// Handle gzip-compressed mmdb file
-			if err := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); err != nil {
+			if err := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); err != nil {
 				log.Error().Err(err).Msg("Failed to extract database from mmdb.gz")
 				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from mmdb.gz", map[string]any{
 					"error": err.Error(),
@@ -966,8 +944,8 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 			}
 		} else {
 			// Try tar.gz first, then fallback to gzip
-			if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-				if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), tmpDBPath); gzErr != nil {
+			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+				if gzErr := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); gzErr != nil {
 					log.Error().Err(err).Msg("Failed to extract database from tar.gz")
 					log.Error().Err(gzErr).Msg("Failed to extract database from mmdb.gz")
 					return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
@@ -997,7 +975,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 
 	// Persist last update timestamp (per-account)
 	if h.accountQueries != nil {
-		if accountID, err := h.getAccountIDFromUser(c); err == nil && accountID != "" {
+		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
 			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "url")
 		}
 	}
@@ -1033,7 +1011,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 	licenseKey := strings.TrimSpace(req.LicenseKey)
 	if licenseKey == "" {
 		// Try to get from account settings
-		accountID, err := h.getAccountIDFromUser(c)
+		accountID, err := ResolveAccountID(c, h.userQueries)
 		if err == nil && h.accountQueries != nil && accountID != "" {
 			licenseKey, _ = h.accountQueries.GetAccountGeolocationLicenseKey(c.Context(), accountID)
 		}
@@ -1104,7 +1082,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 	_ = os.Remove(tmpDBPath)
 
 	// Extract GeoLite2-City.mmdb from tar.gz
-	if err := extractGeoLite2FromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
+	if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
 		log.Error().Err(err).Msg("Failed to extract database from tar.gz")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
 			"error": err.Error(),
@@ -1130,7 +1108,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 
 	// Persist last update timestamp (per-account)
 	if h.accountQueries != nil {
-		if accountID, err := h.getAccountIDFromUser(c); err == nil && accountID != "" {
+		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
 			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "maxmind")
 		}
 	}
@@ -1145,7 +1123,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 
 // DeleteGeolocationMaxMindKey removes the saved MaxMind license key from account settings.
 func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c *fiber.Ctx) error {
-	accountID, err := h.getAccountIDFromUser(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
@@ -1163,115 +1141,7 @@ func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c *fiber.Ctx) error {
 	})
 }
 
-// extractGeoLite2FromTarGz extracts GeoLite2-City.mmdb from tar.gz archive
-func extractGeoLite2FromTarGz(tarGzPath, outputPath string) error {
-	// Open tar.gz file
-	file, err := os.Open(tarGzPath)
-	if err != nil {
-		return fmt.Errorf("failed to open tar.gz file: %w", err)
-	}
-	defer file.Close()
 
-	// Create gzip reader
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	// Create tar reader
-	tarReader := tar.NewReader(gzReader)
-
-	// Find and extract GeoLite2-City.mmdb
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar: %w", err)
-		}
-
-		// Look for GeoLite2-City.mmdb file
-		if header.Typeflag == tar.TypeReg && strings.HasSuffix(header.Name, "GeoLite2-City.mmdb") {
-			// Create output directory if needed
-			if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-				return fmt.Errorf("failed to create output directory: %w", err)
-			}
-
-			// Create output file
-			outFile, err := os.Create(outputPath)
-			if err != nil {
-				return fmt.Errorf("failed to create output file: %w", err)
-			}
-			defer outFile.Close()
-
-			// Copy file content
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("failed to extract file: %w", err)
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("GeoLite2-City.mmdb not found in archive")
-}
-
-// extractGeoLite2FromGzipMMDB extracts GeoLite2-City.mmdb from a gzip-compressed mmdb file (GeoLite2-City.mmdb.gz).
-func extractGeoLite2FromGzipMMDB(gzPath, outputPath string) error {
-	file, err := os.Open(gzPath)
-	if err != nil {
-		return fmt.Errorf("failed to open gzip file: %w", err)
-	}
-	defer file.Close()
-
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	// Create output directory if needed
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	outFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer outFile.Close()
-
-	if _, err := io.Copy(outFile, gzReader); err != nil {
-		return fmt.Errorf("failed to extract gzip file: %w", err)
-	}
-
-	return nil
-}
-
-// getAccountIDFromUser resolves the current user's account_id via database.
-// We don't rely on middleware setting account_id (JWT middleware only sets user_id).
-func (h *SettingsHandler) getAccountIDFromUser(c *fiber.Ctx) (string, error) {
-	if h.userQueries == nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "User queries not initialized")
-	}
-
-	userID, err := GetUserID(c)
-	if err != nil {
-		return "", err
-	}
-
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userID)
-	if err != nil {
-		return "", fiber.NewError(fiber.StatusInternalServerError, "Failed to resolve account")
-	}
-	if strings.TrimSpace(accountID) == "" {
-		return "", fiber.NewError(fiber.StatusUnauthorized, "Account not found")
-	}
-
-	return accountID, nil
-}
 
 func (h *SettingsHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.Get)

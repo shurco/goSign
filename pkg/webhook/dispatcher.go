@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -128,12 +129,7 @@ func (d *Dispatcher) generateSignature(payload []byte, secret string) string {
 
 // isSubscribed checks if webhook is subscribed to event
 func (d *Dispatcher) isSubscribed(webhook *models.Webhook, eventType string) bool {
-	for _, subscribedEvent := range webhook.Events {
-		if subscribedEvent == eventType || subscribedEvent == "*" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(webhook.Events, eventType) || slices.Contains(webhook.Events, "*")
 }
 
 // VerifySignature verifies webhook signature (for incoming webhooks)

@@ -92,14 +92,14 @@ func (h *EmailTemplateHandler) GetAllEmailTemplates(c *fiber.Ctx) error {
 	templates, err := h.emailTemplateQueries.GetAllEmailTemplates(c.Context(), accountIDPtr, organizationIDPtr, localePtr)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get email templates")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get email templates", map[string]interface{}{
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get email templates", map[string]any{
 			"error": err.Error(),
 		})
 	}
 
 	log.Info().Int("count", len(templates)).Msg("Retrieved email templates")
 
-	return webutil.Response(c, fiber.StatusOK, "Email templates retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email templates retrieved successfully", map[string]any{
 		"templates": templates,
 	})
 }
@@ -133,7 +133,7 @@ func (h *EmailTemplateHandler) GetEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Email template not found", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Email template retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email template retrieved successfully", map[string]any{
 		"template": template,
 	})
 }
@@ -193,7 +193,7 @@ func (h *EmailTemplateHandler) CreateEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create email template", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusCreated, "Email template created successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusCreated, "Email template created successfully", map[string]any{
 		"template": template,
 	})
 }
@@ -273,7 +273,7 @@ func (h *EmailTemplateHandler) UpdateEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get updated template", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Email template updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email template updated successfully", map[string]any{
 		"template": updated,
 	})
 }

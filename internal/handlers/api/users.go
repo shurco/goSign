@@ -51,7 +51,7 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	}
 
 	// Return user data (without sensitive information like password)
-	return webutil.Response(c, fiber.StatusOK, "User retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "User retrieved successfully", map[string]any{
 		"id":         user.ID,
 		"account_id": accountID,
 		"first_name": user.FirstName,

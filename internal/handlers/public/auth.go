@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -27,24 +26,22 @@ func SignUp(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Check if user already exists
-	existingUser, _ := queries.DB.GetUserByEmail(context.Background(), request.Email)
+	ctx := c.UserContext()
+
+	existingUser, _ := queries.DB.GetUserByEmail(ctx, request.Email)
 	if existingUser != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "User with this email already exists", nil)
 	}
 
-	// Hash password
 	hashedPassword := password.GeneratePassword(request.Password)
 
-	// Create user
-	user, err := queries.DB.CreateUser(context.Background(), request.Email, hashedPassword, request.FirstName, request.LastName)
+	user, err := queries.DB.CreateUser(ctx, request.Email, hashedPassword, request.FirstName, request.LastName)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Create email verification token
-	token, err := queries.DB.CreateEmailVerificationToken(context.Background(), user.ID, 24*time.Hour)
+	token, err := queries.DB.CreateEmailVerificationToken(ctx, user.ID, 24*time.Hour)
 	if err != nil {
 		logging.Log.Err(err).Msg("Failed to create email verification token")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
@@ -68,9 +65,8 @@ func VerifyEmail(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Token is required", nil)
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 
-	// Validate token
 	userID, err := queries.DB.ValidateEmailVerificationToken(ctx, token)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid or expired token", nil)
@@ -99,9 +95,8 @@ func SignIn(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 
-	// Get user from database
 	user, err := queries.DB.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid email or password", nil)
@@ -193,9 +188,8 @@ func RefreshToken(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Refresh token not found or revoked", nil)
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 
-	// Get user from database
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
@@ -224,9 +218,8 @@ func ForgotPassword(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 
-	// Get user
 	user, err := queries.DB.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		// Don't reveal if user exists
@@ -256,9 +249,8 @@ func ResetPassword(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.UserContext()
 
-	// Validate token
 	userID, err := queries.DB.ValidatePasswordResetToken(ctx, request.Token)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid or expired token", nil)
@@ -290,17 +282,19 @@ func Enable2FA(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
 
-	// Get user
+	ctx := c.UserContext()
+
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Verify password
 	if !password.ComparePasswords(user.Password, request.Password) {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}
@@ -342,8 +336,12 @@ func Verify2FA(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	ctx := c.UserContext()
 
 	// Get secret from request body (sent from Enable2FA response)
 	secret := c.FormValue("secret")
@@ -375,17 +373,19 @@ func Disable2FA(c *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
 
-	// Get user
+	ctx := c.UserContext()
+
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Verify password
 	if !password.ComparePasswords(user.Password, request.Password) {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}

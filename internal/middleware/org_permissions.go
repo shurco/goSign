@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/shurco/gosign/internal/models"
@@ -109,14 +110,7 @@ func (s *OrgPermissionService) CheckOrgPermission(ctx context.Context, orgID, us
 		return false, nil // Unknown role
 	}
 
-	// Check if the permission is in the role's permissions
-	for _, p := range permissions {
-		if p == permission {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return slices.Contains(permissions, permission), nil
 }
 
 // GetOrgPermissions returns all permissions for a user's role in an organization
@@ -291,23 +285,11 @@ func SetOrganizationContext(service *OrgPermissionService) fiber.Handler {
 
 // HasPermission checks if current request has the required permission
 func HasPermission(c *fiber.Ctx, permission OrganizationPermission) bool {
-	permissions := c.Locals("user_permissions")
-	if permissions == nil {
-		return false
-	}
-
-	perms, ok := permissions.([]OrganizationPermission)
+	perms, ok := c.Locals("user_permissions").([]OrganizationPermission)
 	if !ok {
 		return false
 	}
-
-	for _, p := range perms {
-		if p == permission {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(perms, permission)
 }
 
 // GetCurrentOrgID returns the current organization ID from context

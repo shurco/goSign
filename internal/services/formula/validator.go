@@ -108,8 +108,8 @@ func rewriteFormulaWithPlaceholders(formula string) (string, map[string]string) 
 
 // buildFormulaEnvWithPlaceholders builds env for expr: placeholder -> value (or 0 if fieldValues nil).
 // rewritten is used when fieldValues is nil to add any remaining identifiers (e.g. field_1) so compile succeeds.
-func buildFormulaEnvWithPlaceholders(rewritten string, placeholderToID map[string]string, fieldValues map[string]interface{}) map[string]interface{} {
-	env := make(map[string]interface{})
+func buildFormulaEnvWithPlaceholders(rewritten string, placeholderToID map[string]string, fieldValues map[string]any) map[string]any {
+	env := make(map[string]any)
 	for placeholder, fieldID := range placeholderToID {
 		if fieldValues != nil {
 			if v, ok := fieldValues[fieldID]; ok {
@@ -165,7 +165,7 @@ func extractIdentifiers(formula string) []string {
 	return out
 }
 
-func toFloat64(v interface{}) float64 {
+func toFloat64(v any) float64 {
 	switch x := v.(type) {
 	case float64:
 		return x
@@ -181,7 +181,7 @@ func toFloat64(v interface{}) float64 {
 	return 0
 }
 
-func addBuiltinFunctions(env map[string]interface{}) {
+func addBuiltinFunctions(env map[string]any) {
 	env["SUM"] = func(args ...float64) float64 {
 		sum := float64(0)
 		for _, v := range args {
@@ -226,7 +226,7 @@ func addBuiltinFunctions(env map[string]interface{}) {
 }
 
 // EvaluateFormula evaluates formula with field values
-func EvaluateFormula(formula string, fieldValues map[string]interface{}, fields []models.Field) (float64, error) {
+func EvaluateFormula(formula string, fieldValues map[string]any, fields []models.Field) (float64, error) {
 	if formula == "" {
 		return 0, nil
 	}

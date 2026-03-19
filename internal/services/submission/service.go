@@ -214,14 +214,13 @@ func (s *Service) CheckCompletion(ctx context.Context, submissionID string) erro
 		return fmt.Errorf("failed to update submission state: %w", err)
 	}
 
-	// Send notification to creator
-	if submission.CreatedByID != "" {
-		notification := s.createNotification("completion", "Document completed", map[string]any{
+	if submission.CreatedByID != "" && s.notificationSvc != nil {
+		n := s.createNotification("completion", "Document completed", map[string]any{
 			"document_name": "Document",
 			"submission_id": submissionID,
 		}, "submission", submissionID)
 
-		_ = s.notificationSvc.Send(notification)
+		_ = s.notificationSvc.Send(n)
 	}
 
 	s.sendWebhook(ctx, models.EventSubmissionCompleted, submission)
@@ -253,15 +252,14 @@ func (s *Service) HandleDecline(ctx context.Context, submissionID string, reason
 		return fmt.Errorf("failed to update submission state: %w", err)
 	}
 
-	// Send notification to creator
-	if submission.CreatedByID != "" {
-		notification := s.createNotification("declined", "Document signing declined", map[string]any{
+	if submission.CreatedByID != "" && s.notificationSvc != nil {
+		n := s.createNotification("declined", "Document signing declined", map[string]any{
 			"document_name": "Document",
 			"submission_id": submissionID,
 			"reason":        reason,
 		}, "submission", submissionID)
 
-		_ = s.notificationSvc.Send(notification)
+		_ = s.notificationSvc.Send(n)
 	}
 
 	s.sendWebhook(ctx, models.EventSubmissionCancelled, submission)
@@ -329,8 +327,10 @@ func (s *Service) sendInvitation(ctx context.Context, submission *models.Submiss
 		CreatedAt:   now,
 	}
 
-	if err := s.notificationSvc.Send(notification); err != nil {
-		return fmt.Errorf("failed to send notification: %w", err)
+	if s.notificationSvc != nil {
+		if err := s.notificationSvc.Send(notification); err != nil {
+			return fmt.Errorf("failed to send notification: %w", err)
+		}
 	}
 
 	_ = s.repo.UpdateSubmitterStatus(ctx, submitter.ID, models.SubmitterStatusOpened)

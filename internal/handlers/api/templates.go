@@ -20,11 +20,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services/field"
 	"github.com/shurco/gosign/internal/services/formula"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/pdf"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 	"github.com/signintech/gopdf"
@@ -906,7 +906,7 @@ func (h *TemplateHandler) GetUserFavorites(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get favorites", nil)
 	}
 
-	result := map[string]interface{}{
+	result := map[string]any{
 		"templates": templates,
 		"total":     len(templates), // Note: This is approximate since we don't count total
 		"limit":     limit,

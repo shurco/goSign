@@ -91,8 +91,8 @@ func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to accept invitation", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Invitation accepted successfully", map[string]interface{}{
-		"organization": map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Invitation accepted successfully", map[string]any{
+		"organization": map[string]any{
 			"id":   org.ID,
 			"name": org.Name,
 		},
@@ -139,14 +139,14 @@ func (h *InvitationHandler) GetInvitationDetails(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Organization not found", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Invitation details retrieved", map[string]interface{}{
-		"invitation": map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Invitation details retrieved", map[string]any{
+		"invitation": map[string]any{
 			"email":      invitation.Email,
 			"role":       invitation.Role,
 			"expires_at": invitation.ExpiresAt,
 			"invited_by": invitation.InvitedByID,
 		},
-		"organization": map[string]interface{}{
+		"organization": map[string]any{
 			"id":          org.ID,
 			"name":        org.Name,
 			"description": org.Description,
@@ -175,18 +175,11 @@ func (h *InvitationHandler) RevokeInvitation(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID and Invitation ID are required", nil)
 	}
 
-	// Get current user permissions
-	userID := c.Locals("user_id")
-	if userID == nil {
-		return webutil.Response(c, fiber.StatusUnauthorized, "User not authenticated", nil)
+	userIDStr, err := GetUserID(c)
+	if err != nil {
+		return err
 	}
 
-	userIDStr, ok := userID.(string)
-	if !ok {
-		return webutil.Response(c, fiber.StatusInternalServerError, "Invalid user context", nil)
-	}
-
-	// Check if user has permission to revoke invitations
 	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check user membership")
