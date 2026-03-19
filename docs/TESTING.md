@@ -25,9 +25,6 @@ go test ./internal/handlers/public/ -run "TestPassword|TestValidation|TestRefres
 
 # Run benchmarks
 go test ./internal/handlers/public/ -bench=. -benchmem
-
-# Use convenient script
-./scripts/test_auth.sh help
 ```
 
 #### Test Categories
@@ -68,30 +65,6 @@ go test ./internal/handlers/public/... -v
 - SignIn flow
 - Password reset flow
 - Email verification
-
-### Using Test Script
-
-The project includes a convenient test runner:
-
-```bash
-# Show help
-./scripts/test_auth.sh help
-
-# Run unit tests only
-./scripts/test_auth.sh unit
-
-# Generate coverage report
-./scripts/test_auth.sh coverage
-
-# Run benchmarks
-./scripts/test_auth.sh bench
-
-# Run specific test
-./scripts/test_auth.sh specific TestPasswordHashing
-
-# Run all tests
-./scripts/test_auth.sh all
-```
 
 ## Test Coverage
 
@@ -240,7 +213,7 @@ func TestSecurityFeatures(t *testing.T) {
 
 ### Prerequisites
 
-1. **PostgreSQL** running on localhost:5432
+1. **PostgreSQL** running on localhost:5452
 2. **Redis** running on localhost:6379
 3. **Migrations** applied: `./scripts/migration dev up`
 
@@ -298,11 +271,10 @@ Tests run automatically on:
 
 **Import errors**
 - Run: `go mod tidy`
-- Check Go version: `go version` (requires 1.22+)
+- Check Go version: `go version` (requires 1.26+)
 
 ## Additional Resources
 
-- [Test Story Documentation](../internal/handlers/public/AUTH_TEST_STORY.md)
 - [Go Testing Best Practices](https://go.dev/doc/tutorial/add-a-test)
 - [Testify Documentation](https://github.com/stretchr/testify)
 

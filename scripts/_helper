@@ -1,32 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# The following line uses the `uname` command to get the machine's architecture and assigns it to the variable `ARCH`.
-ARCH=$(uname -m)
-case $ARCH in
-i386) ARCH="386" ;;
-i686) ARCH="386" ;;
-x86_64) ARCH="amd64" ;;
+set -euo pipefail
+IFS=$'\n\t'
+
+ARCH="$(uname -m)"
+case "$ARCH" in
+i386|i686) ARCH="386" ;;
+x86_64|amd64) ARCH="amd64" ;;
+arm64|aarch64) ARCH="arm64" ;;
 esac
 
-# The following line uses the `uname` command to get the name of the operating system and assigns it to the variable `OS`.
-# return Linux, Darwin, Windows
-OS=$(uname -s)
+OS="$(uname -s)"
 
-# Init color
-COLOR_GREY=$(tput setaf 0)
-COLOR_RED=$(tput setaf 1)
-COLOR_GREEN=$(tput setaf 2)
-COLOR_YELLOW=$(tput setaf 3)
-COLOR_RESET=$(tput sgr0)
-
-GOPATH=$(go env GOPATH)
-GOBIN=$(go env GOPATH)/bin
-
-DATE=$(date '+%Y-%m-%d-%H:%M:%S')
-GIT_COMMIT=$(git rev-parse --short HEAD)
-GIT_DIRTY=$(test -n "$(git status --porcelain)" && echo "+CHANGES" || true)
-GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
-VERSION=${GIT_TAG#*v}
+if command -v tput >/dev/null 2>&1 && [ -n "${TERM:-}" ] && tput colors >/dev/null 2>&1; then
+  COLOR_GREY="$(tput setaf 0 2>/dev/null || true)"
+  COLOR_RED="$(tput setaf 1 2>/dev/null || true)"
+  COLOR_GREEN="$(tput setaf 2 2>/dev/null || true)"
+  COLOR_YELLOW="$(tput setaf 3 2>/dev/null || true)"
+  COLOR_RESET="$(tput sgr0 2>/dev/null || true)"
+else
+  COLOR_GREY=""
+  COLOR_RED=""
+  COLOR_GREEN=""
+  COLOR_YELLOW=""
+  COLOR_RESET=""
+fi
 
 maybe_sudo() {
   if [ "$(id -u)" -ne 0 ]; then
@@ -36,26 +34,12 @@ maybe_sudo() {
   fi
 }
 
-# This function checks if the architecture of the system running the script is supported.
 support_arch() {
-  if [ "$ARCH" != "amd64" ]; then
+  if [ "$ARCH" != "amd64" ] && [ "$ARCH" != "arm64" ]; then
     print_answer "ERROR" red
     echo "unsupported architecture: $ARCH"
     exit 1
   fi
-}
-
-generate_password() {
-  tr -cd 'a-zA-Z0-9!#$%&()*+?@[]^_' </dev/urandom |
-    fold -w 32 |
-    head -n 1
-}
-
-# This function retrieves the latest release of a GitHub repository using its API.
-get_latest_release() {
-  echo $(curl --silent "https://api.github.com/repos/$1/releases/latest" |
-    grep '"tag_name":' |
-    sed -E 's/.*"([^"]+)".*/\1/')
 }
 
 command_exists() {

@@ -1,33 +1,43 @@
 #!/usr/bin/env bash
 
-#set -e
+# Tools install/update script for goSign project
+# Usage: ./scripts/tools
 
-ROOT_PATH="$(git rev-parse --show-toplevel)"
-source ${ROOT_PATH}/scripts/_helper
+set -euo pipefail
+IFS=$'\n\t'
+
+ROOT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_PATH}/scripts/_helper"
 
 support_arch
 
+install_go_tool() {
+  local name="$1"
+  local pkg="$2"
+  print_header "Install/Update ${name}"
+  go install "${pkg}@latest" >/dev/null 2>&1
+  print_answer "SUCCESS" green
+}
+
 case "$OS" in
 Darwin)
-  brew install goose protobuf protoc-gen-go
+  brew install goose
+  install_go_tool "tygo" "github.com/gzuidhof/tygo"
   ;;
 Linux)
   mkdir -p "${HOME}/.local/bin"
+  install_go_tool "goose" "github.com/pressly/goose/v3/cmd/goose"
+  install_go_tool "tygo"  "github.com/gzuidhof/tygo"
 
-  print_header "Install/Update goose"
-  go install github.com/pressly/goose/v3/cmd/goose@latest >/dev/null 2>&1
-  print_answer "SUCCESS" green
-
-  print_header "Install/Update tygo"
-  go go install github.com/gzuidhof/tygo@latest >/dev/null 2>&1
-  print_answer "SUCCESS" green
-
-  source ~/.profile
+  if [ -f "${HOME}/.profile" ]; then
+    # shellcheck disable=SC1090
+    source "${HOME}/.profile"
+  fi
   ;;
 *)
   print_header "Install/Update tools"
   print_answer "ERROR" red
   echo "Unsupported OS: $OS"
-  exit
+  exit 1
   ;;
 esac

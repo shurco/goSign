@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-#set -e
+# Models generation script for goSign project
+# Usage: ./scripts/models
 
-ROOT_PATH="$(git rev-parse --show-toplevel)"
-source ${ROOT_PATH}/scripts/_helper
+set -euo pipefail
+IFS=$'\n\t'
+
+ROOT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_PATH}/scripts/_helper"
 
 cat <<EOF >"${ROOT_PATH}/tygo.yaml"
 packages:
@@ -11,5 +15,5 @@ packages:
     output_path: "web/src/models/index.ts"
 EOF
 
-tygo generate --config ${ROOT_PATH}/tygo.yaml
-rm -rf ${ROOT_PATH}/tygo.yaml
+tygo generate --config "${ROOT_PATH}/tygo.yaml"
+rm -rf "${ROOT_PATH}/tygo.yaml"

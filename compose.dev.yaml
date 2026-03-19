@@ -1,8 +1,5 @@
 networks:
-  public:
-    driver: bridge
   private:
-    #internal: true
     driver: bridge
     ipam:
       config:
@@ -25,9 +22,9 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: service.postgres
-    restart: always
+    restart: "no"
     ports:
-      - 5432:5432
+      - 5452:5432
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-goSign}
       POSTGRES_DB: ${POSTGRES_DB:-goSign}
@@ -48,7 +45,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: service.redis
-    restart: always
+    restart: "no"
     ports:
       - 6379:6379
     volumes:
@@ -61,10 +58,10 @@ services:
   minio:
     image: minio/minio:latest
     container_name: service.minio
-    restart: always
+    restart: "no"
     ports:
-      - 9000:9000  # API port
-      - 9001:9001  # Console port
+      - 9000:9000
+      - 9001:9001
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -80,10 +77,10 @@ services:
       - private
     logging: *default-logging
 
-  # MinIO client for automatic bucket creation
   minio-init:
     image: minio/mc:latest
     container_name: service.minio-init
+    restart: "no"
     depends_on:
       minio:
         condition: service_healthy
@@ -100,10 +97,31 @@ services:
   mailhog:
     image: mailhog/mailhog:latest
     container_name: service.mailhog
-    restart: always
+    restart: "no"
     ports:
-      - 1025:1025  # SMTP port
-      - 8025:8025  # Web UI port
+      - 1025:1025
+      - 8025:8025
     networks:
       - private
+    logging: *default-logging
+
+  # Test DB (pgtestdb) — ephemeral, uses tmpfs for speed.
+  # Start: docker compose -f compose.dev.yaml up -d pgtestdb
+  # Tests connect to localhost:5433, user=postgres password=password
+  pgtestdb:
+    image: postgres:17-alpine
+    restart: "no"
+    ports:
+      - "5453:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    command:
+      - "postgres"
+      - "-c"
+      - "fsync=off"
+      - "-c"
+      - "synchronous_commit=off"
+    tmpfs:
+      - /var/lib/postgresql/data
     logging: *default-logging

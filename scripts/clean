@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 
-#set -e
+# Cleanup script for goSign project artifacts and local processes
+# Usage: ./scripts/clean
 
-ROOT_PATH="$(git rev-parse --show-toplevel)"
-source ${ROOT_PATH}/scripts/_helper
+set -euo pipefail
+IFS=$'\n\t'
+
+ROOT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_PATH}/scripts/_helper"
 
 arr_process=("__debug_bin" "vite")
 for process_name in "${arr_process[@]}"; do
-  pids=$(pgrep -f "$process_name")
+  pids="$(pgrep -f "$process_name" 2>/dev/null || true)"
   for pid in $pids; do
-    exe_path=$(ps -p $pid -o args=)
-    if [[ -n $exe_path && $exe_path == *"$ROOT_PATH"* ]]; then
+    exe_path="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+    if [[ -n "$exe_path" && "$exe_path" == *"$ROOT_PATH"* ]]; then
       print_header "Killed process ${pid}"
-      kill -9 $pid
+      kill -9 "$pid"
       print_answer "SUCCESS" green
     fi
   done
@@ -23,7 +27,7 @@ for entry in "${ROOT_PATH}/cmd/"*/; do
   if compgen -G "$file_name" >/dev/null; then
     name=$(basename "${entry}")
     print_header "Deleting bin file for ${name}"
-    rm -rf ${file_name}
+    rm -rf "${file_name}"
     print_answer "SUCCESS" green
   fi
 done

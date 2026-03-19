@@ -1,65 +1,69 @@
 #!/usr/bin/env bash
 
-#set -e
+# Database migration script for goSign project
+# Usage: ./scripts/migration [up|up1|down|down1|redo|status|create|test|dev]
 
-ROOT_PATH="$(git rev-parse --show-toplevel)"
-source ${ROOT_PATH}/scripts/_helper
+set -euo pipefail
+IFS=$'\n\t'
 
-# Load database connection settings from docker/.env
-if [ -f "${ROOT_PATH}/docker/.env" ]; then
-  source ${ROOT_PATH}/docker/.env
+ROOT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_PATH}/scripts/_helper"
+
+if [ -f "${ROOT_PATH}/.env" ]; then
+  # shellcheck disable=SC1090
+  source "${ROOT_PATH}/.env"
 else
   print_answer "WARNING" yellow
-  echo "File docker/.env not found, using default values"
+  echo "File .env not found, using default values"
   echo
 fi
 
-# Set default values if not provided in .env
 POSTGRES_USER=${POSTGRES_USER:-goSign}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgresPassword}
 POSTGRES_HOST=${POSTGRES_HOST:-localhost:5432}
 POSTGRES_DB=${POSTGRES_DB:-goSign}
 POSTGRES_SSLMODE=${POSTGRES_SSLMODE:-disable}
 
-MIGRATION_DIR=${ROOT_PATH}/migrations
-MIGRATION_DIR_TMP=${ROOT_PATH}/.vscode/migrate_tmp
+MIGRATION_DIR="${ROOT_PATH}/migrations"
+MIGRATION_DIR_TMP="$(mktemp -d)"
 
-LC_PAGES_DIR=${ROOT_PATH}/cmd/goSign/lc_pages
-LC_SIGNED_DIR=${ROOT_PATH}/cmd/goSign/lc_signed
+LC_PAGES_DIR="${ROOT_PATH}/cmd/goSign/lc_pages"
+LC_SIGNED_DIR="${ROOT_PATH}/cmd/goSign/lc_signed"
 LC_UPLOADS_DIR="${ROOT_PATH}/cmd/goSign/lc_uploads"
 LC_TMP_DIR="${ROOT_PATH}/cmd/goSign/lc_tmp"
 
 DB_POSTFIX="migrate_db_version"
-MIGRATION=$1
-GOOSE_ACTION=$2
+MIGRATION="${1:-}"
+GOOSE_ACTION="${2:-}"
 
 run_goose() {
-  arr_goose=("create" "up" "up1" "down" "down1" "redo" "status")
-  if [[ " ${arr_goose[*]} " =~ " $1 " ]]; then
-    # Database connection settings are loaded from docker/.env at the beginning of the script
-    GOOSE_CMD="goose -dir $MIGRATION_DIR -table $DB_POSTFIX postgres "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}""
+  local action="${1:-}"
+  case "$action" in
+  create|up|up1|down|down1|redo|status)
+    local postgres_url="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}"
+    local -a goose_cmd=("goose" "-dir" "$MIGRATION_DIR" "-table" "$DB_POSTFIX" "postgres" "$postgres_url")
 
-    case "$1" in
-    "create") OTPUT=$($GOOSE_CMD create migration_name sql 2>&1) ;;
-    "up") OTPUT=$($GOOSE_CMD up 2>&1) ;;
-    "up1") OTPUT=$($GOOSE_CMD up-by-one 2>&1) ;;
-    "down") OTPUT=$($GOOSE_CMD reset 2>&1) ;;
-    "down1") OTPUT=$($GOOSE_CMD down 2>&1) ;;
-    "redo") OTPUT=$($GOOSE_CMD redo 2>&1) ;;
-    "status") OTPUT=$($GOOSE_CMD status 2>&1) ;;
+    local OUTPUT=""
+    case "$action" in
+    "create") OUTPUT="$("${goose_cmd[@]}" create migration_name sql 2>&1)" ;;
+    "up")     OUTPUT="$("${goose_cmd[@]}" up 2>&1)" ;;
+    "up1")    OUTPUT="$("${goose_cmd[@]}" up-by-one 2>&1)" ;;
+    "down")   OUTPUT="$("${goose_cmd[@]}" reset 2>&1)" ;;
+    "down1")  OUTPUT="$("${goose_cmd[@]}" down 2>&1)" ;;
+    "redo")   OUTPUT="$("${goose_cmd[@]}" redo 2>&1)" ;;
+    "status") OUTPUT="$("${goose_cmd[@]}" status 2>&1)" ;;
     esac
 
-    rm -rf ${ROOT_PATH}/.vscode/migrate_tmp
+    rm -rf "${MIGRATION_DIR_TMP}"
 
     print_answer "SUCCESS" green
-    if [ -n "${OTPUT}" ]; then
-      echo "${OTPUT}"
+    if [ -n "${OUTPUT}" ]; then
+      echo "${OUTPUT}"
       echo
     fi
-  else
-    if [ -d ${ROOT_PATH}/.vscode/migrate_tmp ]; then
-      rm -rf ${ROOT_PATH}/.vscode/migrate_tmp
-    fi
+    ;;
+  *)
+    rm -rf "${MIGRATION_DIR_TMP}"
     print_answer "ERROR" red
     echo "Parameters not passed"
     echo
@@ -67,86 +71,77 @@ run_goose() {
     echo
     echo "command:"
     print_help "<empty>" "Core version"
-    print_help test "Test version"
-    print_help dev "Development fixtures"
+    print_help test     "Test version"
+    print_help dev      "Development fixtures"
     echo
     echo "option:"
-    print_help create "Create cleare migration"
-    print_help up "Migrate the DB to the most recent version available"
-    print_help up1 "Migrate the DB up by 1"
-    print_help down "Roll back all migrations"
-    print_help down1 "Roll back the version by 1"
-    print_help redo "Re-run the latest migration"
+    print_help create "Create new migration"
+    print_help up     "Migrate the DB to the most recent version available"
+    print_help up1    "Migrate the DB up by 1"
+    print_help down   "Roll back all migrations"
+    print_help down1  "Roll back the version by 1"
+    print_help redo   "Re-run the latest migration"
     print_help status "Dump the migration status for the current DB"
-  fi
+    ;;
+  esac
 }
 
 if [[ $MIGRATION == "test" ]]; then
   print_header "Migrations sql $MIGRATION:$GOOSE_ACTION"
 
-  if [ "$MIGRATION" == "test" ]; then
-    mkdir -p "${MIGRATION_DIR_TMP}"
-    for file_migrate in $(find ${ROOT_PATH} -path '*/fixtures/migration/*' | sort -r); do
-      cp "$file_migrate" ${MIGRATION_DIR_TMP}/
-    done
-    MIGRATION_DIR=${MIGRATION_DIR_TMP}
-    DB_POSTFIX=${DB_POSTFIX}"_test"
-  fi
-  run_goose $GOOSE_ACTION
-elif [[ $MIGRATION == "dev" ]]; then
-  arr_goose=(up down reset)
-  if [[ " ${arr_goose[*]} " =~ " $GOOSE_ACTION " ]]; then
-    SOURCE=${BASH_SOURCE[0]}
-    if [ $GOOSE_ACTION == "up" ]; then
-      declare -A FIXTURES_MAP=(
-        ["pages"]="${LC_PAGES_DIR}"
-        ["signed"]="${LC_SIGNED_DIR}"
-        ["uploads"]="${LC_UPLOADS_DIR}"
-      )
+  while IFS= read -r file_migrate; do
+    cp "$file_migrate" "${MIGRATION_DIR_TMP}/"
+  done < <(find "$ROOT_PATH" -path '*/fixtures/migration/*' | sort -r)
+  MIGRATION_DIR="${MIGRATION_DIR_TMP}"
+  DB_POSTFIX="${DB_POSTFIX}_test"
 
-      for fixture in "${!FIXTURES_MAP[@]}"; do
+  run_goose "$GOOSE_ACTION"
+elif [[ $MIGRATION == "dev" ]]; then
+  case "$GOOSE_ACTION" in
+  up|down|reset)
+    SOURCE="${BASH_SOURCE[0]}"
+    if [ "$GOOSE_ACTION" == "up" ]; then
+      for fixture in pages signed uploads; do
         src_dir="${ROOT_PATH}/fixtures/${fixture}/"
-        dest_dir="${FIXTURES_MAP[$fixture]}"
+        case "$fixture" in
+        pages) dest_dir="${LC_PAGES_DIR}" ;;
+        signed) dest_dir="${LC_SIGNED_DIR}" ;;
+        uploads) dest_dir="${LC_UPLOADS_DIR}" ;;
+        *) continue ;;
+        esac
         mkdir -p "${dest_dir}"
-        if [ "$(ls -A "${src_dir}")" ]; then
+        if [ -d "${src_dir}" ] && [ -n "$(ls -A "${src_dir}" 2>/dev/null || true)" ]; then
           cp -R "${src_dir}"* "${dest_dir}"
         fi
       done
 
       $SOURCE up
       $SOURCE test up
-    elif [ $GOOSE_ACTION == "down" ]; then
-      if [ -d "${LC_PAGES_DIR}" ]; then
-        rm -rf ${LC_PAGES_DIR}
-      fi
-      if [ -d "${LC_SIGNED_DIR}" ]; then
-        rm -rf ${LC_SIGNED_DIR}
-      fi
-      if [ -d "${LC_UPLOADS_DIR}" ]; then
-        rm -rf ${LC_UPLOADS_DIR}
-      fi
-      if [ -d "${LC_TMP_DIR}" ]; then
-        rm -rf ${LC_TMP_DIR}
-      fi
+    elif [ "$GOOSE_ACTION" == "down" ]; then
+      for dir in "${LC_PAGES_DIR}" "${LC_SIGNED_DIR}" "${LC_UPLOADS_DIR}" "${LC_TMP_DIR}"; do
+        [ -d "$dir" ] && rm -rf "$dir"
+      done
 
       $SOURCE test down
       $SOURCE down
-    elif [ $GOOSE_ACTION == "reset" ]; then
+    elif [ "$GOOSE_ACTION" == "reset" ]; then
       $SOURCE dev down
       $SOURCE dev up
     fi
-  else
+    ;;
+  *)
     print_header "Migrations sql"
     print_answer "ERROR" red
     echo "Parameters not passed"
     echo
     echo "Use next command:"
-    print_help up "Run all available migrations"
-    print_help down "Delete all migrations from database"
+    print_help up    "Run all available migrations"
+    print_help down  "Delete all migrations from database"
     print_help reset "Reset all migrations"
-    exit
-  fi
+    exit 1
+    ;;
+  esac
 else
   print_header "Migrations sql"
-  run_goose $MIGRATION
+  run_goose "$MIGRATION"
 fi
