@@ -30,11 +30,12 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 		p := gopdf.GoPdf{}
 		p.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
 		p.AddPage()
-		// Create a valid PDF that gofpdi can re-import.
-		if err := p.AddTTFFont("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); err != nil {
-			t.Fatalf("failed to add font: %v", err)
+		// Create a valid PDF that gofpdi can re-import (TTF from common system paths).
+		fs := addStandardFonts(&p, "")
+		if !fs.NormalOK {
+			t.Skip("no suitable TTF font found for smoke test (install Arial or DejaVu Sans)")
 		}
-		if err := p.SetFont("DejaVuSans", "", 12); err != nil {
+		if err := p.SetFont(fs.NormalName, "", 12); err != nil {
 			t.Fatalf("failed to set font: %v", err)
 		}
 		p.SetXY(50, 50)
@@ -61,7 +62,9 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 	}
 
 	fieldTextID := "field-text"
+	fieldTextZeroHID := "field-text-zero-h"
 	fieldSigID := "field-sig"
+	withID := true
 
 	out, err := RenderCompletedTemplatePDF(RenderCompletedTemplatePDFInput{
 		PagesDir: pagesDir,
@@ -77,16 +80,28 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 				},
 			},
 			{
+				ID:   fieldTextZeroHID,
+				Type: models.FieldTypeText,
+				Areas: []*models.Areas{
+					{AttachmentID: attID, X: 0.5, Y: 0.1, W: 0.2, H: 0}, // triggers default height
+				},
+			},
+			{
 				ID:   fieldSigID,
 				Type: models.FieldTypeSignature,
+				Preferences: &models.FieldPreferences{
+					WithSignatureID: withID,
+				},
 				Areas: []*models.Areas{
 					{AttachmentID: attID, X: 0.1, Y: 0.2, W: 0.3, H: 0.1},
 				},
 			},
 		},
 		Values: map[string]any{
-			fieldTextID: "Hello",
-			fieldSigID:  sigDataURL,
+			fieldTextID:                  "Hello",
+			fieldTextZeroHID:             "Tall",
+			fieldSigID:                   sigDataURL,
+			fieldSigID + "_signature_id": "SIG-42",
 		},
 	})
 	if err != nil {
@@ -97,14 +112,7 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 	}
 	// Quick sanity check: PDF header.
 	if !bytes.HasPrefix(out, []byte("%PDF")) {
-		t.Fatalf("expected PDF header, got %q", string(out[:min(16, len(out))]))
+		prefixLen := min(16, len(out))
+		t.Fatalf("expected PDF header, got %q", string(out[:prefixLen]))
 	}
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-

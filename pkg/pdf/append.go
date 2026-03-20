@@ -3,9 +3,6 @@ package pdf
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/signintech/gopdf"
 )
@@ -22,21 +19,17 @@ func AppendPDF(basePDF []byte, extraPDF []byte) ([]byte, error) {
 		return nil, fmt.Errorf("extra PDF is empty")
 	}
 
-	tmpDir := os.TempDir()
-
-	// Save base PDF.
-	tmpBase := filepath.Join(tmpDir, fmt.Sprintf("gosign_base_%d.pdf", time.Now().UnixNano()))
-	if err := os.WriteFile(tmpBase, basePDF, 0644); err != nil {
+	tmpBase, removeBase, err := tempPDFFile(basePDF, "gosign_base")
+	if err != nil {
 		return nil, fmt.Errorf("failed to write base PDF: %w", err)
 	}
-	defer func() { _ = os.Remove(tmpBase) }()
+	defer removeBase()
 
-	// Save extra PDF.
-	tmpExtra := filepath.Join(tmpDir, fmt.Sprintf("gosign_extra_%d.pdf", time.Now().UnixNano()))
-	if err := os.WriteFile(tmpExtra, extraPDF, 0644); err != nil {
+	tmpExtra, removeExtra, err := tempPDFFile(extraPDF, "gosign_extra")
+	if err != nil {
 		return nil, fmt.Errorf("failed to write extra PDF: %w", err)
 	}
-	defer func() { _ = os.Remove(tmpExtra) }()
+	defer removeExtra()
 
 	// Count pages.
 	basePages, err := ExtractPages(ExtractPagesInput{PDFPath: tmpBase})
@@ -71,4 +64,3 @@ func AppendPDF(basePDF []byte, extraPDF []byte) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-

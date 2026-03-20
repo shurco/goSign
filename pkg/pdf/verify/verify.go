@@ -73,7 +73,10 @@ type DocumentInfo struct {
 }
 
 func File(file *os.File) (apiResp *Response, err error) {
-	info, _ := file.Stat()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("stat: %w", err)
+	}
 	if _, err := file.Seek(0, 0); err != nil {
 		return nil, err
 	}
@@ -86,8 +89,7 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			// err = fmt.Errorf("Failed to verify file (%v)", r)
-			err = fmt.Errorf("%v", apiResp.Error)
+			err = fmt.Errorf("failed to verify file: %v", r)
 			apiResp = nil
 		}
 	}()
@@ -110,7 +112,7 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 		// Get object ID from xref pointer
 		ptr := x.Ptr()
 		objID := ptr.GetID()
-		
+
 		// Get the object value using GetObject
 		v, err := rdr.GetObject(objID)
 		if err != nil {
@@ -241,10 +243,9 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 			resp, err := ocsp.ParseResponse(o.FullBytes, nil)
 			if err != nil {
 				apiResp.Error = fmt.Sprintln("Failed to parse or verify OCSP response", err)
-				ocspStatus[fmt.Sprintf("%x", resp.SerialNumber)] = nil
-			} else {
-				ocspStatus[fmt.Sprintf("%x", resp.SerialNumber)] = resp
+				continue
 			}
+			ocspStatus[fmt.Sprintf("%x", resp.SerialNumber)] = resp
 		}
 
 		// Build certificate chains and verify revocation status
@@ -329,10 +330,6 @@ func Reader(file io.ReaderAt, size int64) (apiResp *Response, err error) {
 		// v.Key("Cert").Text()
 
 		apiResp.Signers = append(apiResp.Signers, signer)
-	}
-
-	if apiResp == nil {
-		err = ErrNoResultWithSignature
 	}
 
 	apiResp.DocumentInfo = documentInfo

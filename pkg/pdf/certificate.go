@@ -13,13 +13,13 @@ import (
 )
 
 type SignatureCertificateSigner struct {
-	Name       string
-	Email      string
-	IP         string
-	SentAt     *time.Time
-	OpenedAt   *time.Time
+	Name        string
+	Email       string
+	IP          string
+	SentAt      *time.Time
+	OpenedAt    *time.Time
 	CompletedAt *time.Time
-	Location   string
+	Location    string
 
 	// SignatureValue is expected to be a PNG data URL (or raw base64) as stored by the frontend
 	// for signature/initials/stamp/image fields.
@@ -43,8 +43,8 @@ type SignatureCertificateInput struct {
 	AssetsDir string
 	// QRURL is encoded into the QR code on the certificate.
 	// Must be an absolute URL to work reliably on mobile QR scanners.
-	QRURL string
-	Signers     []SignatureCertificateSigner
+	QRURL   string
+	Signers []SignatureCertificateSigner
 }
 
 // GenerateSignatureCertificatePDF renders a certificate page using the exact same design
@@ -229,8 +229,14 @@ func GenerateSignatureCertificatePDF(input SignatureCertificateInput) ([]byte, e
 		pdf.SetXY(160, 747)
 		pdf.Text("and secure document signing with eSignature.")
 
-		qrCode, _ := qrcode.Encode(qrURL, qrcode.Medium, 256)
-		imgQRCode, _ := gopdf.ImageHolderByBytes(qrCode)
+		qrCode, err := qrcode.Encode(qrURL, qrcode.Medium, 256)
+		if err != nil {
+			return nil, fmt.Errorf("qr encode: %w", err)
+		}
+		imgQRCode, err := gopdf.ImageHolderByBytes(qrCode)
+		if err != nil {
+			return nil, fmt.Errorf("qr image holder: %w", err)
+		}
 		_ = pdf.ImageByHolder(imgQRCode, 460, 700, &gopdf.Rect{W: 65, H: 65})
 		// ------ END FOOTER -----
 	}
@@ -256,17 +262,9 @@ func AppendSignatureCertificate(basePDF []byte, certificatePDF []byte) ([]byte, 
 	return AppendPDF(basePDF, certificatePDF)
 }
 
-func formatTimeUTC(t *time.Time) string {
-	if t == nil || t.IsZero() {
-		return "-"
-	}
-	return t.UTC().Format("02 Jan 2006 15:04:05 UTC")
-}
-
 func formatCertTime(t *time.Time) string {
 	if t == nil || t.IsZero() {
 		return "-"
 	}
 	return t.UTC().Format("02 Jan 2006 15:04:05 UTC")
 }
-

@@ -1,7 +1,6 @@
 package sign
 
 import (
-	"bufio"
 	"bytes"
 	"os"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestFindFirstPage(t *testing.T) {
-	input_file, reader := loadHelpersTestPDF()
+	input_file, reader := loadHelpersTestPDF(t)
 	if input_file == nil || reader == nil {
 		t.Errorf("Failed to load test PDF")
 		return
@@ -115,54 +114,43 @@ func TestLeftPad(t *testing.T) {
 }
 
 func TestWritePartFromSourceFileToTargetFile(t *testing.T) {
-	var b bytes.Buffer
-	writer := bufio.NewWriter(&b)
-
-	input_file, err := os.Open("../../fixtures/testfiles/testfile20.pdf")
+	input_file, err := os.Open(testPDFFixturePath(t, "testfile20.pdf"))
 	if err != nil {
 		t.Errorf("Failed to load test PDF")
 		return
 	}
+	defer input_file.Close()
 
-	_ = writePartFromSourceFileToTargetFile(input_file, writer, 0, 0)
-	writer.Flush()
-
-	if writer.Buffered() != 0 {
-		t.Errorf("Content was copied while length was 0")
+	write := func(offset, length int64) string {
+		var b bytes.Buffer
+		_ = writePartFromSourceFileToTargetFile(input_file, &b, offset, length)
+		return b.String()
 	}
 
-	_ = writePartFromSourceFileToTargetFile(input_file, writer, 0, -20)
-	writer.Flush()
-
-	if writer.Buffered() != 0 {
-		t.Errorf("Content was copied while length was smaller than 0")
+	if n := len(write(0, 0)); n != 0 {
+		t.Errorf("Expected 0 bytes for length=0, got %d", n)
 	}
 
-	_ = writePartFromSourceFileToTargetFile(input_file, writer, 0, 8)
-	writer.Flush()
-
-	if b.String() != "%PDF-2.0" {
-		t.Errorf("Wrong content was copied, got %s but expected %s", b.String(), "%PDF-2.0")
+	if n := len(write(0, -20)); n != 0 {
+		t.Errorf("Expected 0 bytes for length=-20, got %d", n)
 	}
 
-	_ = writePartFromSourceFileToTargetFile(input_file, writer, 33, 8)
-	writer.Flush()
-
-	if b.String() != "%PDF-2.0/Catalog" {
-		t.Errorf("Wrong content was copied, got %s but expected %s", b.String(), "%PDF-2.0/Catalog")
+	if got := write(0, 8); got != "%PDF-2.0" {
+		t.Errorf("Wrong content at offset 0 len 8: got %q, want %q", got, "%PDF-2.0")
 	}
 
-	_ = writePartFromSourceFileToTargetFile(input_file, writer, 0, 1200)
-
-	if writer.Buffered() != 1200 {
-		t.Errorf("Requested 1200 bytes but only got %d", writer.Buffered())
+	if got := write(33, 8); got != "/Catalog" {
+		t.Errorf("Wrong content at offset 33 len 8: got %q, want %q", got, "/Catalog")
 	}
 
-	input_file.Close()
+	if n := len(write(0, 1200)); n != 1200 {
+		t.Errorf("Requested 1200 bytes but only got %d", n)
+	}
 }
 
-func loadHelpersTestPDF() (*os.File, *pdf.Reader) {
-	input_file, err := os.Open("../../fixtures/testfiles/testfile20.pdf")
+func loadHelpersTestPDF(t *testing.T) (*os.File, *pdf.Reader) {
+	t.Helper()
+	input_file, err := os.Open(testPDFFixturePath(t, "testfile20.pdf"))
 	if err != nil {
 		return nil, nil
 	}
@@ -176,6 +164,7 @@ func loadHelpersTestPDF() (*os.File, *pdf.Reader) {
 
 	rdr, err := pdf.NewReader(input_file, size)
 	if err != nil {
+		input_file.Close()
 		return nil, nil
 	}
 

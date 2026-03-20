@@ -1,54 +1,10 @@
 package pdf
 
 import (
-	"bytes"
-	"os"
 	"testing"
 
-	"github.com/signintech/gopdf"
 	"github.com/shurco/gosign/internal/assets"
 )
-
-func makeOnePagePDF(t *testing.T) []byte {
-	t.Helper()
-	p := gopdf.GoPdf{}
-	p.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-	p.AddPage()
-	fonts := addStandardFonts(&p, "")
-	if !fonts.NormalOK {
-		t.Skip("no TTF fonts available for gopdf")
-	}
-	if err := p.SetFont(fonts.NormalName, "", 10); err != nil {
-		t.Fatalf("failed to set font: %v", err)
-	}
-	p.SetXY(50, 50)
-	p.Cell(nil, "base")
-	var buf bytes.Buffer
-	if err := p.Write(&buf); err != nil {
-		t.Fatalf("failed to write base PDF: %v", err)
-	}
-	return buf.Bytes()
-}
-
-func pageCountFromBytes(t *testing.T, b []byte) int {
-	t.Helper()
-	f, err := os.CreateTemp("", "gosign_test_pages_*.pdf")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-	defer func() {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-	}()
-	if _, err := f.Write(b); err != nil {
-		t.Fatalf("failed to write temp pdf: %v", err)
-	}
-	res, err := ExtractPages(ExtractPagesInput{PDFPath: f.Name()})
-	if err != nil {
-		t.Fatalf("failed to extract pages: %v", err)
-	}
-	return res.PageCount
-}
 
 func TestGenerateSignatureCertificatePDF(t *testing.T) {
 	assetPaths, err := assets.EnsureOnDisk(t.TempDir())
@@ -81,7 +37,7 @@ func TestAppendSignatureCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to prepare assets: %v", err)
 	}
-	base := makeOnePagePDF(t)
+	base := buildTestPDF(t, 1, "base")
 	cert, err := GenerateSignatureCertificatePDF(SignatureCertificateInput{
 		DocumentName: "Test Document",
 		Reference:    "submission_123",
@@ -107,4 +63,3 @@ func TestAppendSignatureCertificate(t *testing.T) {
 		t.Fatalf("expected merged PDF to have at least 2 pages, got %d", gotPages)
 	}
 }
-

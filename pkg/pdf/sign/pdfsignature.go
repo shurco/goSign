@@ -6,11 +6,11 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
@@ -254,25 +254,19 @@ func (context *SignContext) GetTSA(sign_content []byte) (timestamp_response []by
 		req.SetBasicAuth(context.SignData.TSA.Username, context.SignData.TSA.Password)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
-	code := 0
-
 	if resp != nil {
-		code = resp.StatusCode
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("tsa request failed: %w", err)
 	}
 
-	if err != nil || (code < 200 || code > 299) {
-		if err == nil {
-			defer resp.Body.Close()
-			body, _ := io.ReadAll(resp.Body)
-			return nil, errors.New("non success response (" + strconv.Itoa(code) + "): " + string(body))
-		}
-
-		return nil, errors.New("non success response (" + strconv.Itoa(code) + ")")
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("non success response (%d): %s", resp.StatusCode, body)
 	}
-
-	defer resp.Body.Close()
 	timestamp_response_body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)

@@ -14,6 +14,10 @@ import (
 )
 
 func embedOCSPRevocationStatus(cert, issuer *x509.Certificate, i *revocation.InfoArchival) error {
+	if len(cert.OCSPServer) == 0 {
+		return fmt.Errorf("certificate has no OCSP server URLs")
+	}
+
 	req, err := ocsp.CreateRequest(cert, issuer, nil)
 	if err != nil {
 		return err
@@ -44,6 +48,10 @@ func embedOCSPRevocationStatus(cert, issuer *x509.Certificate, i *revocation.Inf
 // embedCRLRevocationStatus requires an issuer as it needs to implement the
 // the interface, a nil argment might be given if the issuer is not known.
 func embedCRLRevocationStatus(cert, issuer *x509.Certificate, i *revocation.InfoArchival) error {
+	if len(cert.CRLDistributionPoints) == 0 {
+		return fmt.Errorf("certificate has no CRL distribution points")
+	}
+
 	resp, err := http.Get(cert.CRLDistributionPoints[0])
 	if err != nil {
 		return err

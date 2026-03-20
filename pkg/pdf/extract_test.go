@@ -1,52 +1,13 @@
 package pdf
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/signintech/gopdf"
 )
 
-func makeTempPDF(t *testing.T, pages int) string {
-	t.Helper()
-	if pages <= 0 {
-		pages = 1
-	}
-	f, err := os.CreateTemp("", "gosign_extract_test_*.pdf")
-	if err != nil {
-		t.Fatalf("failed to create temp pdf: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-	})
-
-	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-	fonts := addStandardFonts(&pdf, "")
-	if !fonts.NormalOK {
-		t.Skip("no TTF fonts available for gopdf")
-	}
-	for i := 0; i < pages; i++ {
-		pdf.AddPage()
-		_ = pdf.SetFont(fonts.NormalName, "", 10)
-		pdf.SetXY(50, 50)
-		pdf.Cell(nil, "test")
-	}
-	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
-		t.Fatalf("failed to write test pdf: %v", err)
-	}
-	if _, err := f.Write(buf.Bytes()); err != nil {
-		t.Fatalf("failed to write temp pdf bytes: %v", err)
-	}
-	return f.Name()
-}
-
 func TestExtractPages(t *testing.T) {
-	sample := makeTempPDF(t, 1)
+	sample := writeTempPDFPath(t, 1)
 	tests := []struct {
 		name      string
 		input     ExtractPagesInput
@@ -79,9 +40,7 @@ func TestExtractPages(t *testing.T) {
 			}
 
 			result, err := ExtractPages(tt.input)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractPages() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
 
@@ -97,7 +56,7 @@ func TestGeneratePreview(t *testing.T) {
 	previewDir := filepath.Join(tmpDir, "test_previews")
 	defer os.RemoveAll(previewDir)
 
-	sample := makeTempPDF(t, 1)
+	sample := writeTempPDFPath(t, 1)
 
 	if err := os.MkdirAll(previewDir, 0755); err != nil {
 		t.Fatalf("Failed to create preview dir: %v", err)
@@ -134,9 +93,7 @@ func TestGeneratePreview(t *testing.T) {
 			}
 
 			result, err := GeneratePreview(tt.input)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GeneratePreview() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
 
@@ -151,7 +108,7 @@ func TestGeneratePreview(t *testing.T) {
 }
 
 func TestExtractFormFields(t *testing.T) {
-	sample := makeTempPDF(t, 1)
+	sample := writeTempPDFPath(t, 1)
 	tests := []struct {
 		name       string
 		input      ExtractFormFieldsInput
@@ -179,9 +136,7 @@ func TestExtractFormFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ExtractFormFields(tt.input)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractFormFields() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
 
@@ -194,4 +149,3 @@ func TestExtractFormFields(t *testing.T) {
 		})
 	}
 }
-

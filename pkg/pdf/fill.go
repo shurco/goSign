@@ -44,13 +44,11 @@ func FillFields(input FillFieldsInput) ([]byte, error) {
 		fieldMap[fields.Fields[i].Name] = &fields.Fields[i]
 	}
 
-	// Save PDF to temp file for gopdf
-	tmpDir := os.TempDir()
-	tmpInput := filepath.Join(tmpDir, fmt.Sprintf("input_%d.pdf", time.Now().UnixNano()))
-	defer os.Remove(tmpInput)
-	if err := os.WriteFile(tmpInput, data, 0644); err != nil {
+	tmpInput, removeTmp, err := tempPDFFile(data, "input")
+	if err != nil {
 		return nil, fmt.Errorf("failed to write temp PDF: %w", err)
 	}
+	defer removeTmp()
 
 	// Get page count
 	pageResult, err := ExtractPages(ExtractPagesInput{PDFPath: tmpInput})
@@ -58,29 +56,10 @@ func FillFields(input FillFieldsInput) ([]byte, error) {
 		return data, nil
 	}
 
-	// Create new PDF with gopdf
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-
-	// Try to add Arial font (fallback to built-in if not available)
-	fontAdded := false
-	fontPaths := []string{
-		"/usr/share/fonts/truetype/arial.ttf",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-		"./fonts/Arial.ttf",
-	}
-	for _, fontPath := range fontPaths {
-		if err := pdf.AddTTFFont("Arial", fontPath); err == nil {
-			fontAdded = true
-			break
-		}
-	}
-	if !fontAdded {
-		// Use built-in Helvetica if TTF not available
-		pdf.SetFont("helvetica", "", 10)
-	} else {
-		pdf.SetFont("Arial", "", 10)
-	}
+	fonts := addStandardFonts(&pdf, "")
+	fonts.SetNormal(&pdf, 10)
 
 	// Import all pages and overlay field values
 	for pageNum := 1; pageNum <= pageResult.PageCount; pageNum++ {
@@ -91,24 +70,18 @@ func FillFields(input FillFieldsInput) ([]byte, error) {
 		// Overlay field values on this page
 		for fieldName, value := range input.Fields {
 			if field, exists := fieldMap[fieldName]; exists && field.Page == pageNum {
-				// gopdf uses bottom-left origin, PDF form fields use top-left
-				// Convert Y coordinate: pageHeight - fieldY - fieldHeight
-				pageHeight := 792.0 // A4 height in points
-				yPos := pageHeight - field.Y - field.Height
-
+				// gopdf uses bottom-left origin, PDF form fields use top-left.
+				yPos := A4HeightPt - field.Y - field.Height
 				pdf.SetXY(field.X, yPos)
-				if fontAdded {
-					pdf.SetFont("Arial", "", 10)
-				}
+				fonts.SetNormal(&pdf, 10)
 				pdf.Cell(nil, value)
 			}
 		}
 	}
 
-	// Write to buffer
 	var buf bytes.Buffer
 	if err := pdf.Write(&buf); err != nil {
-		return data, nil // Return original on error
+		return nil, fmt.Errorf("failed to write filled PDF: %w", err)
 	}
 
 	return buf.Bytes(), nil
@@ -127,7 +100,7 @@ type SignatureInfo struct {
 	Y          float64 // Y position
 	Width      float64
 	Height     float64
-	ImageData  []byte  // signature image (PNG/JPEG)
+	ImageData  []byte // signature image (PNG/JPEG)
 	SignerName string
 	Date       time.Time
 }
@@ -139,14 +112,12 @@ func MergeSignatures(input MergeSignaturesInput) ([]byte, error) {
 		return input.BasePDF, nil
 	}
 
-	// Save base PDF to temporary file
-	tmpDir := os.TempDir()
-	tmpInput := filepath.Join(tmpDir, fmt.Sprintf("base_%d.pdf", time.Now().UnixNano()))
-	defer os.Remove(tmpInput)
-
-	if err := os.WriteFile(tmpInput, input.BasePDF, 0644); err != nil {
+	tmpInput, removeBase, err := tempPDFFile(input.BasePDF, "base")
+	if err != nil {
 		return nil, fmt.Errorf("failed to write base PDF: %w", err)
 	}
+	defer removeBase()
+	tmpDir := filepath.Dir(tmpInput)
 
 	// Get page count
 	pageResult, err := ExtractPages(ExtractPagesInput{PDFPath: tmpInput})
@@ -175,24 +146,18 @@ func MergeSignatures(input MergeSignaturesInput) ([]byte, error) {
 		// Add signatures for this page
 		if sigs, exists := signaturesByPage[pageNum]; exists {
 			for i, sig := range sigs {
-				// Save signature image to temporary file
 				tmpImage := filepath.Join(tmpDir, fmt.Sprintf("sig_%d_%d.png", time.Now().UnixNano(), i))
 				if err := os.WriteFile(tmpImage, sig.ImageData, 0644); err != nil {
 					continue
 				}
-				defer os.Remove(tmpImage)
-
-				// gopdf uses bottom-left origin, convert Y coordinate
-				pageHeight := 792.0 // A4 height in points
-				yPos := pageHeight - sig.Y - sig.Height
-
-				// Place image at specified position
+				yPos := A4HeightPt - sig.Y - sig.Height
 				rect := &gopdf.Rect{}
 				if sig.Width > 0 && sig.Height > 0 {
 					rect.W = sig.Width
 					rect.H = sig.Height
 				}
 				pdf.Image(tmpImage, sig.X, yPos, rect)
+				_ = os.Remove(tmpImage)
 			}
 		}
 	}
@@ -215,59 +180,20 @@ type GenerateAuditTrailInput struct {
 
 // GenerateAuditTrail generates audit trail page using gopdf
 func GenerateAuditTrail(input GenerateAuditTrailInput) ([]byte, error) {
-	// Create new PDF with gopdf
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-
-	// Try to add fonts (fallback to built-in if not available)
-	fontAdded := false
-	boldFontAdded := false
-	fontPaths := []string{
-		"/usr/share/fonts/truetype/arial.ttf",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-		"./fonts/Arial.ttf",
-	}
-	for _, fontPath := range fontPaths {
-		if !fontAdded {
-			if err := pdf.AddTTFFont("Arial", fontPath); err == nil {
-				fontAdded = true
-			}
-		}
-		if !boldFontAdded {
-			boldPath := fontPath
-			if fontPath == "/usr/share/fonts/truetype/arial.ttf" {
-				boldPath = "/usr/share/fonts/truetype/arialbd.ttf"
-			} else if fontPath == "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf" {
-				boldPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-			} else if fontPath == "./fonts/Arial.ttf" {
-				boldPath = "./fonts/Arial-Bold.ttf"
-			}
-			if err := pdf.AddTTFFont("Arial-Bold", boldPath); err == nil {
-				boldFontAdded = true
-			}
-		}
-	}
+	fonts := addStandardFonts(&pdf, "")
 
 	pdf.AddPage()
 	yPos := 50.0
-	lineHeight := 12.0
+	const lineHeight = 12.0
 
-	// Header
-	if boldFontAdded {
-		pdf.SetFont("Arial-Bold", "", 16)
-	} else {
-		pdf.SetFont("helvetica", "B", 16)
-	}
+	fonts.SetBold(&pdf, 16)
 	pdf.SetXY(50, yPos)
 	pdf.Cell(nil, "Audit Trail")
 	yPos += lineHeight * 2
 
-	// Submission information
-	if fontAdded {
-		pdf.SetFont("Arial", "", 10)
-	} else {
-		pdf.SetFont("helvetica", "", 10)
-	}
+	fonts.SetNormal(&pdf, 10)
 	pdf.SetXY(50, yPos)
 	pdf.Cell(nil, fmt.Sprintf("Submission ID: %s", input.Submission.ID))
 	yPos += lineHeight
@@ -276,76 +202,45 @@ func GenerateAuditTrail(input GenerateAuditTrailInput) ([]byte, error) {
 	pdf.Cell(nil, fmt.Sprintf("Created: %s", input.Submission.CreatedAt.Format("2006-01-02 15:04:05")))
 	yPos += lineHeight * 2
 
-	// Signers
-	if boldFontAdded {
-		pdf.SetFont("Arial-Bold", "", 10)
-	} else {
-		pdf.SetFont("helvetica", "B", 10)
-	}
+	fonts.SetBold(&pdf, 10)
 	pdf.SetXY(50, yPos)
 	pdf.Cell(nil, "Signers:")
 	yPos += lineHeight
 
-	if fontAdded {
-		pdf.SetFont("Arial", "", 10)
-	} else {
-		pdf.SetFont("helvetica", "", 10)
-	}
+	fonts.SetNormal(&pdf, 10)
 	for _, submitter := range input.Submitters {
-		signerText := fmt.Sprintf("- %s (%s)", submitter.Name, submitter.Email)
 		pdf.SetXY(60, yPos)
-		pdf.Cell(nil, signerText)
+		pdf.Cell(nil, fmt.Sprintf("- %s (%s)", submitter.Name, submitter.Email))
 		yPos += lineHeight
 
 		if submitter.CompletedAt != nil {
-			signedText := fmt.Sprintf("  Signed at: %s", submitter.CompletedAt.Format("2006-01-02 15:04:05"))
-			if fontAdded {
-				pdf.SetFont("Arial", "", 9)
-			} else {
-				pdf.SetFont("helvetica", "", 9)
-			}
+			fonts.SetNormal(&pdf, 9)
 			pdf.SetXY(60, yPos)
-			pdf.Cell(nil, signedText)
+			pdf.Cell(nil, fmt.Sprintf("  Signed at: %s", submitter.CompletedAt.Format("2006-01-02 15:04:05")))
 			yPos += lineHeight
-			if fontAdded {
-				pdf.SetFont("Arial", "", 10)
-			} else {
-				pdf.SetFont("helvetica", "", 10)
-			}
+			fonts.SetNormal(&pdf, 10)
 		}
 	}
 
-	// Events timeline
 	if len(input.Events) > 0 {
 		yPos += lineHeight
-		if boldFontAdded {
-			pdf.SetFont("Arial-Bold", "", 10)
-		} else {
-			pdf.SetFont("helvetica", "B", 10)
-		}
+		fonts.SetBold(&pdf, 10)
 		pdf.SetXY(50, yPos)
 		pdf.Cell(nil, "Timeline:")
 		yPos += lineHeight
 
-		if fontAdded {
-			pdf.SetFont("Arial", "", 9)
-		} else {
-			pdf.SetFont("helvetica", "", 9)
-		}
+		fonts.SetNormal(&pdf, 9)
 		for _, event := range input.Events {
-			eventText := fmt.Sprintf("%s - %s", event.CreatedAt.Format("2006-01-02 15:04:05"), event.Type)
 			pdf.SetXY(60, yPos)
-			pdf.Cell(nil, eventText)
+			pdf.Cell(nil, fmt.Sprintf("%s - %s", event.CreatedAt.Format("2006-01-02 15:04:05"), event.Type))
 			yPos += lineHeight
 		}
 	}
 
-	// Write to buffer
 	var buf bytes.Buffer
 	if err := pdf.Write(&buf); err != nil {
 		return nil, fmt.Errorf("failed to write PDF: %w", err)
 	}
-
 	return buf.Bytes(), nil
 }
 
@@ -380,3 +275,12 @@ func AssembleDocument(basePDF []byte, signatures []SignatureInfo, auditInput Gen
 	return finalPDF, nil
 }
 
+// tempPDFFile writes data to a unique file under os.TempDir(); cleanup removes the file (no-op on write error).
+func tempPDFFile(data []byte, prefix string) (path string, cleanup func(), err error) {
+	cleanup = func() {}
+	p := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%d.pdf", prefix, time.Now().UnixNano()))
+	if err = os.WriteFile(p, data, 0o644); err != nil {
+		return "", cleanup, err
+	}
+	return p, func() { _ = os.Remove(p) }, nil
+}

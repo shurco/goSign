@@ -18,22 +18,16 @@ import (
 // per-page PDFs in lc_pages.
 //
 // Notes:
-// - The current goSign storage model stores each PDF page as its own attachment:
-//   lc_pages/{attachment_id}/0.pdf
-// - Field areas are stored as percentages (0..1) relative to an A4 page.
-// - For signature/initials fields, the frontend stores a PNG data URL in the field value.
+//   - The current goSign storage model stores each PDF page as its own attachment:
+//     lc_pages/{attachment_id}/0.pdf
+//   - Field areas are stored as percentages (0..1) relative to an A4 page.
+//   - For signature/initials fields, the frontend stores a PNG data URL in the field value.
 type RenderCompletedTemplatePDFInput struct {
 	PagesDir string // e.g. "./lc_pages"
 	Schema   []models.Schema
 	Fields   []models.Field
 	Values   map[string]any // field_id -> value (string/bool/[]any/etc.)
 }
-
-const (
-	// A4 size in points (1/72 inch). Must match how we generate/extract pages.
-	a4WidthPt  = 595.28
-	a4HeightPt = 841.89
-)
 
 // RenderCompletedTemplatePDF renders a PDF based on stored page PDFs and overlays
 // all filled values on the appropriate pages using template field areas.
@@ -86,17 +80,17 @@ func RenderCompletedTemplatePDF(input RenderCompletedTemplatePDFInput) ([]byte, 
 				}
 
 				// Convert percent-based coordinates to points.
-				x := clamp01(area.X) * a4WidthPt
-				yTop := clamp01(area.Y) * a4HeightPt
-				w := clamp01(area.W) * a4WidthPt
-				h := clamp01(area.H) * a4HeightPt
+				x := clamp01(area.X) * A4WidthPt
+				yTop := clamp01(area.Y) * A4HeightPt
+				w := clamp01(area.W) * A4WidthPt
+				h := clamp01(area.H) * A4HeightPt
 				if h <= 0 {
 					// Defensive default: small height so text isn't placed outside the page.
 					h = 12
 				}
 
 				// gopdf uses bottom-left origin. Convert from top-left.
-				y := a4HeightPt - yTop - h
+				y := A4HeightPt - yTop - h
 
 				switch field.Type {
 				case models.FieldTypeSignature, models.FieldTypeInitials, models.FieldTypeStamp, models.FieldTypeImage:
@@ -212,8 +206,11 @@ func decodeImageDataURL(v any) ([]byte, error) {
 
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		return nil, err
+		// Fallback to URL-safe alphabet (- and _ instead of + and /)
+		b, err = base64.URLEncoding.DecodeString(s)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return b, nil
 }
-
