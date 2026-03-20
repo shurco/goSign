@@ -1,15 +1,10 @@
-/**
- * Authentication utilities for token management
- */
+import type { Router } from "vue-router";
 
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
-let routerInstance: any = null;
+let routerInstance: Router | null = null;
 
-/**
- * Set router instance for redirects
- */
-export function setAuthRouter(router: any): void {
+export function setAuthRouter(router: Router): void {
   routerInstance = router;
 }
 
@@ -68,17 +63,11 @@ export async function logout(): Promise<void> {
 
   // Try to invalidate refresh token on server (optional, don't wait for response)
   if (refreshToken) {
-    try {
-      await fetch("/auth/signout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken })
-      }).catch(() => {
-        // Ignore errors
-      });
-    } catch {
-      // Ignore errors
-    }
+    fetch("/auth/signout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    }).catch(() => {});
   }
 
   redirectToLogin();
@@ -267,12 +256,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     options.headers = headers;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, options);
-  } catch (error) {
-    throw error;
-  }
+  const response = await fetch(url, options);
 
   // Handle 401 with token refresh
   if (response.status === 401 && requiresAuth) {

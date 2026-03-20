@@ -2,8 +2,26 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES, SIGNING_LOCALES } from '../index'
 
+type I18nGlobalLike = {
+  // In `legacy: false` mode, vue-i18n exposes locale as a ref-like value.
+  locale: { value: string }
+  // In these tests we only use `t(key)` (no interpolation objects).
+  t: (key: string) => string
+  // Used by this spec for `numberFormats`.
+  n: (value: number, format: string) => string
+  // Used by this spec for `datetimeFormats`.
+  d: (value: Date | number, format: string) => string
+}
+
+type I18nLike = {
+  global: I18nGlobalLike
+}
+
+const createTestI18n = (options: any): I18nLike =>
+  createI18n(options) as unknown as I18nLike
+
 describe('i18n Translation Loading and Fallback', () => {
-  let i18n: ReturnType<typeof createI18n>
+  let i18n!: I18nLike
 
   beforeEach(() => {
     // Reset localStorage before each test
@@ -26,7 +44,7 @@ describe('i18n Translation Loading and Fallback', () => {
         ru: { common: { save: 'Сохранить' } },
       }
       
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: localStorage.getItem('locale') || 'en',
         fallbackLocale: 'en',
@@ -52,7 +70,7 @@ describe('i18n Translation Loading and Fallback', () => {
       const browser = navigator.language.split('-')[0]
       const detectedLocale = browser in SUPPORTED_LOCALES ? browser : 'en'
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: detectedLocale,
         fallbackLocale: 'en',
@@ -76,7 +94,7 @@ describe('i18n Translation Loading and Fallback', () => {
       const browser = navigator.language.split('-')[0]
       const detectedLocale = browser in SUPPORTED_LOCALES ? browser : 'en'
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: detectedLocale,
         fallbackLocale: 'en',
@@ -97,7 +115,7 @@ describe('i18n Translation Loading and Fallback', () => {
       const detectedLocale =
         stored && stored in SUPPORTED_LOCALES ? stored : 'en'
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: detectedLocale,
         fallbackLocale: 'en',
@@ -137,7 +155,7 @@ describe('i18n Translation Loading and Fallback', () => {
         },
       }
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: 'en',
         fallbackLocale: 'en',
@@ -191,7 +209,7 @@ describe('i18n Translation Loading and Fallback', () => {
         },
       }
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: 'ru',
         fallbackLocale: 'en',
@@ -220,7 +238,7 @@ describe('i18n Translation Loading and Fallback', () => {
         },
       }
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: 'fr', // French not in messages
         fallbackLocale: 'en',
@@ -278,7 +296,7 @@ describe('i18n Translation Loading and Fallback', () => {
         ru: {},
       }
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: 'en',
         fallbackLocale: 'en',
@@ -342,7 +360,7 @@ describe('i18n Translation Loading and Fallback', () => {
         },
       }
 
-      i18n = createI18n({
+      i18n = createTestI18n({
         legacy: false,
         locale: 'en',
         fallbackLocale: 'en',

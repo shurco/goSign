@@ -16,7 +16,7 @@
           :label="$t('organizations.organizationName')"
           :placeholder="$t('organizations.enterOrganizationName')"
           required
-          @update:model-value="(val: string) => { formData.name = val; localName = val; }"
+          @update:model-value="(val: string | boolean | string[]) => { const s = String(val); formData.name = s; localName = s; }"
         />
 
         <FormControl :label="$t('organizations.description')">
@@ -159,7 +159,6 @@ const updateOrganization = async (formData: Record<string, unknown>) => {
 
     // If organization is still null, create updated object from form data and current organization
     if (!organization || !organization.id) {
-      console.log("Creating organization object from form data");
       organization = {
         ...props.organization,
         name: name,

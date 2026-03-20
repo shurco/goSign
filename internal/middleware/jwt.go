@@ -158,16 +158,16 @@ func Protected() fiber.Handler {
 				return webutil.Response(c, fiber.StatusForbidden, "API key has expired", nil)
 			}
 
-		go func(id string) {
-			_ = apiKeyValidator.UpdateLastUsed(id)
-		}(keyModel.ID)
+			go func(id string) {
+				_ = apiKeyValidator.UpdateLastUsed(id)
+			}(keyModel.ID)
 
-			// Store auth context
 			c.Locals("auth", &AuthContext{
 				Type:      AuthTypeAPIKey,
-				UserID:    keyModel.ID,
+				UserID:    keyModel.AccountID,
 				AccountID: keyModel.AccountID,
 			})
+			c.Locals("user_id", keyModel.AccountID)
 
 			return c.Next()
 		}

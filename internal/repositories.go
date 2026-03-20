@@ -14,7 +14,23 @@ type simpleTemplateRepository struct {
 }
 
 func (r *simpleTemplateRepository) List(page, pageSize int, filters map[string]string) ([]models.Template, int, error) {
-	return []models.Template{}, 0, nil
+	if r.templateQueries == nil {
+		return []models.Template{}, 0, nil
+	}
+	offset := (page - 1) * pageSize
+	if offset < 0 {
+		offset = 0
+	}
+	req := queries.TemplateSearchRequest{
+		Limit:  pageSize,
+		Offset: offset,
+		Query:  filters["query"],
+	}
+	result, err := r.templateQueries.SearchTemplates(context.Background(), req)
+	if err != nil {
+		return nil, 0, err
+	}
+	return result.Templates, result.Total, nil
 }
 
 func (r *simpleTemplateRepository) Get(id string) (*models.Template, error) {

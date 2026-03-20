@@ -1,5 +1,4 @@
 import { createI18n } from 'vue-i18n'
-import type { I18nOptions } from 'vue-i18n'
 
 // Supported UI languages (7 total)
 export const SUPPORTED_LOCALES = {
@@ -54,7 +53,7 @@ for (const path in localeModules) {
   }
 }
 
-const i18n = createI18n<I18nOptions>({
+const i18n = createI18n({
   legacy: false,
   locale: detectLocale(),
   fallbackLocale: 'en',

@@ -13,7 +13,7 @@
       @click="handleClick(option)"
     >
       <div class="flex items-center justify-center gap-2">
-        <SvgIcon v-if="getOptionIcon(option)" :name="getOptionIcon(option)" width="16" height="16" />
+        <SvgIcon v-if="getOptionIcon(option)" :name="getOptionIcon(option)!" width="16" height="16" />
         <span>{{ getOptionLabel(option) }}</span>
       </div>
     </button>

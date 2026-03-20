@@ -1,4 +1,3 @@
-// @ts-nocheck
 <template>
   <div class="grid h-48 grid-cols-1 place-content-center gap-4">
     <div>
@@ -91,7 +90,7 @@
               <div class="flex items-center space-x-1">
                 <SvgIcon name="sign" class="h-5 w-5" />
                 <span>{{
-                  item.cert_subject.common_name ? item.cert_subject.common_name : item.cert_subject.organization
+                  item.cert_subject?.common_name ? item.cert_subject.common_name : item.cert_subject?.organization
                 }}</span>
               </div>
 
@@ -122,17 +121,27 @@
 <script setup lang="ts">
 import { getCurrentInstance, ref } from "vue";
 import { toDate } from "@/utils/time";
+import type { Signer } from "@/models/index";
 
-const initialVerifyInfo = {
+interface VerifyData {
+  verify: boolean;
+  error: string | null;
+  signers: Signer[];
+}
+
+interface VerifyInfo {
+  success: boolean;
+  data: VerifyData;
+}
+
+const verifyInfo = ref<VerifyInfo>({
   success: false,
   data: {
     verify: false,
     error: null,
     signers: []
   }
-};
-
-const verifyInfo = ref(initialVerifyInfo);
+});
 const status = ref(false);
 const instance: any = getCurrentInstance();
 

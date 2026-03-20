@@ -434,8 +434,8 @@ func issueOrgTokens(userRecord *queries.UserRecord, orgID string) (*orgTokens, e
 		return nil, fmt.Errorf("failed to create refresh token: %w", err)
 	}
 
-	refreshKey := fmt.Sprintf("refresh_token:%s", userRecord.ID)
-	if err := redis.Conn.Set(refreshKey, refreshToken, 7*24*time.Hour); err != nil {
+	refreshKey := fmt.Sprintf("refresh_token:%s", refreshToken)
+	if err := redis.Conn.Set(refreshKey, userRecord.ID, 7*24*time.Hour); err != nil {
 		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
 

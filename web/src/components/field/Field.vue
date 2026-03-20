@@ -409,11 +409,11 @@
         @dragstart.prevent.stop
       >
         <div v-for="(option, index) in field.options" :key="option.id" class="flex items-center space-x-1.5">
-          <span class="w-3.5 text-sm"> {{ index + 1 }}. </span>
+          <span class="w-3.5 text-sm"> {{ Number(index) + 1 }}. </span>
           <div
             v-if="
               ['radio', 'multiple'].includes(field.type) &&
-              (index > 0 || field.areas.find((a: any) => a.option_id) || !field.areas.length) &&
+              (Number(index) > 0 || field.areas.find((a: any) => a.option_id) || !field.areas.length) &&
               !field.areas.find((a: any) => a.option_id === option.id)
             "
             class="flex w-full items-center"
@@ -424,7 +424,7 @@
               type="text"
               dir="auto"
               required
-              :placeholder="`Option ${index + 1}`"
+              :placeholder="`Option ${Number(index) + 1}`"
               @blur="save"
             />
             <button title="Draw" tabindex="-1" @click.prevent="emit('set-draw', { field, option })">
@@ -435,7 +435,7 @@
             v-else
             v-model="option.value"
             class="input input-xs input-primary w-full bg-transparent text-sm"
-            :placeholder="`Option ${index + 1}`"
+            :placeholder="`Option ${Number(index) + 1}`"
             type="text"
             required
             dir="auto"
@@ -455,7 +455,7 @@
       </template>
       <template #default>
         <ConditionBuilder
-          :field="field"
+          :field="(field as any)"
           :available-fields="availableFieldsForConditions"
           @update:conditions="(conditions) => {
             field.condition_groups = conditions;
@@ -483,7 +483,7 @@
       <template #default>
         <FormulaBuilder
           ref="formulaBuilderRef"
-          :field="field"
+          :field="(field as any)"
           :available-fields="availableFieldsForFormula"
         />
       </template>
@@ -558,7 +558,7 @@
 // This component intentionally mutates props.field because field is part of a reactive template object
 // managed by the parent component. Direct mutation is used for performance optimization.
 // Rule vue/no-mutating-props is disabled for this file in eslint.config.mjs
-import { computed, inject, nextTick, ref, watch } from "vue";
+import { computed, inject, nextTick, ref, watch, type PropType } from "vue";
 import { useI18n } from "vue-i18n";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import FieldType from "@/components/field/Type.vue";
@@ -571,11 +571,11 @@ import { v4 } from "uuid";
 
 const props = defineProps({
   field: {
-    type: Object,
+    type: Object as PropType<Record<string, any>>,
     required: true
   },
   defaultField: {
-    type: Object,
+    type: Object as PropType<Record<string, any> | null>,
     required: false,
     default: null
   },
@@ -594,9 +594,9 @@ const props = defineProps({
 const emit = defineEmits(["set-draw", "remove", "scroll-to"]);
 
 const { t } = useI18n();
-const template: any = inject("template");
-const save: any = inject("save");
-const selectedAreaRef: any = inject("selectedAreaRef");
+const template = inject<any>("template");
+const save = inject<() => void>("save", () => {});
+const selectedAreaRef = inject<any>("selectedAreaRef");
 
 const nameRef: any = ref(null);
 const optionsRef: any = ref(null);

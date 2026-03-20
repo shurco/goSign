@@ -331,8 +331,11 @@ func Enable2FA(c *fiber.Ctx) error {
 
 // Verify2FA verifies and activates 2FA
 func Verify2FA(c *fiber.Ctx) error {
-	request := &models.Verify2FA{}
-	if err := parseAndValidate(c, request); err != nil {
+	var request struct {
+		Code   string `json:"code" validate:"required"`
+		Secret string `json:"secret" validate:"required"`
+	}
+	if err := parseAndValidate(c, &request); err != nil {
 		return err
 	}
 
@@ -343,20 +346,12 @@ func Verify2FA(c *fiber.Ctx) error {
 
 	ctx := c.UserContext()
 
-	// Get secret from request body (sent from Enable2FA response)
-	secret := c.FormValue("secret")
-	if secret == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "Secret is required", nil)
-	}
-
-	// Validate TOTP code
-	valid := totp.Validate(request.Code, secret)
+	valid := totp.Validate(request.Code, request.Secret)
 	if !valid {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid 2FA code", nil)
 	}
 
-	// Enable 2FA
-	if err := queries.DB.Enable2FA(ctx, userID, secret); err != nil {
+	if err := queries.DB.Enable2FA(ctx, userID, request.Secret); err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}

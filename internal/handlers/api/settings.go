@@ -177,8 +177,11 @@ func (h *SettingsHandler) Get(c *fiber.Ctx) error {
 // Example: "abcd1234WXYZ" -> "abcd…WXYZ"
 func maskSecretFirstLast4(secret string) string {
 	secret = strings.TrimSpace(secret)
+	if len(secret) == 0 {
+		return ""
+	}
 	if len(secret) <= 8 {
-		return secret
+		return strings.Repeat("*", len(secret))
 	}
 	return secret[:4] + "…" + secret[len(secret)-4:]
 }
@@ -806,6 +809,88 @@ func (h *SettingsHandler) UpdateGeolocation(c *fiber.Ctx) error {
 	})
 }
 
+// prepareGeoLite2Download validates that a download should proceed (checks
+// existing file + force flag) and ensures the target directory exists.
+// Returns (dbPath, tmpDBPath, nil) on success, or a Fiber response error to short-circuit.
+func (h *SettingsHandler) prepareGeoLite2Download(c *fiber.Ctx, force bool) (string, string, error) {
+	baseDir := appdir.Base()
+	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
+
+	if _, err := os.Stat(dbPath); err == nil && !force {
+		return "", "", webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
+			"status":  "skipped",
+			"message": "GeoLite2 database already exists",
+			"path":    dbPath,
+		})
+	}
+
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
+		return "", "", webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
+	}
+
+	tmpDBPath := dbPath + ".tmp"
+	_ = os.Remove(tmpDBPath)
+	return dbPath, tmpDBPath, nil
+}
+
+// finalizeGeoLite2Install atomically replaces the DB file, reloads the
+// in-memory geolocation service, and persists the last-update timestamp.
+func (h *SettingsHandler) finalizeGeoLite2Install(c *fiber.Ctx, dbPath, tmpDBPath, source string) error {
+	if err := os.Rename(tmpDBPath, dbPath); err != nil {
+		_ = os.Remove(tmpDBPath)
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
+			"error": err.Error(),
+		})
+	}
+
+	if h.geolocationSvc != nil {
+		if err := h.geolocationSvc.Reload(); err != nil {
+			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	if h.accountQueries != nil {
+		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
+			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), source)
+		}
+	}
+
+	return nil
+}
+
+// downloadToTempAndExtractTarGz downloads a URL to a temp file, extracts
+// the .mmdb from the tar.gz archive into tmpDBPath.
+func downloadToTempAndExtractTarGz(url, tmpDBPath string) error {
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
+	if err != nil {
+		return fmt.Errorf("temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+		return fmt.Errorf("save archive: %w", err)
+	}
+
+	return geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath)
+}
+
 // DownloadGeoLite2FromURLRequest request body for downloading GeoLite2 from URL
 type DownloadGeoLite2FromURLRequest struct {
 	URL   string `json:"url" validate:"required,url"`
@@ -830,31 +915,14 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
-	baseDir := appdir.Base()
-	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
-
-	// Check if database already exists
-	if _, err := os.Stat(dbPath); err == nil {
-		if !req.Force {
-			return webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
-				"status":  "skipped",
-				"message": "GeoLite2 database already exists",
-				"path":    dbPath,
-			})
-		}
+	dbPath, tmpDBPath, err := h.prepareGeoLite2Download(c, req.Force)
+	if err != nil {
+		return err
 	}
 
-	// Create base directory if it doesn't exist (next to executable)
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
-	}
-
-	// Download from URL (follow redirects automatically)
 	client := &http.Client{
 		Timeout: 5 * time.Minute,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Allow up to 10 redirects
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("stopped after 10 redirects")
 			}
@@ -864,124 +932,68 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 	resp, err := client.Get(req.URL)
 	if err != nil {
 		log.Error().Err(err).Str("url", req.URL).Msg("Failed to download file")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{
-			"error": err.Error(),
-		})
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{"error": err.Error()})
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Error().Int("status", resp.StatusCode).Str("url", req.URL).Msg("Failed to download file")
 		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{
 			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
 		})
 	}
 
-	// Determine file type from URL or Content-Type
 	urlLower := strings.ToLower(req.URL)
 	contentType := resp.Header.Get("Content-Type")
 	isDirectMMDB := strings.HasSuffix(urlLower, ".mmdb") && !strings.HasSuffix(urlLower, ".mmdb.gz")
 	isGzipMMDB := strings.HasSuffix(urlLower, ".mmdb.gz") || strings.HasSuffix(urlLower, ".gz")
 	isTarGz := strings.HasSuffix(urlLower, ".tar.gz") || strings.Contains(contentType, "application/x-gzip") || strings.Contains(contentType, "application/gzip")
 
-	// Extract into temp output, then atomically replace dbPath
-	tmpDBPath := dbPath + ".tmp"
-	_ = os.Remove(tmpDBPath)
-
-	// Handle direct .mmdb file (no archive)
 	if isDirectMMDB {
-		// Create output directory if needed
-		if err := os.MkdirAll(filepath.Dir(tmpDBPath), 0755); err != nil {
-			log.Error().Err(err).Msg("Failed to create output directory")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create output directory", nil)
-		}
-
-		// Create output file
 		outFile, err := os.Create(tmpDBPath)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create output file")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create output file", nil)
 		}
 		defer outFile.Close()
-
-		// Copy file content directly
 		if _, err := io.Copy(outFile, resp.Body); err != nil {
-			log.Error().Err(err).Msg("Failed to save database file")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save database file", nil)
 		}
 	} else {
-		// Handle archive files (tar.gz, .gz, etc.)
-		// Create temporary file for archive
 		tmpFile, err := os.CreateTemp("", "geolite2-*")
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create temporary file")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
 		}
 		defer os.Remove(tmpFile.Name())
 		defer tmpFile.Close()
 
-		// Save archive to temporary file
 		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-			log.Error().Err(err).Msg("Failed to save archive file")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save archive file", nil)
 		}
 
-		// Extract GeoLite2-City.mmdb from archive
-		if isTarGz {
+		switch {
+		case isTarGz:
 			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-				log.Error().Err(err).Msg("Failed to extract database from tar.gz")
-				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from tar.gz", map[string]any{
-					"error": err.Error(),
-				})
+				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from tar.gz", map[string]any{"error": err.Error()})
 			}
-		} else if isGzipMMDB {
-			// Handle gzip-compressed mmdb file
+		case isGzipMMDB:
 			if err := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); err != nil {
-				log.Error().Err(err).Msg("Failed to extract database from mmdb.gz")
-				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from mmdb.gz", map[string]any{
-					"error": err.Error(),
-				})
+				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from mmdb.gz", map[string]any{"error": err.Error()})
 			}
-		} else {
-			// Try tar.gz first, then fallback to gzip
+		default:
 			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
 				if gzErr := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); gzErr != nil {
-					log.Error().Err(err).Msg("Failed to extract database from tar.gz")
-					log.Error().Err(gzErr).Msg("Failed to extract database from mmdb.gz")
 					return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
-						"error": fmt.Sprintf("tar.gz error: %s; gzip error: %s", err.Error(), gzErr.Error()),
+						"error": fmt.Sprintf("tar.gz: %s; gzip: %s", err.Error(), gzErr.Error()),
 					})
 				}
 			}
 		}
 	}
 
-	if err := os.Rename(tmpDBPath, dbPath); err != nil {
-		_ = os.Remove(tmpDBPath)
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
-			"error": err.Error(),
-		})
-	}
-
-	// Reload in-memory geolocation DB so changes apply immediately
-	if h.geolocationSvc != nil {
-		if err := h.geolocationSvc.Reload(); err != nil {
-			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
-				"error": err.Error(),
-			})
-		}
-	}
-
-	// Persist last update timestamp (per-account)
-	if h.accountQueries != nil {
-		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
-			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "url")
-		}
+	if err := h.finalizeGeoLite2Install(c, dbPath, tmpDBPath, "url"); err != nil {
+		return err
 	}
 
 	log.Info().Str("path", dbPath).Str("url", req.URL).Msg("GeoLite2 database downloaded and extracted successfully")
-
 	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
 		"status": "success",
 		"path":   dbPath,
@@ -990,7 +1002,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
 
 // DownloadGeoLite2FromMaxMindRequest request body for downloading GeoLite2 from MaxMind
 type DownloadGeoLite2FromMaxMindRequest struct {
-	LicenseKey string `json:"license_key,omitempty"` // Optional: use from database if not provided
+	LicenseKey string `json:"license_key,omitempty"`
 	Force      bool   `json:"force,omitempty"`
 }
 
@@ -1005,14 +1017,11 @@ type DownloadGeoLite2FromMaxMindRequest struct {
 // @Router /api/settings/geolocation/download-maxmind [post]
 func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 	var req DownloadGeoLite2FromMaxMindRequest
-	_ = c.BodyParser(&req) // Optional body
+	_ = c.BodyParser(&req)
 
-	// Get license key from request or from database
 	licenseKey := strings.TrimSpace(req.LicenseKey)
 	if licenseKey == "" {
-		// Try to get from account settings
-		accountID, err := ResolveAccountID(c, h.userQueries)
-		if err == nil && h.accountQueries != nil && accountID != "" {
+		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && h.accountQueries != nil && accountID != "" {
 			licenseKey, _ = h.accountQueries.GetAccountGeolocationLicenseKey(c.Context(), accountID)
 		}
 	}
@@ -1021,100 +1030,22 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "MaxMind license key is required. Please configure it in settings first.", nil)
 	}
 
-	baseDir := appdir.Base()
-	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
-
-	// Check if database already exists
-	if _, err := os.Stat(dbPath); err == nil {
-		if !req.Force {
-			return webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
-				"status":  "skipped",
-				"message": "GeoLite2 database already exists",
-				"path":    dbPath,
-			})
-		}
+	dbPath, tmpDBPath, err := h.prepareGeoLite2Download(c, req.Force)
+	if err != nil {
+		return err
 	}
 
-	// Create base directory if it doesn't exist (next to executable)
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
-	}
-
-	// Download from MaxMind API
 	downloadURL := fmt.Sprintf("https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz", licenseKey)
-	
-	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Get(downloadURL)
-	if err != nil {
+	if err := downloadToTempAndExtractTarGz(downloadURL, tmpDBPath); err != nil {
 		log.Error().Err(err).Msg("Failed to download from MaxMind")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{
-			"error": err.Error(),
-		})
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Error().Int("status", resp.StatusCode).Bytes("body", body).Msg("MaxMind API error")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{
-			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
-		})
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{"error": err.Error()})
 	}
 
-	// Create temporary file for tar.gz
-	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create temporary file")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// Save tar.gz to temporary file
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		log.Error().Err(err).Msg("Failed to save tar.gz file")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save tar.gz file", nil)
-	}
-
-	// Extract into temp output, then atomically replace dbPath
-	tmpDBPath := dbPath + ".tmp"
-	_ = os.Remove(tmpDBPath)
-
-	// Extract GeoLite2-City.mmdb from tar.gz
-	if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-		log.Error().Err(err).Msg("Failed to extract database from tar.gz")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
-			"error": err.Error(),
-		})
-	}
-
-	if err := os.Rename(tmpDBPath, dbPath); err != nil {
-		_ = os.Remove(tmpDBPath)
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
-			"error": err.Error(),
-		})
-	}
-
-	// Reload in-memory geolocation DB so changes apply immediately
-	if h.geolocationSvc != nil {
-		if err := h.geolocationSvc.Reload(); err != nil {
-			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
-				"error": err.Error(),
-			})
-		}
-	}
-
-	// Persist last update timestamp (per-account)
-	if h.accountQueries != nil {
-		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
-			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), "maxmind")
-		}
+	if err := h.finalizeGeoLite2Install(c, dbPath, tmpDBPath, "maxmind"); err != nil {
+		return err
 	}
 
 	log.Info().Str("path", dbPath).Msg("GeoLite2 database downloaded from MaxMind successfully")
-
 	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
 		"status": "success",
 		"path":   dbPath,

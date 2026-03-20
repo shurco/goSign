@@ -75,6 +75,17 @@ func ResolveAccountID(c *fiber.Ctx, uq *queries.UserQueries) (string, error) {
 	return accountID, nil
 }
 
+// GetOrganizationIDFromLocals extracts organization ID from fiber.Ctx locals.
+// Returns empty string if not set. This is the canonical way to get org context.
+func GetOrganizationIDFromLocals(c *fiber.Ctx) string {
+	if orgID := c.Locals("organization_id"); orgID != nil {
+		if s, ok := orgID.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
 // GetClientIP extracts the real client IP address from the request
 // It checks X-Forwarded-For, X-Real-IP headers first, then falls back to c.IP()
 func GetClientIP(c *fiber.Ctx) string {

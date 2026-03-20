@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, type Ref } from 'vue'
 import { useFormulas } from '../useFormulas'
 import type { Field } from '@/models/template'
 
 describe('useFormulas - Formula Parsing and Calculation', () => {
-  let fields: ReturnType<typeof ref<Field[]>>
-  let formData: ReturnType<typeof ref<Record<string, any>>>
+  let fields: Ref<Field[]>
+  let formData: Ref<Record<string, any>>
 
   beforeEach(() => {
     // Suppress console.error in tests
@@ -17,18 +17,21 @@ describe('useFormulas - Formula Parsing and Calculation', () => {
         type: 'number',
         name: 'Field 1',
         required: false,
+        submitter_id: '',
       },
       {
         id: 'field_2',
         type: 'number',
         name: 'Field 2',
         required: false,
+        submitter_id: '',
       },
       {
         id: 'field_3',
         type: 'number',
         name: 'Field 3',
         required: false,
+        submitter_id: '',
       },
       {
         id: 'calculated_field',
@@ -36,7 +39,7 @@ describe('useFormulas - Formula Parsing and Calculation', () => {
         name: 'Calculated Field',
         required: false,
         formula: 'field_1 + field_2',
-        calculation_type: 'number',
+        submitter_id: '',
       },
     ])
 
@@ -273,7 +276,7 @@ describe('useFormulas - Formula Parsing and Calculation', () => {
         name: 'Calculated Field 2',
         required: false,
         formula: 'field_2 * field_3',
-        calculation_type: 'number',
+        submitter_id: '',
       })
 
       const { calculatedValues } = useFormulas(fields, formData)

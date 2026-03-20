@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/earlydata"
 	"github.com/gofiber/fiber/v2/middleware/etag"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
@@ -19,7 +20,11 @@ import (
 // Fiber applies common middleware to the Fiber app
 func Fiber(a *fiber.App, log *logging.Logger) {
 	a.Use(
-		// cors.New(),
+		cors.New(cors.Config{
+			AllowCredentials: true,
+			AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-API-Key, X-Organization-ID",
+			AllowMethods:     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+		}),
 		earlydata.New(),
 		helmet.New(),
 		etag.New(),

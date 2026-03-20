@@ -21,7 +21,8 @@
         class="flex cursor-pointer items-center gap-2"
       >
         <Radio
-          v-model="localValue"
+          :model-value="typeof localValue === 'string' ? localValue : String(localValue || '')"
+          @update:model-value="(val) => { localValue = val; }"
           :name="radioGroupName"
           :value="option.value ?? option.id ?? ''"
           :disabled="disabled"
@@ -31,7 +32,7 @@
     </div>
 
     <div v-else-if="type === 'checkbox'" class="flex items-center gap-2">
-      <Checkbox v-model="localValue" :disabled="disabled" @blur="handleBlur" />
+      <Checkbox :model-value="typeof localValue === 'boolean' ? localValue : Boolean(localValue)" @update:model-value="(val) => { localValue = val; }" :disabled="disabled" @blur="handleBlur" />
       <span v-if="placeholder">{{ placeholder }}</span>
     </div>
 

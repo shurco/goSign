@@ -121,28 +121,11 @@ func New() error {
 		log.Warn().Err(err).Msg("Failed to download GeoLite2 database, continuing without it")
 	}
 
-	go func() {
-		const interval = 12 * time.Hour
-
-		now := time.Now()
-		nextRun := now.Truncate(interval).Add(interval)
-		if nextRun.Before(now) {
-			nextRun = nextRun.Add(interval)
-		}
-		time.Sleep(time.Until(nextRun))
-
+	startPeriodicTask(12*time.Hour, func() {
 		if err := trust.Update(); err != nil {
 			log.Err(err).Send()
 		}
-
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := trust.Update(); err != nil {
-				log.Err(err).Send()
-			}
-		}
-	}()
+	})
 
 	// web init
 	app := fiber.New(fiber.Config{
@@ -239,6 +222,27 @@ func New() error {
 	return app.Shutdown()
 }
 
+// startPeriodicTask launches a goroutine that aligns to the given interval,
+// executes fn once after the alignment, then repeats every interval.
+func startPeriodicTask(interval time.Duration, fn func()) {
+	go func() {
+		now := time.Now()
+		nextRun := now.Truncate(interval).Add(interval)
+		if nextRun.Before(now) {
+			nextRun = nextRun.Add(interval)
+		}
+		time.Sleep(time.Until(nextRun))
+
+		fn()
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			fn()
+		}
+	}()
+}
+
 func createDirs() error {
 	dirs := []string{
 		appdir.LcPages(),
@@ -299,27 +303,10 @@ func scheduleGeoLite2Updates(pool *pgxpool.Pool, log *logging.Logger, geoSvc *ge
 	}
 
 	dbPath := filepath.Join(appdir.Base(), "GeoLite2-City.mmdb")
-	const (
-		checkEvery        = 12 * time.Hour
-		initialAlignEvery = 12 * time.Hour
-	)
 
-	go func() {
-		now := time.Now()
-		nextRun := now.Truncate(initialAlignEvery).Add(initialAlignEvery)
-		if nextRun.Before(now) {
-			nextRun = nextRun.Add(initialAlignEvery)
-		}
-		time.Sleep(time.Until(nextRun))
-
+	startPeriodicTask(12*time.Hour, func() {
 		updateGeoLite2OnSchedule(pool, log, geoSvc, dbPath)
-
-		ticker := time.NewTicker(checkEvery)
-		defer ticker.Stop()
-		for range ticker.C {
-			updateGeoLite2OnSchedule(pool, log, geoSvc, dbPath)
-		}
-	}()
+	})
 }
 
 func updateGeoLite2OnSchedule(pool *pgxpool.Pool, log *logging.Logger, geoSvc *geolocation.Service, dbPath string) {

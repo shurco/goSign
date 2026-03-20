@@ -71,13 +71,7 @@ func (h *TemplateHandler) CreateEmptyTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "name is required", nil)
 	}
 
-	// Get organization ID from context
-	organizationID := ""
-	if orgID := c.Locals("organization_id"); orgID != nil {
-		if orgIDStr, ok := orgID.(string); ok {
-			organizationID = orgIDStr
-		}
-	}
+	organizationID := GetOrganizationIDFromLocals(c)
 
 	// Create empty template with all required fields
 	template := &models.Template{
@@ -230,13 +224,7 @@ func (h *TemplateHandler) AttachFileToTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Template not found", nil)
 	}
 
-	// Get organization ID from context (used by storage paths/providers in future)
-	organizationID := ""
-	if orgID := c.Locals("organization_id"); orgID != nil {
-		if orgIDStr, ok := orgID.(string); ok {
-			organizationID = orgIDStr
-		}
-	}
+	organizationID := GetOrganizationIDFromLocals(c)
 
 	// Determine base schema (append mode keeps existing pages)
 	var baseSchema []models.Schema
@@ -304,13 +292,7 @@ func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "file_url not yet supported", nil)
 	}
 
-	// Get organization ID from context
-	organizationID := ""
-	if orgID := c.Locals("organization_id"); orgID != nil {
-		if orgIDStr, ok := orgID.(string); ok {
-			organizationID = orgIDStr
-		}
-	}
+	organizationID := GetOrganizationIDFromLocals(c)
 
 	// Process based on type
 	var template *models.Template

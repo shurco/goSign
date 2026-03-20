@@ -12,7 +12,7 @@ import (
 
 var DB *Base
 
-// Base is ...
+// Base aggregates all query structs for convenient access.
 type Base struct {
 	SystemQueries
 	TrustQueries
@@ -21,7 +21,7 @@ type Base struct {
 	EmailTemplateQueries
 }
 
-// New is ...
+// New creates the global DB instance with all query structs.
 func New(pool *pgxpool.Pool) error {
 	DB = &Base{
 		SystemQueries:        SystemQueries{pool},
@@ -34,11 +34,15 @@ func New(pool *pgxpool.Pool) error {
 	return nil
 }
 
-// Init is ...
+// Init initializes the database connection and runs pending migrations.
 func Init(pool *pgxpool.Pool) error {
 	New(pool)
 
-	if _, err := pool.Query(context.Background(), `SELECT * FROM migrate_db_version`); err != nil {
+	var exists bool
+	err := pool.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'migrate_db_version')`,
+	).Scan(&exists)
+	if err != nil || !exists {
 		goose.SetBaseFS(migrations.Embed())
 		goose.SetTableName("migrate_db_version")
 		if err := goose.SetDialect("pgx"); err != nil {
@@ -53,37 +57,3 @@ func Init(pool *pgxpool.Pool) error {
 
 	return nil
 }
-
-/*
-// SQLPagination is ...
-// example query's for sortBy - id:DESC or id:ASC
-func (db *Base) SQLPagination(params webutil.PaginationQuery) string {
-	if params.Offset < 0 {
-		params.Offset = 0
-	}
-
-	if params.Limit <= 0 {
-		params.Limit = 30
-	}
-
-	var showSortBy string
-	if len(params.SortBy) > 0 {
-		showSortBy = "ORDER BY "
-
-		var orderParts []string
-		sorts := strings.Split(params.SortBy, ",")
-		for _, sort := range sorts {
-			parts := strings.SplitN(sort, ":", 2)
-			if len(parts) == 1 {
-				orderParts = append(orderParts, parts[0])
-			}
-			if len(parts) == 2 {
-				orderParts = append(orderParts, fmt.Sprintf("%s %s", parts[0], parts[1]))
-			}
-		}
-		showSortBy = showSortBy + strings.Join(orderParts, ", ")
-	}
-
-	return fmt.Sprintf(" %s LIMIT %d OFFSET %d", showSortBy, params.Limit, params.Offset)
-}
-*/

@@ -15,7 +15,7 @@ func init() {
 }
 
 // ValidateStruct validates a struct using go-playground/validator
-func ValidateStruct(s interface{}) error {
+func ValidateStruct(s any) error {
 	if err := validate.Struct(s); err != nil {
 		var errs []string
 		for _, err := range err.(validator.ValidationErrors) {

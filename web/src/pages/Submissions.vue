@@ -118,7 +118,7 @@
               :submitters="createSubmittersForOrder"
               :editable="true"
               :hide-order-list="true"
-              @update:signing-mode="createSigningMode = $event"
+              @update:signing-mode="createSigningMode = $event as 'sequential' | 'parallel'"
               @update:submitter-order="onCreateSubmitterOrder($event)"
             />
 
@@ -692,9 +692,7 @@ function openLinksModal(signing: Signing): void {
   linksModalOpen.value = true;
 }
 
-function handlePageChange(page: number): void {
-  console.log("Page changed:", page);
-  // Implement server-side pagination if needed
+function handlePageChange(_page: number): void {
 }
 
 function openUrl(url: string): void {

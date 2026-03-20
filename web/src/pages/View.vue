@@ -539,7 +539,6 @@ function onDropfield(area: any): void {
 }
 
 function scrollToArea(area: any): void {
-  //console.log(documentRefs.value)
   const documentRef = documentRefs.value.find((a: any) => a && a.document && a.document.id === area.attachment_id);
   if (documentRef) {
     documentRef.scrollToArea(area);

@@ -48,16 +48,18 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUpdate, ref } from "vue";
-import type { PreviewImages, Submitters } from "@/models/index";
+import type { PreviewImages, Submitter } from "@/models/index";
 import type { Area, Field } from "@/models/template";
 import FieldArea from "@/components/template/Area.vue";
 
+type PageImage = PreviewImages & { url?: string };
+
 interface Props {
-  image: PreviewImages;
+  image: PageImage;
   areas?: any[];
   defaultFields?: Field[];
   allowDraw?: boolean;
-  selectedSubmitter: Submitters;
+  selectedSubmitter: Submitter;
   drawField?: Field | null;
   editable?: boolean;
   isDrag?: boolean;

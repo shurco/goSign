@@ -252,9 +252,7 @@ const loadMembers = async () => {
           if (!currentUserRole.value) {
             currentUserRole.value = currentMember.role;
           }
-          console.log("Set currentUserId:", currentUserId.value, "currentUserRole:", currentUserRole.value);
         } else {
-          console.warn("Current user not found in members list. Account ID:", accountId, "Members:", members.value);
           // Fallback: if role is set from localStorage, use it
           if (!currentUserRole.value && storedOrg) {
             try {
@@ -273,7 +271,6 @@ const loadMembers = async () => {
         try {
           const orgData = JSON.parse(storedOrg);
           currentUserRole.value = orgData.role || "owner";
-          console.log("Using role from localStorage (fallback):", currentUserRole.value);
         } catch (e) {
           console.error("Failed to parse stored organization:", e);
         }
