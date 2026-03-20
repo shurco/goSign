@@ -158,4 +158,3 @@ func setStringField[T any](ptr *T, fieldName, val string) {
 	}
 	f.SetString(val)
 }
-
