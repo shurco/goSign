@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -61,9 +61,9 @@ type CreateEmptyTemplateRequest struct {
 // @Success 201 {object} models.Template
 // @Failure 400 {object} map[string]any
 // @Router /api/templates/empty [post]
-func (h *TemplateHandler) CreateEmptyTemplate(c *fiber.Ctx) error {
+func (h *TemplateHandler) CreateEmptyTemplate(c fiber.Ctx) error {
 	var req CreateEmptyTemplateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -119,9 +119,9 @@ type CloneRequest struct {
 // @Success 201 {object} models.Template
 // @Failure 400 {object} map[string]any
 // @Router /api/templates/clone [post]
-func (h *TemplateHandler) Clone(c *fiber.Ctx) error {
+func (h *TemplateHandler) Clone(c fiber.Ctx) error {
 	var req CloneRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -188,14 +188,14 @@ type AttachFileToTemplateRequest struct {
 // @Failure 400 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /api/templates/{template_id}/from-file [post]
-func (h *TemplateHandler) AttachFileToTemplate(c *fiber.Ctx) error {
+func (h *TemplateHandler) AttachFileToTemplate(c fiber.Ctx) error {
 	templateID := c.Params("template_id")
 	if templateID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "template_id is required", nil)
 	}
 
 	var req AttachFileToTemplateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -261,9 +261,9 @@ func (h *TemplateHandler) AttachFileToTemplate(c *fiber.Ctx) error {
 // @Success 201 {object} models.Template
 // @Failure 400 {object} map[string]any
 // @Router /api/templates/from-file [post]
-func (h *TemplateHandler) CreateFromType(c *fiber.Ctx) error {
+func (h *TemplateHandler) CreateFromType(c fiber.Ctx) error {
 	var req CreateFromTypeRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -790,7 +790,7 @@ func createThumbnail(imageData []byte) ([]byte, error) {
 // @Failure 400 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/templates/search [get]
-func (h *TemplateHandler) SearchTemplates(c *fiber.Ctx) error {
+func (h *TemplateHandler) SearchTemplates(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -860,7 +860,7 @@ func (h *TemplateHandler) SearchTemplates(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/templates/favorites [get]
-func (h *TemplateHandler) GetUserFavorites(c *fiber.Ctx) error {
+func (h *TemplateHandler) GetUserFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -910,7 +910,7 @@ func (h *TemplateHandler) GetUserFavorites(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 409 {object} map[string]any
 // @Router /api/v1/templates/favorites [post]
-func (h *TemplateHandler) AddToFavorites(c *fiber.Ctx) error {
+func (h *TemplateHandler) AddToFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -921,7 +921,7 @@ func (h *TemplateHandler) AddToFavorites(c *fiber.Ctx) error {
 	var req struct {
 		TemplateID string `json:"template_id" validate:"required"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -951,7 +951,7 @@ func (h *TemplateHandler) AddToFavorites(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/templates/favorites/{template_id} [delete]
-func (h *TemplateHandler) RemoveFromFavorites(c *fiber.Ctx) error {
+func (h *TemplateHandler) RemoveFromFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -987,7 +987,7 @@ func (h *TemplateHandler) RemoveFromFavorites(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Router /api/v1/templates/folders [post]
-func (h *TemplateHandler) CreateFolder(c *fiber.Ctx) error {
+func (h *TemplateHandler) CreateFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -999,7 +999,7 @@ func (h *TemplateHandler) CreateFolder(c *fiber.Ctx) error {
 		Name     string  `json:"name" validate:"required"`
 		ParentID *string `json:"parent_id,omitempty"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -1034,7 +1034,7 @@ func (h *TemplateHandler) CreateFolder(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Router /api/v1/templates/folders [get]
-func (h *TemplateHandler) GetFolders(c *fiber.Ctx) error {
+func (h *TemplateHandler) GetFolders(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -1063,7 +1063,7 @@ func (h *TemplateHandler) GetFolders(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /api/v1/templates/folders/{folder_id} [put]
-func (h *TemplateHandler) UpdateFolder(c *fiber.Ctx) error {
+func (h *TemplateHandler) UpdateFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -1080,7 +1080,7 @@ func (h *TemplateHandler) UpdateFolder(c *fiber.Ctx) error {
 		Name     string  `json:"name" validate:"required"`
 		ParentID *string `json:"parent_id,omitempty"`
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -1108,7 +1108,7 @@ func (h *TemplateHandler) UpdateFolder(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Router /api/v1/templates/folders/{folder_id} [delete]
-func (h *TemplateHandler) DeleteFolder(c *fiber.Ctx) error {
+func (h *TemplateHandler) DeleteFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -1143,7 +1143,7 @@ func (h *TemplateHandler) DeleteFolder(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Router /api/v1/templates/{template_id}/move [put]
-func (h *TemplateHandler) MoveTemplate(c *fiber.Ctx) error {
+func (h *TemplateHandler) MoveTemplate(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -1159,7 +1159,7 @@ func (h *TemplateHandler) MoveTemplate(c *fiber.Ctx) error {
 	var req struct {
 		FolderID string `json:"folder_id,omitempty"` // Empty string means move to root
 	}
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -1190,9 +1190,9 @@ type ValidateConditionsRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/v1/templates/:id/conditions/validate [post]
-func (h *TemplateHandler) ValidateConditions(c *fiber.Ctx) error {
+func (h *TemplateHandler) ValidateConditions(c fiber.Ctx) error {
 	var req ValidateConditionsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -1219,9 +1219,9 @@ type ValidateFormulaRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/v1/formulas/validate [post]
-func (h *TemplateHandler) ValidateFormula(c *fiber.Ctx) error {
+func (h *TemplateHandler) ValidateFormula(c fiber.Ctx) error {
 	var req ValidateFormulaRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -1237,7 +1237,7 @@ func (h *TemplateHandler) ValidateFormula(c *fiber.Ctx) error {
 // between "field not provided" and "provided empty/null", which is required
 // to safely persist editor changes (schema/fields/submitters) without wiping
 // other columns unintentionally.
-func (h *TemplateHandler) UpdateTemplate(c *fiber.Ctx) error {
+func (h *TemplateHandler) UpdateTemplate(c fiber.Ctx) error {
 	templateID := c.Params("id")
 	if templateID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)

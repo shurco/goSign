@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -32,7 +32,7 @@ func NewBrandingHandler(accountQueries *queries.AccountQueries, userQueries *que
 // @Produce json
 // @Success 200 {object} models.BrandingSettings
 // @Router /api/v1/branding [get]
-func (h *BrandingHandler) GetBranding(c *fiber.Ctx) error {
+func (h *BrandingHandler) GetBranding(c fiber.Ctx) error {
 	_, err := GetAccountID(c)
 	if err != nil {
 		return err
@@ -62,14 +62,14 @@ type UpdateBrandingSettingsRequest struct {
 // @Param body body UpdateBrandingSettingsRequest true "Branding settings"
 // @Success 200 {object} map[string]any
 // @Router /api/v1/branding [put]
-func (h *BrandingHandler) UpdateBranding(c *fiber.Ctx) error {
+func (h *BrandingHandler) UpdateBranding(c fiber.Ctx) error {
 	accountID, err := GetAccountID(c)
 	if err != nil {
 		return err
 	}
 
 	var req UpdateBrandingSettingsRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -96,7 +96,7 @@ type UploadAssetRequest struct {
 // @Param file formData file true "Asset file"
 // @Success 200 {object} models.BrandingAsset
 // @Router /api/v1/branding/assets [post]
-func (h *BrandingHandler) UploadAsset(c *fiber.Ctx) error {
+func (h *BrandingHandler) UploadAsset(c fiber.Ctx) error {
 	accountID, err := GetAccountID(c)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (h *BrandingHandler) UploadAsset(c *fiber.Ctx) error {
 // @Param id path string true "Asset ID"
 // @Success 200 {object} map[string]any
 // @Router /api/v1/branding/assets/:id [delete]
-func (h *BrandingHandler) DeleteAsset(c *fiber.Ctx) error {
+func (h *BrandingHandler) DeleteAsset(c fiber.Ctx) error {
 	accountID, err := GetAccountID(c)
 	if err != nil {
 		return err
@@ -171,14 +171,14 @@ type AddCustomDomainRequest struct {
 // @Param body body AddCustomDomainRequest true "Domain configuration"
 // @Success 200 {object} models.CustomDomain
 // @Router /api/v1/branding/domain [post]
-func (h *BrandingHandler) AddCustomDomain(c *fiber.Ctx) error {
+func (h *BrandingHandler) AddCustomDomain(c fiber.Ctx) error {
 	accountID, err := GetAccountID(c)
 	if err != nil {
 		return err
 	}
 
 	var req AddCustomDomainRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -206,7 +206,7 @@ func (h *BrandingHandler) AddCustomDomain(c *fiber.Ctx) error {
 // @Param domain_id path string true "Domain ID"
 // @Success 200 {object} models.CustomDomain
 // @Router /api/v1/branding/domain/:domain_id/verify [post]
-func (h *BrandingHandler) VerifyCustomDomain(c *fiber.Ctx) error {
+func (h *BrandingHandler) VerifyCustomDomain(c fiber.Ctx) error {
 	accountID, err := GetAccountID(c)
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (h *BrandingHandler) VerifyCustomDomain(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Router /api/v1/branding/preview [get]
-func (h *BrandingHandler) PreviewBranding(c *fiber.Ctx) error {
+func (h *BrandingHandler) PreviewBranding(c fiber.Ctx) error {
 	_, err := GetAccountID(c)
 	if err != nil {
 		return err

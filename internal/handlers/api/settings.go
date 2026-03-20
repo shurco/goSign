@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -51,7 +51,7 @@ func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *q
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Router /api/settings [get]
-func (h *SettingsHandler) Get(c *fiber.Ctx) error {
+func (h *SettingsHandler) Get(c fiber.Ctx) error {
 	safSettings := make(map[string]any)
 
 	// Get global settings from database (SMTP, SMS, Storage, Geolocation)
@@ -214,9 +214,9 @@ type UpdateEmailRequest struct {
 // @Param body body UpdateEmailRequest true "Email settings"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/email [put]
-func (h *SettingsHandler) UpdateEmail(c *fiber.Ctx) error {
+func (h *SettingsHandler) UpdateEmail(c fiber.Ctx) error {
 	var req UpdateEmailRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -312,9 +312,9 @@ type UpdateSMSRequest struct {
 	TwilioFromNumber  string `json:"twilio_from_number,omitempty"`
 }
 
-func (h *SettingsHandler) UpdateSMS(c *fiber.Ctx) error {
+func (h *SettingsHandler) UpdateSMS(c fiber.Ctx) error {
 	var req UpdateSMSRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -368,9 +368,9 @@ type TestSMSRequest struct {
 	Message string `json:"message,omitempty"`
 }
 
-func (h *SettingsHandler) TestSMS(c *fiber.Ctx) error {
+func (h *SettingsHandler) TestSMS(c fiber.Ctx) error {
 	var req TestSMSRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 	if err := webutil.ValidateStruct(&req); err != nil {
@@ -417,9 +417,9 @@ type UpdateStorageRequest struct {
 // @Param body body UpdateStorageRequest true "Storage settings"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/storage [put]
-func (h *SettingsHandler) UpdateStorage(c *fiber.Ctx) error {
+func (h *SettingsHandler) UpdateStorage(c fiber.Ctx) error {
 	var req UpdateStorageRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -481,7 +481,7 @@ type UpdateBrandingRequest struct {
 // @Param body body UpdateBrandingRequest true "Branding settings"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/branding [put]
-func (h *SettingsHandler) UpdateBranding(c *fiber.Ctx) error {
+func (h *SettingsHandler) UpdateBranding(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
@@ -491,7 +491,7 @@ func (h *SettingsHandler) UpdateBranding(c *fiber.Ctx) error {
 	}
 
 	var req UpdateBrandingRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -561,9 +561,9 @@ type TestEmailRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/settings/email/test [post]
-func (h *SettingsHandler) TestEmail(c *fiber.Ctx) error {
+func (h *SettingsHandler) TestEmail(c fiber.Ctx) error {
 	var req TestEmailRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -633,9 +633,9 @@ type TestStorageRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/settings/storage/test [post]
-func (h *SettingsHandler) TestStorage(c *fiber.Ctx) error {
+func (h *SettingsHandler) TestStorage(c fiber.Ctx) error {
 	var req TestStorageRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -756,9 +756,9 @@ type UpdateGeolocationRequest struct {
 // @Param body body UpdateGeolocationRequest true "Geolocation settings"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/geolocation [put]
-func (h *SettingsHandler) UpdateGeolocation(c *fiber.Ctx) error {
+func (h *SettingsHandler) UpdateGeolocation(c fiber.Ctx) error {
 	var req UpdateGeolocationRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -812,7 +812,7 @@ func (h *SettingsHandler) UpdateGeolocation(c *fiber.Ctx) error {
 // prepareGeoLite2Download validates that a download should proceed (checks
 // existing file + force flag) and ensures the target directory exists.
 // Returns (dbPath, tmpDBPath, nil) on success, or a Fiber response error to short-circuit.
-func (h *SettingsHandler) prepareGeoLite2Download(c *fiber.Ctx, force bool) (string, string, error) {
+func (h *SettingsHandler) prepareGeoLite2Download(c fiber.Ctx, force bool) (string, string, error) {
 	baseDir := appdir.Base()
 	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
 
@@ -836,7 +836,7 @@ func (h *SettingsHandler) prepareGeoLite2Download(c *fiber.Ctx, force bool) (str
 
 // finalizeGeoLite2Install atomically replaces the DB file, reloads the
 // in-memory geolocation service, and persists the last-update timestamp.
-func (h *SettingsHandler) finalizeGeoLite2Install(c *fiber.Ctx, dbPath, tmpDBPath, source string) error {
+func (h *SettingsHandler) finalizeGeoLite2Install(c fiber.Ctx, dbPath, tmpDBPath, source string) error {
 	if err := os.Rename(tmpDBPath, dbPath); err != nil {
 		_ = os.Remove(tmpDBPath)
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
@@ -906,9 +906,9 @@ type DownloadGeoLite2FromURLRequest struct {
 // @Param body body DownloadGeoLite2FromURLRequest true "Download request"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/geolocation/download [post]
-func (h *SettingsHandler) DownloadGeoLite2FromURL(c *fiber.Ctx) error {
+func (h *SettingsHandler) DownloadGeoLite2FromURL(c fiber.Ctx) error {
 	var req DownloadGeoLite2FromURLRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 	if err := webutil.ValidateStruct(&req); err != nil {
@@ -1015,9 +1015,9 @@ type DownloadGeoLite2FromMaxMindRequest struct {
 // @Param body body DownloadGeoLite2FromMaxMindRequest false "Download request (license_key optional, uses saved key if not provided)"
 // @Success 200 {object} map[string]any
 // @Router /api/settings/geolocation/download-maxmind [post]
-func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
+func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c fiber.Ctx) error {
 	var req DownloadGeoLite2FromMaxMindRequest
-	_ = c.BodyParser(&req)
+	_ = c.Bind().JSON(&req)
 
 	licenseKey := strings.TrimSpace(req.LicenseKey)
 	if licenseKey == "" {
@@ -1053,7 +1053,7 @@ func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c *fiber.Ctx) error {
 }
 
 // DeleteGeolocationMaxMindKey removes the saved MaxMind license key from account settings.
-func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c *fiber.Ctx) error {
+func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err

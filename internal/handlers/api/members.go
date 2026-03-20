@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -39,7 +39,7 @@ func NewMemberHandler(organizationQueries *queries.OrganizationQueries, userQuer
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/members [get]
-func (h *MemberHandler) GetOrganizationMembers(c *fiber.Ctx) error {
+func (h *MemberHandler) GetOrganizationMembers(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -73,7 +73,7 @@ func (h *MemberHandler) GetOrganizationMembers(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/members/{member_id}/role [put]
-func (h *MemberHandler) UpdateMemberRole(c *fiber.Ctx) error {
+func (h *MemberHandler) UpdateMemberRole(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	memberID := c.Params("member_id")
 
@@ -83,7 +83,7 @@ func (h *MemberHandler) UpdateMemberRole(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req map[string]string
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse role update request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -187,7 +187,7 @@ func (h *MemberHandler) UpdateMemberRole(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/members/{member_id} [delete]
-func (h *MemberHandler) RemoveOrganizationMember(c *fiber.Ctx) error {
+func (h *MemberHandler) RemoveOrganizationMember(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	memberID := c.Params("member_id")
 
@@ -279,7 +279,7 @@ func (h *MemberHandler) RemoveOrganizationMember(c *fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/members/invite [post]
-func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
+func (h *MemberHandler) InviteMember(c fiber.Ctx) error {
 	// Get organization details for email template
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -299,7 +299,7 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req map[string]string
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse invitation request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -440,7 +440,7 @@ func (h *MemberHandler) InviteMember(c *fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/invitations [get]
-func (h *MemberHandler) GetOrganizationInvitations(c *fiber.Ctx) error {
+func (h *MemberHandler) GetOrganizationInvitations(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -471,7 +471,7 @@ func (h *MemberHandler) GetOrganizationInvitations(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/invitations/{invitation_id} [delete]
-func (h *MemberHandler) RevokeInvitation(c *fiber.Ctx) error {
+func (h *MemberHandler) RevokeInvitation(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	invitationID := c.Params("invitation_id")
 

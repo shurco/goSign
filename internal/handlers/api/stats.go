@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -18,11 +18,12 @@ func NewStatsHandler(pool *pgxpool.Pool) *StatsHandler {
 
 // Get returns dashboard statistics
 // @Summary Get dashboard statistics
+// @Description Returns dashboard statistics for the authenticated account (submission counts by status, templates, and submitters).
 // @Tags stats
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Router /api/v1/stats [get]
-func (h *StatsHandler) Get(c *fiber.Ctx) error {
+func (h *StatsHandler) Get(c fiber.Ctx) error {
 	// Get user ID from auth context
 	userID, err := GetUserID(c)
 	if err != nil {

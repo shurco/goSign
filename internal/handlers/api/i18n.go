@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/queries"
@@ -35,7 +35,7 @@ type AvailableLocales struct {
 // @Produce json
 // @Success 200 {object} AvailableLocales
 // @Router /api/v1/i18n/locales [get]
-func (h *I18nHandler) GetLocales(c *fiber.Ctx) error {
+func (h *I18nHandler) GetLocales(c fiber.Ctx) error {
 	uiLocales := map[string]string{
 		"en": "English",
 		"ru": "Русский",
@@ -86,14 +86,14 @@ type UpdateUserLocaleRequest struct {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/user/locale [put]
-func (h *I18nHandler) UpdateUserLocale(c *fiber.Ctx) error {
+func (h *I18nHandler) UpdateUserLocale(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
 		return err
 	}
 
 	var req UpdateUserLocaleRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -134,14 +134,14 @@ type UpdateAccountLocaleRequest struct {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/account/locale [put]
-func (h *I18nHandler) UpdateAccountLocale(c *fiber.Ctx) error {
+func (h *I18nHandler) UpdateAccountLocale(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
 
 	var req UpdateAccountLocaleRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 

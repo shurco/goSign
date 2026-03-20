@@ -1,7 +1,10 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"errors"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/queries"
@@ -29,7 +32,7 @@ func NewUserHandler(userQueries *queries.UserQueries) *UserHandler {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/users/me [get]
-func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
+func (h *UserHandler) GetCurrentUser(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -38,8 +41,14 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	// Get user from database
 	user, err := h.userQueries.GetUserByID(c.Context(), userID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return webutil.Response(c, fiber.StatusNotFound, "User not found", nil)
+		}
 		log.Error().Err(err).Str("user_id", userID).Msg("Failed to get user")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user", nil)
+	}
+	if user == nil {
+		return webutil.Response(c, fiber.StatusNotFound, "User not found", nil)
 	}
 
 	// Get account_id from user

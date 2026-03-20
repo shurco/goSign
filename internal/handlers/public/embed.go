@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -34,7 +34,7 @@ func NewEmbedHandler(submitterRepo SubmitterRepository) *EmbedHandler {
 // @Success 200 {string} string "HTML page"
 // @Failure 404 {object} map[string]any "Submission not found"
 // @Router /embed/{slug} [get]
-func (h *EmbedHandler) GetEmbedPage(c *fiber.Ctx) error {
+func (h *EmbedHandler) GetEmbedPage(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -125,7 +125,7 @@ func (h *EmbedHandler) GetEmbedPage(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]any "Embed configuration"
 // @Failure 404 {object} map[string]any "Submission not found"
 // @Router /embed/{slug}/config [get]
-func (h *EmbedHandler) GetEmbedConfig(c *fiber.Ctx) error {
+func (h *EmbedHandler) GetEmbedConfig(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)

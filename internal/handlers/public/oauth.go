@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/logging"
@@ -59,9 +59,9 @@ func getGitHubOAuthConfig() *OAuthConfig {
 }
 
 // GoogleLogin redirects to Google OAuth
-func GoogleLogin(c *fiber.Ctx) error {
+func GoogleLogin(c fiber.Ctx) error {
 	config := getGoogleOAuthConfig()
-	
+
 	if config.ClientID == "" {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
@@ -85,14 +85,14 @@ func GoogleLogin(c *fiber.Ctx) error {
 	params.Add("response_type", "code")
 	params.Add("scope", "openid email profile")
 	params.Add("state", state)
-	
+
 	authURL := fmt.Sprintf("%s?%s", config.AuthURL, params.Encode())
-	
-	return c.Redirect(authURL, fiber.StatusTemporaryRedirect)
+
+	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(authURL)
 }
 
 // GoogleCallback handles Google OAuth callback
-func GoogleCallback(c *fiber.Ctx) error {
+func GoogleCallback(c fiber.Ctx) error {
 	log := logging.Log
 	ctx := context.Background()
 
@@ -134,7 +134,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 	googleID := userInfo["id"].(string)
 	firstName := ""
 	lastName := ""
-	
+
 	if givenName, ok := userInfo["given_name"].(string); ok {
 		firstName = givenName
 	}
@@ -162,7 +162,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 				log.Err(err).Msg("Failed to create user")
 				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
-			
+
 			// Mark email as verified (trusted from OAuth provider)
 			if err := queries.DB.MarkEmailAsVerified(ctx, newUser.ID); err != nil {
 				log.Err(err).Msg("Failed to mark email as verified")
@@ -173,7 +173,7 @@ func GoogleCallback(c *fiber.Ctx) error {
 			if err := queries.DB.CreateOrUpdateOAuthAccount(ctx, newUser.ID, "google", googleID, tokenResp.AccessToken, tokenResp.RefreshToken, &expiresAt); err != nil {
 				log.Err(err).Msg("Failed to link OAuth account")
 			}
-			
+
 			user = newUser
 		}
 	}
@@ -192,13 +192,13 @@ func GoogleCallback(c *fiber.Ctx) error {
 	// Redirect to frontend with tokens
 	// TODO: Configure frontend URL
 	frontendURL := fmt.Sprintf("http://localhost:3000/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken)
-	return c.Redirect(frontendURL, fiber.StatusTemporaryRedirect)
+	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(frontendURL)
 }
 
 // GitHubLogin redirects to GitHub OAuth
-func GitHubLogin(c *fiber.Ctx) error {
+func GitHubLogin(c fiber.Ctx) error {
 	config := getGitHubOAuthConfig()
-	
+
 	if config.ClientID == "" {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
@@ -221,14 +221,14 @@ func GitHubLogin(c *fiber.Ctx) error {
 	params.Add("redirect_uri", config.RedirectURL)
 	params.Add("scope", "read:user user:email")
 	params.Add("state", state)
-	
+
 	authURL := fmt.Sprintf("%s?%s", config.AuthURL, params.Encode())
-	
-	return c.Redirect(authURL, fiber.StatusTemporaryRedirect)
+
+	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(authURL)
 }
 
 // GitHubCallback handles GitHub OAuth callback
-func GitHubCallback(c *fiber.Ctx) error {
+func GitHubCallback(c fiber.Ctx) error {
 	log := logging.Log
 	ctx := context.Background()
 
@@ -285,7 +285,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 	name := userInfo["name"].(string)
 	firstName := name
 	lastName := ""
-	
+
 	// Try to split name
 	if name != "" {
 		parts := splitName(name)
@@ -316,7 +316,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 				log.Err(err).Msg("Failed to create user")
 				return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 			}
-			
+
 			// Mark email as verified (trusted from OAuth provider)
 			if err := queries.DB.MarkEmailAsVerified(ctx, newUser.ID); err != nil {
 				log.Err(err).Msg("Failed to mark email as verified")
@@ -326,7 +326,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 			if err := queries.DB.CreateOrUpdateOAuthAccount(ctx, newUser.ID, "github", githubID, tokenResp.AccessToken, tokenResp.RefreshToken, nil); err != nil {
 				log.Err(err).Msg("Failed to link OAuth account")
 			}
-			
+
 			user = newUser
 		}
 	}
@@ -345,7 +345,7 @@ func GitHubCallback(c *fiber.Ctx) error {
 	// Redirect to frontend with tokens
 	// TODO: Configure frontend URL
 	frontendURL := fmt.Sprintf("http://localhost:3000/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken)
-	return c.Redirect(frontendURL, fiber.StatusTemporaryRedirect)
+	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(frontendURL)
 }
 
 // Helper functions
@@ -476,7 +476,7 @@ func splitName(fullName string) []string {
 			break
 		}
 	}
-	
+
 	// Basic split by first space
 	for i, char := range fullName {
 		if char == ' ' {
@@ -485,11 +485,10 @@ func splitName(fullName string) []string {
 			break
 		}
 	}
-	
+
 	if len(parts) == 0 {
 		parts = append(parts, fullName)
 	}
-	
+
 	return parts
 }
-

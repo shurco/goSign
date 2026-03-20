@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/shurco/gosign/internal/assets"
 	"github.com/shurco/gosign/internal/config"
@@ -129,15 +129,14 @@ func New() error {
 
 	// web init
 	app := fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		BodyLimit:             50 * 1024 * 1024,
+		BodyLimit: 50 * 1024 * 1024,
 	})
 
 	middleware.Fiber(app, log)
 	routes.SiteRoutes(app)
-	app.Static("/drive/pages", appdir.LcPages())
-	app.Static("/drive/signed", appdir.LcSigned())
-	app.Static("/drive/uploads", appdir.LcUploads())
+	app.Use("/drive/pages", static.New(appdir.LcPages()))
+	app.Use("/drive/signed", static.New(appdir.LcSigned()))
+	app.Use("/drive/uploads", static.New(appdir.LcUploads()))
 
 	// Initialize webhook repository
 	webhookRepo := &simpleWebhookRepository{}
@@ -170,9 +169,7 @@ func New() error {
 	scheduleGeoLite2Updates(pool, log, geolocationSvc)
 
 	// Initialize API key repository and service
-	// Convert pgxpool.Pool to sql.DB for APIKeyRepository
-	sqlDB := stdlib.OpenDBFromPool(pool)
-	apiKeyRepo := queries.NewAPIKeyRepository(sqlDB)
+	apiKeyRepo := queries.NewAPIKeyRepository(pool)
 	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
 
 	// Initialize email template queries
@@ -259,7 +256,6 @@ func createDirs() error {
 
 	return nil
 }
-
 
 func initNotificationService(settingQueries *queries.SettingQueries) *notification.Service {
 	svc := notification.NewService(nil)
@@ -597,4 +593,3 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 		return fmt.Errorf("unknown geolocation download method: %s", method)
 	}
 }
-

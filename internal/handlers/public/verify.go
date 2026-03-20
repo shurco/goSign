@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/shurco/gosign/internal/models"
@@ -19,7 +19,7 @@ import (
 )
 
 // VerifyPDF is ...
-func VerifyPDF(c *fiber.Ctx) error {
+func VerifyPDF(c fiber.Ctx) error {
 	response := &models.Verify{}
 
 	fileHeader, err := c.FormFile("document")

@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/base64"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -42,9 +42,9 @@ type ResendRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submitters/resend [post]
-func (h *SubmitterHandler) Resend(c *fiber.Ctx) error {
+func (h *SubmitterHandler) Resend(c fiber.Ctx) error {
 	var req ResendRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -97,9 +97,9 @@ type DeclineRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submitters/decline [post]
-func (h *SubmitterHandler) Decline(c *fiber.Ctx) error {
+func (h *SubmitterHandler) Decline(c fiber.Ctx) error {
 	var req DeclineRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -157,9 +157,9 @@ type SignatureData struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submitters/complete [post]
-func (h *SubmitterHandler) Complete(c *fiber.Ctx) error {
+func (h *SubmitterHandler) Complete(c fiber.Ctx) error {
 	var req CompleteRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 

@@ -3,13 +3,13 @@ package api
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/queries"
 )
 
 // GetUserID extracts user ID from request context
-func GetUserID(c *fiber.Ctx) (string, error) {
+func GetUserID(c fiber.Ctx) (string, error) {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return "", fiber.NewError(fiber.StatusUnauthorized, "User not authenticated")
@@ -24,7 +24,7 @@ func GetUserID(c *fiber.Ctx) (string, error) {
 }
 
 // GetOrganizationID extracts organization ID from request context
-func GetOrganizationID(c *fiber.Ctx) (string, error) {
+func GetOrganizationID(c fiber.Ctx) (string, error) {
 	orgID := c.Locals("organization_id")
 	if orgID == nil {
 		return "", nil // Organization ID is optional
@@ -39,7 +39,7 @@ func GetOrganizationID(c *fiber.Ctx) (string, error) {
 }
 
 // GetAccountID extracts account ID from request context or user's account
-func GetAccountID(c *fiber.Ctx) (string, error) {
+func GetAccountID(c fiber.Ctx) (string, error) {
 	// Try to get from context first
 	accountID := c.Locals("account_id")
 	if accountID != nil {
@@ -57,7 +57,7 @@ func GetAccountID(c *fiber.Ctx) (string, error) {
 
 // ResolveAccountID extracts user_id from context and resolves account_id via DB.
 // Eliminates the repeated GetUserID → GetUserAccountID pattern across handlers.
-func ResolveAccountID(c *fiber.Ctx, uq *queries.UserQueries) (string, error) {
+func ResolveAccountID(c fiber.Ctx, uq *queries.UserQueries) (string, error) {
 	if uq == nil {
 		return "", fiber.NewError(fiber.StatusInternalServerError, "User queries not initialized")
 	}
@@ -77,7 +77,7 @@ func ResolveAccountID(c *fiber.Ctx, uq *queries.UserQueries) (string, error) {
 
 // GetOrganizationIDFromLocals extracts organization ID from fiber.Ctx locals.
 // Returns empty string if not set. This is the canonical way to get org context.
-func GetOrganizationIDFromLocals(c *fiber.Ctx) string {
+func GetOrganizationIDFromLocals(c fiber.Ctx) string {
 	if orgID := c.Locals("organization_id"); orgID != nil {
 		if s, ok := orgID.(string); ok {
 			return s
@@ -88,7 +88,7 @@ func GetOrganizationIDFromLocals(c *fiber.Ctx) string {
 
 // GetClientIP extracts the real client IP address from the request
 // It checks X-Forwarded-For, X-Real-IP headers first, then falls back to c.IP()
-func GetClientIP(c *fiber.Ctx) string {
+func GetClientIP(c fiber.Ctx) string {
 	// Check X-Forwarded-For header (first IP in the chain)
 	forwardedFor := c.Get("X-Forwarded-For")
 	if forwardedFor != "" {

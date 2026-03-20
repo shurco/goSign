@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -133,7 +133,7 @@ func (s *OrgPermissionService) GetOrgPermissions(ctx context.Context, orgID, use
 }
 
 // extractOrgUserContext extracts organization and user IDs from request context
-func extractOrgUserContext(c *fiber.Ctx) (orgID, userID string, err error) {
+func extractOrgUserContext(c fiber.Ctx) (orgID, userID string, err error) {
 	// Get organization ID from context
 	orgIDVal := c.Locals("organization_id")
 	if orgIDVal == nil {
@@ -161,7 +161,7 @@ func extractOrgUserContext(c *fiber.Ctx) (orgID, userID string, err error) {
 
 // RequireOrgPermission creates middleware that requires a specific permission
 func RequireOrgPermission(service *OrgPermissionService, permission OrganizationPermission) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		orgID, userID, err := extractOrgUserContext(c)
 		if err != nil {
 			return err
@@ -183,7 +183,7 @@ func RequireOrgPermission(service *OrgPermissionService, permission Organization
 
 // RequireOrgRole creates middleware that requires a minimum role level
 func RequireOrgRole(service *OrgPermissionService, requiredRole models.OrganizationRole) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		orgID, userID, err := extractOrgUserContext(c)
 		if err != nil {
 			return err
@@ -228,7 +228,7 @@ func RequireOrgRole(service *OrgPermissionService, requiredRole models.Organizat
 
 // SetOrganizationContext creates middleware that sets organization context
 func SetOrganizationContext(service *OrgPermissionService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get organization ID from URL parameter or header
 		orgID := c.Params("organization_id")
 		if orgID == "" {
@@ -284,7 +284,7 @@ func SetOrganizationContext(service *OrgPermissionService) fiber.Handler {
 // Helper functions for permission checking in handlers
 
 // HasPermission checks if current request has the required permission
-func HasPermission(c *fiber.Ctx, permission OrganizationPermission) bool {
+func HasPermission(c fiber.Ctx, permission OrganizationPermission) bool {
 	perms, ok := c.Locals("user_permissions").([]OrganizationPermission)
 	if !ok {
 		return false
@@ -293,7 +293,7 @@ func HasPermission(c *fiber.Ctx, permission OrganizationPermission) bool {
 }
 
 // GetCurrentOrgID returns the current organization ID from context
-func GetCurrentOrgID(c *fiber.Ctx) (string, bool) {
+func GetCurrentOrgID(c fiber.Ctx) (string, bool) {
 	orgID := c.Locals("organization_id")
 	if orgID == nil {
 		return "", false
@@ -304,7 +304,7 @@ func GetCurrentOrgID(c *fiber.Ctx) (string, bool) {
 }
 
 // GetCurrentUserRole returns the current user's role from context
-func GetCurrentUserRole(c *fiber.Ctx) (models.OrganizationRole, bool) {
+func GetCurrentUserRole(c fiber.Ctx) (models.OrganizationRole, bool) {
 	role := c.Locals("user_role")
 	if role == nil {
 		return "", false

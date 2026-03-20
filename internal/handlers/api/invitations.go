@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -35,7 +35,7 @@ func NewInvitationHandler(organizationQueries *queries.OrganizationQueries) *Inv
 // @Failure 409 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/invitations/{token}/accept [post]
-func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) AcceptInvitation(c fiber.Ctx) error {
 	token := c.Params("token")
 	if token == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invitation token is required", nil)
@@ -111,7 +111,7 @@ func (h *InvitationHandler) AcceptInvitation(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/invitations/{token} [get]
-func (h *InvitationHandler) GetInvitationDetails(c *fiber.Ctx) error {
+func (h *InvitationHandler) GetInvitationDetails(c fiber.Ctx) error {
 	token := c.Params("token")
 	if token == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invitation token is required", nil)
@@ -167,7 +167,7 @@ func (h *InvitationHandler) GetInvitationDetails(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/invitations/{invitation_id} [delete]
-func (h *InvitationHandler) RevokeInvitation(c *fiber.Ctx) error {
+func (h *InvitationHandler) RevokeInvitation(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	invitationID := c.Params("invitation_id")
 

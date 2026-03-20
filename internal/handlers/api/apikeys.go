@@ -3,7 +3,7 @@ package api
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/services"
@@ -47,7 +47,7 @@ type CreateRequest struct {
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Router /api/v1/apikeys [get]
-func (h *APIKeyHandler) List(c *fiber.Ctx) error {
+func (h *APIKeyHandler) List(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -75,14 +75,14 @@ func (h *APIKeyHandler) List(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Router /api/v1/apikeys [post]
-func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
+func (h *APIKeyHandler) Create(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
 	var req CreateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "", nil)
 	}
 
@@ -122,7 +122,7 @@ func (h *APIKeyHandler) Create(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Router /api/v1/apikeys/{id}/enable [put]
-func (h *APIKeyHandler) Enable(c *fiber.Ctx) error {
+func (h *APIKeyHandler) Enable(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -149,7 +149,7 @@ func (h *APIKeyHandler) Enable(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Router /api/v1/apikeys/{id}/disable [put]
-func (h *APIKeyHandler) Disable(c *fiber.Ctx) error {
+func (h *APIKeyHandler) Disable(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -176,7 +176,7 @@ func (h *APIKeyHandler) Disable(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Security ApiKeyAuth
 // @Router /api/v1/apikeys/{id} [delete]
-func (h *APIKeyHandler) Delete(c *fiber.Ctx) error {
+func (h *APIKeyHandler) Delete(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)

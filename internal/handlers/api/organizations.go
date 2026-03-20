@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -42,7 +42,7 @@ func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries, us
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations [post]
-func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) CreateOrganization(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req models.Organization
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse organization request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -108,7 +108,7 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations [get]
-func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
+func (h *OrganizationHandler) GetUserOrganizations(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [get]
-func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) GetOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -189,7 +189,7 @@ func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [put]
-func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) UpdateOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -197,7 +197,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req map[string]string
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -268,7 +268,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [delete]
-func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) DeleteOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -315,7 +315,7 @@ func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/switch [post]
-func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) SwitchOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -386,7 +386,7 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/switch [post]
-func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) ExitOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
