@@ -26,6 +26,20 @@ x-logging: &default-logging
     max-file: "10"
     tag: "{{.ImageName}}|{{.Name}}"
 
+x-resources:
+  xsmall: &res-xsmall
+    limits:
+      memory: 64M
+  small: &res-small
+    limits:
+      memory: 256M
+  medium: &res-medium
+    limits:
+      memory: 512M
+  large: &res-large
+    limits:
+      memory: 1G
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -44,6 +58,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    deploy:
+      resources: *res-large
     networks:
       - private
     logging: *default-logging
@@ -60,6 +76,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    deploy:
+      resources: *res-small
     networks:
       - private
     logging: *default-logging
@@ -79,6 +97,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    deploy:
+      resources: *res-large
     networks:
       - private
     logging: *default-logging
@@ -97,6 +117,8 @@ services:
       /usr/bin/mc policy set download myminio/gosign;
       exit 0;
       "
+    deploy:
+      resources: *res-xsmall
     networks:
       - private
 
@@ -133,6 +155,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    deploy:
+      resources: *res-medium
     networks:
       - private
     logging: *default-logging
@@ -153,6 +177,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    deploy:
+      resources: *res-small
     networks:
       - private
     logging: *default-logging
@@ -176,6 +202,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    deploy:
+      resources: *res-xsmall
     networks:
       - private
       - public
