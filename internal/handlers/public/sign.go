@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
 	"github.com/shurco/gosign/pkg/appdir"
@@ -22,7 +22,7 @@ import (
 )
 
 // SignPDF is ...
-func SignPDF(c *fiber.Ctx) error {
+func SignPDF(c fiber.Ctx) error {
 	response := &models.Sign{}
 
 	fileHeader, err := c.FormFile("document")

@@ -10,7 +10,7 @@ import { computed } from "vue";
 import LoadingSpinner from "./LoadingSpinner.vue";
 
 interface Props {
-  variant?: "primary" | "ghost" | "success" | "warning" | "error" | "info";
+  variant?: "primary" | "ghost" | "outline" | "success" | "warning" | "error" | "info";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
   disabled?: boolean;
@@ -32,6 +32,7 @@ const buttonClasses = computed(() => {
   const variants = {
     primary: "rounded-md border border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100",
     ghost: "rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
+    outline: "rounded-md border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50",
     success: "rounded-md border border-green-500 bg-green-50 text-green-700 hover:bg-green-100",
     warning: "rounded-md border border-yellow-500 bg-yellow-50 text-yellow-700 hover:bg-yellow-100",
     error: "rounded-md border border-red-500 bg-red-50 text-red-700 hover:bg-red-100",

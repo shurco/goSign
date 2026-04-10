@@ -272,7 +272,6 @@ const onOrganizationUpdated = (updatedOrg: Organization) => {
   if (index !== -1) {
     // Update organization in place to ensure Vue reactivity
     Object.assign(organizations.value[index], updatedOrg);
-    console.log("Organization updated in list at index:", index, "New value:", organizations.value[index]);
   } else {
     // If not found, reload organizations
     loadOrganizations();

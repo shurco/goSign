@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/shurco/gosign/internal/services/submission"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -53,7 +53,7 @@ type BulkItemResult struct {
 // @Failure 400 {object} map[string]any "Bad request"
 // @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/v1/submissions/bulk [post]
-func (h *BulkHandler) BulkCreateSubmissions(c *fiber.Ctx) error {
+func (h *BulkHandler) BulkCreateSubmissions(c fiber.Ctx) error {
 	// Get template_id
 	templateID := c.FormValue("template_id")
 	if templateID == "" {

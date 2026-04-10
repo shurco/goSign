@@ -3,8 +3,9 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
@@ -36,15 +37,26 @@ func NewResourceHandler[T any](resourceName string, repo ResourceRepository[T]) 
 
 // List returns paginated list of resources
 // @Summary List resources
+// @Description Returns a paginated list of the configured resource. Supports `page`, `page_size` and any extra query parameters as filters.
 // @Tags {resourceName}
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(20)
 // @Success 200 {object} map[string]any
 // @Router /{resourceName} [get]
-func (h *ResourceHandler[T]) List(c *fiber.Ctx) error {
+func (h *ResourceHandler[T]) List(c fiber.Ctx) error {
 	// Parse pagination parameters
-	page := c.QueryInt("page", 1)
-	pageSize := c.QueryInt("page_size", 20)
+	page := 1
+	if raw := c.Query("page"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			page = v
+		}
+	}
+	pageSize := 20
+	if raw := c.Query("page_size"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			pageSize = v
+		}
+	}
 
 	// Limit page size
 	if pageSize > 100 {
@@ -56,7 +68,7 @@ func (h *ResourceHandler[T]) List(c *fiber.Ctx) error {
 
 	// Collect filters
 	filters := make(map[string]string)
-	c.Context().QueryArgs().VisitAll(func(key, value []byte) {
+	c.RequestCtx().QueryArgs().VisitAll(func(key, value []byte) {
 		keyStr := string(key)
 		// Skip pagination parameters
 		if keyStr != "page" && keyStr != "page_size" {
@@ -72,22 +84,23 @@ func (h *ResourceHandler[T]) List(c *fiber.Ctx) error {
 	}
 
 	return webutil.Response(c, fiber.StatusOK, h.resourceName, map[string]any{
-		"items":      items,
-		"total":      total,
-		"page":       page,
-		"page_size":  pageSize,
+		"items":       items,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
 		"total_pages": (total + pageSize - 1) / pageSize,
 	})
 }
 
 // Get returns resource by ID
 // @Summary Get resource by ID
+// @Description Returns a single resource item by its ID.
 // @Tags {resourceName}
 // @Param id path string true "Resource ID"
 // @Success 200 {object} T
 // @Failure 404 {object} map[string]any
 // @Router /{resourceName}/{id} [get]
-func (h *ResourceHandler[T]) Get(c *fiber.Ctx) error {
+func (h *ResourceHandler[T]) Get(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
@@ -107,15 +120,16 @@ func (h *ResourceHandler[T]) Get(c *fiber.Ctx) error {
 
 // Create creates new resource
 // @Summary Create resource
+// @Description Creates a new resource item.
 // @Tags {resourceName}
 // @Accept json
 // @Param body body T true "Resource data"
 // @Success 201 {object} T
 // @Failure 400 {object} map[string]any
 // @Router /{resourceName} [post]
-func (h *ResourceHandler[T]) Create(c *fiber.Ctx) error {
+func (h *ResourceHandler[T]) Create(c fiber.Ctx) error {
 	var item T
-	if err := c.BodyParser(&item); err != nil {
+	if err := c.Bind().JSON(&item); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -129,6 +143,7 @@ func (h *ResourceHandler[T]) Create(c *fiber.Ctx) error {
 
 // Update updates resource
 // @Summary Update resource
+// @Description Updates an existing resource item by ID.
 // @Tags {resourceName}
 // @Accept json
 // @Param id path string true "Resource ID"
@@ -137,14 +152,14 @@ func (h *ResourceHandler[T]) Create(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /{resourceName}/{id} [put]
-func (h *ResourceHandler[T]) Update(c *fiber.Ctx) error {
+func (h *ResourceHandler[T]) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
 	}
 
 	var item T
-	if err := c.BodyParser(&item); err != nil {
+	if err := c.Bind().JSON(&item); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -161,12 +176,13 @@ func (h *ResourceHandler[T]) Update(c *fiber.Ctx) error {
 
 // Delete deletes resource
 // @Summary Delete resource
+// @Description Deletes a resource item by ID.
 // @Tags {resourceName}
 // @Param id path string true "Resource ID"
 // @Success 204 "No content"
 // @Failure 404 {object} map[string]any
 // @Router /{resourceName}/{id} [delete]
-func (h *ResourceHandler[T]) Delete(c *fiber.Ctx) error {
+func (h *ResourceHandler[T]) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "ID is required", nil)
@@ -191,4 +207,3 @@ func (h *ResourceHandler[T]) RegisterRoutes(router fiber.Router) {
 	router.Put("/:id", h.Update)
 	router.Delete("/:id", h.Delete)
 }
-

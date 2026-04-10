@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -24,7 +24,7 @@ func NewEmailTemplateHandler(emailTemplateQueries *queries.EmailTemplateQueries,
 }
 
 // verifyTemplateOwnership ensures the template belongs to the current scope (organization or account)
-func (h *EmailTemplateHandler) verifyTemplateOwnership(c *fiber.Ctx, existing *models.EmailTemplate) error {
+func (h *EmailTemplateHandler) verifyTemplateOwnership(c fiber.Ctx, existing *models.EmailTemplate) error {
 	orgID, _ := GetOrganizationID(c)
 	if existing.OrganizationID != nil && *existing.OrganizationID != "" {
 		if orgID != *existing.OrganizationID {
@@ -48,7 +48,7 @@ func (h *EmailTemplateHandler) verifyTemplateOwnership(c *fiber.Ctx, existing *m
 
 // getEmailTemplateScope returns accountID and organizationID for the current request.
 // When user is in organization context (JWT has organization_id), organizationID is set and accountID is nil for scoping.
-func (h *EmailTemplateHandler) getEmailTemplateScope(c *fiber.Ctx) (accountIDPtr *string, organizationIDPtr *string, err error) {
+func (h *EmailTemplateHandler) getEmailTemplateScope(c fiber.Ctx) (accountIDPtr *string, organizationIDPtr *string, err error) {
 	orgID, _ := GetOrganizationID(c)
 	if orgID != "" {
 		return nil, &orgID, nil
@@ -77,7 +77,7 @@ func (h *EmailTemplateHandler) getEmailTemplateScope(c *fiber.Ctx) (accountIDPtr
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/email-templates [get]
-func (h *EmailTemplateHandler) GetAllEmailTemplates(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) GetAllEmailTemplates(c fiber.Ctx) error {
 	accountIDPtr, organizationIDPtr, err := h.getEmailTemplateScope(c)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to resolve scope", nil)
@@ -92,14 +92,14 @@ func (h *EmailTemplateHandler) GetAllEmailTemplates(c *fiber.Ctx) error {
 	templates, err := h.emailTemplateQueries.GetAllEmailTemplates(c.Context(), accountIDPtr, organizationIDPtr, localePtr)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get email templates")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get email templates", map[string]interface{}{
+		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get email templates", map[string]any{
 			"error": err.Error(),
 		})
 	}
 
 	log.Info().Int("count", len(templates)).Msg("Retrieved email templates")
 
-	return webutil.Response(c, fiber.StatusOK, "Email templates retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email templates retrieved successfully", map[string]any{
 		"templates": templates,
 	})
 }
@@ -115,7 +115,7 @@ func (h *EmailTemplateHandler) GetAllEmailTemplates(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/email-templates/{name} [get]
-func (h *EmailTemplateHandler) GetEmailTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) GetEmailTemplate(c fiber.Ctx) error {
 	templateName := c.Params("name")
 	if templateName == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Template name is required", nil)
@@ -133,7 +133,7 @@ func (h *EmailTemplateHandler) GetEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Email template not found", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Email template retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email template retrieved successfully", map[string]any{
 		"template": template,
 	})
 }
@@ -150,14 +150,14 @@ func (h *EmailTemplateHandler) GetEmailTemplate(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/email-templates [post]
-func (h *EmailTemplateHandler) CreateEmailTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) CreateEmailTemplate(c fiber.Ctx) error {
 	accountIDPtr, organizationIDPtr, err := h.getEmailTemplateScope(c)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to resolve scope", nil)
 	}
 
 	var req models.EmailTemplateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse email template request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -193,7 +193,7 @@ func (h *EmailTemplateHandler) CreateEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create email template", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusCreated, "Email template created successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusCreated, "Email template created successfully", map[string]any{
 		"template": template,
 	})
 }
@@ -212,14 +212,14 @@ func (h *EmailTemplateHandler) CreateEmailTemplate(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/email-templates/{id} [put]
-func (h *EmailTemplateHandler) UpdateEmailTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) UpdateEmailTemplate(c fiber.Ctx) error {
 	templateID := c.Params("id")
 	if templateID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Template ID is required", nil)
 	}
 
 	var req models.EmailTemplateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse email template request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -273,7 +273,7 @@ func (h *EmailTemplateHandler) UpdateEmailTemplate(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get updated template", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Email template updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Email template updated successfully", map[string]any{
 		"template": updated,
 	})
 }
@@ -289,7 +289,7 @@ func (h *EmailTemplateHandler) UpdateEmailTemplate(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/email-templates/{id} [delete]
-func (h *EmailTemplateHandler) DeleteEmailTemplate(c *fiber.Ctx) error {
+func (h *EmailTemplateHandler) DeleteEmailTemplate(c fiber.Ctx) error {
 	templateID := c.Params("id")
 	if templateID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Template ID is required", nil)

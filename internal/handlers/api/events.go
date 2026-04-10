@@ -1,9 +1,10 @@
 package api
 
 import (
+	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -32,15 +33,21 @@ type EventItem struct {
 
 // List returns paginated list of events
 // @Summary List events
+// @Description Returns a paginated list of activity events for the authenticated account. In organization context, events are scoped to templates owned by the organization.
 // @Tags events
 // @Param limit query int false "Limit" default(10)
 // @Param sort query string false "Sort" default(created_at:desc)
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Router /api/v1/events [get]
-func (h *EventHandler) List(c *fiber.Ctx) error {
+func (h *EventHandler) List(c fiber.Ctx) error {
 	// Get pagination parameters
-	limit := c.QueryInt("limit", 10)
+	limit := 10
+	if raw := c.Query("limit"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			limit = v
+		}
+	}
 	if limit > 100 {
 		limit = 100
 	}
@@ -163,7 +170,7 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 			ORDER BY ts DESC
 			LIMIT $2
 		`, orgID, limit)
-} else {
+	} else {
 		rows, err = h.pool.Query(c.Context(), `
 			WITH scoped_submissions AS (
 				SELECT
@@ -333,4 +340,3 @@ func eventMessage(eventType string) string {
 func (h *EventHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.List)
 }
-

@@ -70,7 +70,9 @@ export type Field = Omit<BaseField, "areas"> & {
   label?: string;
   title?: string;
   description?: string;
+  displayName?: string;
   translations?: Record<string, string>;
+  formula?: string;
   condition_groups?: FieldConditionGroup[];
   areas?: Area[];
   options?: FieldOption[];

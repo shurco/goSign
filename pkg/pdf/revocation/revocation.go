@@ -30,14 +30,14 @@ func (r *InfoArchival) AddOCSP(b []byte) error {
 	return nil
 }
 
-// IsRevoked checks if there is a status inclded for the certificate and returns
+// IsRevoked checks if there is a status included for the certificate and returns
 // true if the certificate is marked as revoked.
 //
-// TODO: We should report if there is no CRL or OCSP response embedded for this certificate
-// TODO: Information about the revocation (time, reason, etc) must be extractable
-func (r *InfoArchival) IsRevoked(c *x509.Certificate) bool {
-	// check the crl and ocsp to see if this certificate is revoked
-	return true
+// TODO: implement full CRL/OCSP status check; currently returns false (not revoked).
+// TODO: report if no CRL/OCSP response is embedded for the certificate.
+// TODO: expose revocation time, reason, etc.
+func (r *InfoArchival) IsRevoked(_ *x509.Certificate) bool {
+	return false
 }
 
 // CRL contains the raw bytes of a pkix.CertificateList and can be parsed with

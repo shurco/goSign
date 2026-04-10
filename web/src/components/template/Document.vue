@@ -23,16 +23,16 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUpdate, ref } from "vue";
-import type { Documents, Submitters } from "@/models/index";
+import type { Document as DocumentModel, Submitter } from "@/models/index";
 import type { Area, Field } from "@/models/template";
 import Page from "@/components/template/Page.vue";
 
 interface Props {
-  document: Documents;
+  document: DocumentModel;
   areasIndex?: Record<number, any[]>;
   defaultFields?: Field[];
   allowDraw?: boolean;
-  selectedSubmitter: Submitters;
+  selectedSubmitter: Submitter;
   editable?: boolean;
   drawField?: Field | null;
   isDrag?: boolean;
@@ -69,13 +69,13 @@ const previewImagesIndex = computed(() => {
   if (!props.document) {
     return {};
   }
-  return props.document.preview_images.reduce(
+  return props.document.preview_images.reduce<Record<number, any>>(
     (acc, e) => {
-      e.url = `${props.document.url}/${props.document.id}`;
-      acc[parseInt(e.filename, 10)] = e;
+      const entry = { ...e, url: `${props.document.url}/${props.document.id}` };
+      acc[parseInt(e.filename, 10)] = entry;
       return acc;
     },
-    {} as Record<number, any>
+    {}
   );
 });
 

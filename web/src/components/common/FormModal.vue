@@ -68,7 +68,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-const formData = ref<Record<string, unknown>>({});
+const formData = ref<Record<string, any>>({});
 const errors = ref<Record<string, string>>({});
 const isSubmitting = ref(false);
 
@@ -139,7 +139,6 @@ async function handleSubmit(): Promise<void> {
     
     // If we got a Promise, wait for it
     if (result instanceof Promise) {
-      console.log('Waiting for Promise to resolve');
       await result;
       // After promise resolves, reset submitting state
       isSubmitting.value = false;
@@ -179,7 +178,7 @@ function setError(field: string, message: string): void {
 }
 
 function clearError(field: string): void {
-  errors.value[field] = undefined;
+  delete errors.value[field];
 }
 
 function clearAllErrors(): void {

@@ -191,11 +191,15 @@ const router = createRouter({
 });
 
 let pendingNavigation: Promise<void> | null = null;
+let cachedAdminRole: { role: number | null; checkedAt: number } = { role: null, checkedAt: 0 };
+const ADMIN_CACHE_TTL = 5 * 60 * 1000;
+
+window.addEventListener("gosign:clear-admin-cache", () => {
+  cachedAdminRole = { role: null, checkedAt: 0 };
+});
 
 router.beforeEach(async (to, from, next) => {
-  // Cancel any pending navigation if route changed
   if (pendingNavigation) {
-    // If route changed while loading, wait for current load to complete
     try {
       await pendingNavigation;
     } catch {
@@ -205,13 +209,10 @@ router.beforeEach(async (to, from, next) => {
 
   NProgress.start();
 
-  // Create navigation promise
   pendingNavigation = (async () => {
     try {
-      // Wait for layout to load before proceeding
       await loadLayoutMiddleware(to);
 
-      // Check if route requires authentication
       if (to.meta.requiresAuth) {
         const token = localStorage.getItem("access_token");
         if (!token) {
@@ -220,25 +221,26 @@ router.beforeEach(async (to, from, next) => {
         }
       }
 
-      // Check if route requires admin access
       if (to.meta.requiresAdmin) {
-        try {
-          // Dynamically import apiGet to avoid circular dependencies
-          const { apiGet } = await import("@/services/api");
-          const response = await apiGet("/api/v1/users/me");
-          // UserRoleAdmin = 3
-          if (response.data?.role !== 3) {
-            next({ name: "dashboard" });
+        const now = Date.now();
+        if (!cachedAdminRole.role || now - cachedAdminRole.checkedAt > ADMIN_CACHE_TTL) {
+          try {
+            const { apiGet } = await import("@/services/api");
+            const response = await apiGet("/api/v1/users/me");
+            cachedAdminRole = { role: response.data?.role ?? null, checkedAt: now };
+          } catch (error) {
+            console.error("Failed to check admin access:", error);
+            cachedAdminRole = { role: null, checkedAt: 0 };
+            next({ name: "signin", query: { redirect: to.fullPath } });
             return;
           }
-        } catch (error) {
-          console.error("Failed to check admin access:", error);
-          next({ name: "signin", query: { redirect: to.fullPath } });
+        }
+        if (cachedAdminRole.role !== 3) {
+          next({ name: "dashboard" });
           return;
         }
       }
 
-      // Redirect to dashboard if already logged in and trying to access auth pages
       const authPages = ["signin", "signup"];
       if (authPages.includes(to.name as string)) {
         const token = localStorage.getItem("access_token");

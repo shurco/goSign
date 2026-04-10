@@ -1,6 +1,6 @@
-// API service for making HTTP requests
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 import { fetchWithAuth } from "@/utils/auth";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
 interface ApiResponse<T = any> {
   data: T;
@@ -17,13 +17,7 @@ class ApiError extends Error {
   }
 }
 
-function isAuthPage(): boolean {
-  const path = window.location.pathname;
-  return path.includes("/auth/") || path.includes("/signin");
-}
-
 async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  // Normalize endpoint
   let finalUrl: string;
   if (endpoint.startsWith("/api/v1")) {
     finalUrl = endpoint;
@@ -42,41 +36,14 @@ async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}):
     ...options
   };
 
-  try {
-    if (isAuthPage()) {
-      return { success: false, data: null } as T;
-    }
+  const response = await fetchWithAuth(finalUrl, config);
 
-    const response = await fetchWithAuth(finalUrl, config);
-
-    if (isAuthPage()) {
-      return { success: false, data: null } as T;
-    }
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Redirect will be handled by fetchWithAuth, just return empty response
-        if (isAuthPage()) {
-            return { success: false, data: null } as T;
-        }
-      }
-
-      const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-      throw new ApiError(response.status, errorData.message || `HTTP ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (isAuthPage()) {
-      return { success: false, data: null } as T;
-    }
-
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(0, error instanceof Error ? error.message : "Network error");
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new ApiError(response.status, errorData.message || `HTTP ${response.status}`);
   }
+
+  return await response.json();
 }
 
 export async function apiGet<T = any>(endpoint: string): Promise<ApiResponse<T>> {

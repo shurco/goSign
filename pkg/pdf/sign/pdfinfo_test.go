@@ -1,7 +1,9 @@
 package sign
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,7 +11,7 @@ import (
 )
 
 func TestCreateInfoEmpty(t *testing.T) {
-	input_file, err := os.Open("../../fixtures/testfiles/testfile20.pdf")
+	input_file, err := os.Open(testPDFFixturePath(t, "testfile20.pdf"))
 	if err != nil {
 		t.Errorf("Failed to load test PDF")
 		return
@@ -66,18 +68,19 @@ func TestCreateInfoEmpty(t *testing.T) {
 		return
 	}
 
-	expected_info := "12 0 obj\n<<>>\nendobj\n"
-	if info != expected_info {
-		t.Errorf("Info mismatch, expected %s, but got %s", expected_info, info)
+	expectedInfo := fmt.Sprintf("%d 0 obj\n<<>>\nendobj\n", context.InfoData.ObjectId)
+	if info != expectedInfo {
+		t.Errorf("Info mismatch, expected %s, but got %s", expectedInfo, info)
 	}
 }
 
 func TestCreateInfo(t *testing.T) {
-	input_file, err := os.Open("../../fixtures/testfiles/testfile12.pdf")
+	input_file, err := os.Open(testPDFFixturePath(t, "testfile20.pdf"))
 	if err != nil {
 		t.Errorf("Failed to load test PDF")
 		return
 	}
+	defer input_file.Close()
 
 	finfo, err := input_file.Stat()
 	if err != nil {
@@ -130,9 +133,24 @@ func TestCreateInfo(t *testing.T) {
 		return
 	}
 
-	expected_info := "18 0 obj\n<</Author(User: Isamu Ohzawa [isamu])/CreationDate(D:19981025161109)/Creator(FastIO Systems: cover.c)/Keywords(ClibPDF, ANSI C Library, Acrobat, PDF, Dynamic Web, Graph, Plot)/Producer([ClibPDF Library 0.96] NEXTSTEP or OPENSTEP)/Subject(ANSI C Library for Direct PDF Generation)/Title(ClibPDF Reference Manual)>>\nendobj\n"
+	if !strings.HasPrefix(info, fmt.Sprintf("%d 0 obj\n<<", context.InfoData.ObjectId)) {
+		t.Errorf("unexpected info header: %q", info)
+	}
+	if !strings.HasSuffix(info, ">>\nendobj\n") {
+		t.Errorf("unexpected info trailer: %q", info)
+	}
 
-	if info != expected_info {
-		t.Errorf("Info mismatch, expected %s, but got %s", expected_info, info)
+	orig := rdr.Trailer().Key("Info")
+	for _, key := range orig.Keys() {
+		var want string
+		if key == "ModDate" {
+			want = pdfDateTime(sign_data.Signature.Info.Date)
+		} else {
+			want = pdfString(orig.Key(key).RawString())
+		}
+		needle := "/" + key + want
+		if !strings.Contains(info, needle) {
+			t.Errorf("info missing %q (full info: %q)", needle, info)
+		}
 	}
 }

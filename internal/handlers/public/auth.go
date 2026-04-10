@@ -1,12 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"github.com/skip2/go-qrcode"
@@ -21,30 +20,28 @@ import (
 )
 
 // SignUp handles user registration
-func SignUp(c *fiber.Ctx) error {
+func SignUp(c fiber.Ctx) error {
 	request := &models.SignUp{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	// Check if user already exists
-	existingUser, _ := queries.DB.GetUserByEmail(context.Background(), request.Email)
+	ctx := c.Context()
+
+	existingUser, _ := queries.DB.GetUserByEmail(ctx, request.Email)
 	if existingUser != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "User with this email already exists", nil)
 	}
 
-	// Hash password
 	hashedPassword := password.GeneratePassword(request.Password)
 
-	// Create user
-	user, err := queries.DB.CreateUser(context.Background(), request.Email, hashedPassword, request.FirstName, request.LastName)
+	user, err := queries.DB.CreateUser(ctx, request.Email, hashedPassword, request.FirstName, request.LastName)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Create email verification token
-	token, err := queries.DB.CreateEmailVerificationToken(context.Background(), user.ID, 24*time.Hour)
+	token, err := queries.DB.CreateEmailVerificationToken(ctx, user.ID, 24*time.Hour)
 	if err != nil {
 		logging.Log.Err(err).Msg("Failed to create email verification token")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
@@ -62,15 +59,14 @@ func SignUp(c *fiber.Ctx) error {
 }
 
 // VerifyEmail handles email verification
-func VerifyEmail(c *fiber.Ctx) error {
+func VerifyEmail(c fiber.Ctx) error {
 	token := c.Query("token")
 	if token == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Token is required", nil)
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
-	// Validate token
 	userID, err := queries.DB.ValidateEmailVerificationToken(ctx, token)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid or expired token", nil)
@@ -93,15 +89,14 @@ func VerifyEmail(c *fiber.Ctx) error {
 }
 
 // SignIn handles user login with optional 2FA
-func SignIn(c *fiber.Ctx) error {
+func SignIn(c fiber.Ctx) error {
 	request := &models.SignIn{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
-	// Get user from database
 	user, err := queries.DB.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid email or password", nil)
@@ -151,13 +146,13 @@ func SignIn(c *fiber.Ctx) error {
 }
 
 // SignOut logs out user and invalidates refresh token
-func SignOut(c *fiber.Ctx) error {
+func SignOut(c fiber.Ctx) error {
 	type SignOutRequest struct {
 		RefreshToken string `json:"refresh_token"`
 	}
 
 	var req SignOutRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
@@ -166,13 +161,13 @@ func SignOut(c *fiber.Ctx) error {
 }
 
 // RefreshToken refreshes access token using refresh token
-func RefreshToken(c *fiber.Ctx) error {
+func RefreshToken(c fiber.Ctx) error {
 	type RefreshRequest struct {
 		RefreshToken string `json:"refresh_token" validate:"required"`
 	}
 
 	var req RefreshRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
@@ -193,9 +188,8 @@ func RefreshToken(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Refresh token not found or revoked", nil)
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
-	// Get user from database
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
@@ -218,15 +212,14 @@ func RefreshToken(c *fiber.Ctx) error {
 }
 
 // ForgotPassword handles password reset request
-func ForgotPassword(c *fiber.Ctx) error {
+func ForgotPassword(c fiber.Ctx) error {
 	request := &models.ForgotPassword{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
-	// Get user
 	user, err := queries.DB.GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		// Don't reveal if user exists
@@ -250,15 +243,14 @@ func ForgotPassword(c *fiber.Ctx) error {
 }
 
 // ResetPassword handles password reset confirmation
-func ResetPassword(c *fiber.Ctx) error {
+func ResetPassword(c fiber.Ctx) error {
 	request := &models.ResetPassword{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
-	// Validate token
 	userID, err := queries.DB.ValidatePasswordResetToken(ctx, request.Token)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid or expired token", nil)
@@ -284,23 +276,25 @@ func ResetPassword(c *fiber.Ctx) error {
 }
 
 // Enable2FA enables 2FA for authenticated user
-func Enable2FA(c *fiber.Ctx) error {
+func Enable2FA(c fiber.Ctx) error {
 	request := &models.Enable2FA{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
 
-	// Get user
+	ctx := c.Context()
+
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Verify password
 	if !password.ComparePasswords(user.Password, request.Password) {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}
@@ -336,29 +330,28 @@ func Enable2FA(c *fiber.Ctx) error {
 }
 
 // Verify2FA verifies and activates 2FA
-func Verify2FA(c *fiber.Ctx) error {
-	request := &models.Verify2FA{}
-	if err := parseAndValidate(c, request); err != nil {
+func Verify2FA(c fiber.Ctx) error {
+	var request struct {
+		Code   string `json:"code" validate:"required"`
+		Secret string `json:"secret" validate:"required"`
+	}
+	if err := parseAndValidate(c, &request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
-
-	// Get secret from request body (sent from Enable2FA response)
-	secret := c.FormValue("secret")
-	if secret == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "Secret is required", nil)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
-	// Validate TOTP code
-	valid := totp.Validate(request.Code, secret)
+	ctx := c.Context()
+
+	valid := totp.Validate(request.Code, request.Secret)
 	if !valid {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid 2FA code", nil)
 	}
 
-	// Enable 2FA
-	if err := queries.DB.Enable2FA(ctx, userID, secret); err != nil {
+	if err := queries.DB.Enable2FA(ctx, userID, request.Secret); err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
@@ -369,23 +362,25 @@ func Verify2FA(c *fiber.Ctx) error {
 }
 
 // Disable2FA disables 2FA for authenticated user
-func Disable2FA(c *fiber.Ctx) error {
+func Disable2FA(c fiber.Ctx) error {
 	request := &models.Disable2FA{}
 	if err := parseAndValidate(c, request); err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
 
-	// Get user
+	ctx := c.Context()
+
 	user, err := queries.DB.GetUserByID(ctx, userID)
 	if err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
-	// Verify password
 	if !password.ComparePasswords(user.Password, request.Password) {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}

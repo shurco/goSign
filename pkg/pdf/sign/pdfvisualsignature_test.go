@@ -9,7 +9,7 @@ import (
 )
 
 func TestVisualSignature(t *testing.T) {
-	input_file, err := os.Open("../../fixtures/testfiles/testfile20.pdf")
+	input_file, err := os.Open(testPDFFixturePath(t, "testfile20.pdf"))
 	if err != nil {
 		t.Errorf("Failed to load test PDF")
 		return

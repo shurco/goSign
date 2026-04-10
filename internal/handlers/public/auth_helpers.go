@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
@@ -16,8 +16,8 @@ import (
 )
 
 // parseAndValidate parses request body and validates it
-func parseAndValidate(c *fiber.Ctx, v interface{}) error {
-	if err := c.BodyParser(v); err != nil {
+func parseAndValidate(c fiber.Ctx, v any) error {
+	if err := c.Bind().JSON(v); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 	if err := webutil.ValidateStruct(v); err != nil {

@@ -4,17 +4,21 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
-var mySigningKey = []byte("mysecretkey")
+func signingKey() []byte {
+	return []byte(config.Data().JWTSecret)
+}
 
 // AuthType defines the type of authentication used
 type AuthType string
@@ -35,9 +39,9 @@ type AuthContext struct {
 
 // MyCustomClaims represents JWT token claims
 type MyCustomClaims struct {
-	Id            string `json:"id"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
+	Id             string `json:"id"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
 	OrganizationId string `json:"organization_id,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -68,6 +72,8 @@ func CreateTokenWithOrg(user *models.User, organizationID string) (string, error
 		Email:          user.Email,
 		OrganizationId: organizationID,
 		RegisteredClaims: jwt.RegisteredClaims{
+			// Keep user ID also in standard `jti` so callers/tests using RegisteredClaims.ID work.
+			ID:        user.ID,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
@@ -75,28 +81,29 @@ func CreateTokenWithOrg(user *models.User, organizationID string) (string, error
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, err := token.SignedString(mySigningKey)
-	return accessToken, err
+	return token.SignedString(signingKey())
 }
 
 // CreateRefreshToken generates JWT refresh token (7 days)
 func CreateRefreshToken(userID string) (string, error) {
+	// Include a unique ID so tokens differ even if issued within the same second.
+	nonce := strconv.FormatInt(time.Now().UnixNano(), 10)
 	claims := jwt.RegisteredClaims{
 		Subject:   userID,
+		ID:        nonce,
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		NotBefore: jwt.NewNumericDate(time.Now()),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	refreshToken, err := token.SignedString(mySigningKey)
-	return refreshToken, err
+	return token.SignedString(signingKey())
 }
 
 // ValidateRefreshToken validates refresh token and returns user ID
 func ValidateRefreshToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
-		return mySigningKey, nil
+		return signingKey(), nil
 	})
 	if err != nil {
 		return "", errors.New("invalid refresh token")
@@ -113,7 +120,7 @@ func ValidateRefreshToken(tokenString string) (string, error) {
 // ValidateToken parses and validates JWT token
 func ValidateToken(tokenString string) (*MyCustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &MyCustomClaims{}, func(token *jwt.Token) (any, error) {
-		return mySigningKey, nil
+		return signingKey(), nil
 	})
 	if err != nil {
 		return nil, errors.New("unauthorized")
@@ -135,7 +142,7 @@ func HashAPIKey(key string) string {
 
 // Protected authenticates requests using JWT or API Key
 func Protected() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Try API Key first (X-API-Key header)
 		apiKey := c.Get("X-API-Key")
 		if apiKey != "" {
@@ -157,15 +164,16 @@ func Protected() fiber.Handler {
 				return webutil.Response(c, fiber.StatusForbidden, "API key has expired", nil)
 			}
 
-			// Update last used timestamp (async, don't block request)
-			go apiKeyValidator.UpdateLastUsed(keyModel.ID)
+			go func(id string) {
+				_ = apiKeyValidator.UpdateLastUsed(id)
+			}(keyModel.ID)
 
-			// Store auth context
 			c.Locals("auth", &AuthContext{
 				Type:      AuthTypeAPIKey,
-				UserID:    keyModel.ID,
+				UserID:    keyModel.AccountID,
 				AccountID: keyModel.AccountID,
 			})
+			c.Locals("user_id", keyModel.AccountID)
 
 			return c.Next()
 		}
@@ -176,7 +184,7 @@ func Protected() fiber.Handler {
 			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
-		accessToken = strings.Replace(accessToken, "Bearer ", "", 1)
+		accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 		claims, err := ValidateToken(accessToken)
 		if err != nil {
 			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -189,7 +197,7 @@ func Protected() fiber.Handler {
 			Email:  claims.Email,
 			Name:   claims.Name,
 		})
-		
+
 		// Also store user_id and organization_id for easier access
 		c.Locals("user_id", claims.Id)
 		if claims.OrganizationId != "" {
@@ -202,7 +210,7 @@ func Protected() fiber.Handler {
 
 // RequireEmailVerification checks if user has verified their email
 func RequireEmailVerification() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Get auth context
 		auth := GetAuthContext(c)
 		if auth == nil {
@@ -217,7 +225,7 @@ func RequireEmailVerification() fiber.Handler {
 		// Note: In a real implementation, you would check the database
 		// to see if the user's email is verified. For now, we'll just
 		// rely on the fact that the token was issued after verification.
-		
+
 		// TODO: Add database check for email verification status
 		// user, err := queries.DB.GetUserByID(ctx, auth.UserID)
 		// if err != nil || !user.EmailVerified {
@@ -229,7 +237,7 @@ func RequireEmailVerification() fiber.Handler {
 }
 
 // GetAuthContext retrieves authentication context from fiber locals
-func GetAuthContext(c *fiber.Ctx) *AuthContext {
+func GetAuthContext(c fiber.Ctx) *AuthContext {
 	auth, ok := c.Locals("auth").(*AuthContext)
 	if !ok {
 		return nil

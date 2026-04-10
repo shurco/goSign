@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 const defaultLimit int32 = 10 // Use const instead of var for constants.
@@ -19,7 +19,7 @@ type PaginationQuery struct {
 }
 
 // GetPaginationFromCtx creates a PaginationQuery from the fiber context.
-func GetPaginationFromCtx(c *fiber.Ctx) *PaginationQuery {
+func GetPaginationFromCtx(c fiber.Ctx) *PaginationQuery {
 	return &PaginationQuery{
 		Limit:  parseOrDefault(c.Query("limit"), defaultLimit),
 		Offset: parseOrDefault(c.Query("offset"), 0),

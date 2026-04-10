@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/handlers/api"
 	public "github.com/shurco/gosign/internal/handlers/public"

@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shurco/gosign/internal/models"
@@ -38,9 +38,9 @@ type SendRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submissions/send [post]
-func (h *SubmissionHandler) Send(c *fiber.Ctx) error {
+func (h *SubmissionHandler) Send(c fiber.Ctx) error {
 	var req SendRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -84,9 +84,9 @@ type SubmitterBulkData struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submissions/bulk [post]
-func (h *SubmissionHandler) BulkCreate(c *fiber.Ctx) error {
+func (h *SubmissionHandler) BulkCreate(c fiber.Ctx) error {
 	var req BulkCreateRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 
@@ -157,9 +157,9 @@ type ExpireRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /api/submissions/expire [post]
-func (h *SubmissionHandler) Expire(c *fiber.Ctx) error {
+func (h *SubmissionHandler) Expire(c fiber.Ctx) error {
 	var req ExpireRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 

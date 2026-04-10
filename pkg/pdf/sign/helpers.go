@@ -84,66 +84,15 @@ func leftPad(s string, padStr string, pLen int) string {
 	return strings.Repeat(padStr, pLen) + s
 }
 
-func writePartFromSourceFileToTargetFile(input_file io.ReadSeeker, output_file io.Writer, offset int64, length int64) error {
-	_, err := input_file.Seek(offset, 0)
-	if err != nil {
-		return err
-	}
-
-	// Create a small buffer for proper IO handling.
-	max_chunk_length := int64(1024)
-
-	// If the target length is smaller than our chunk size, use that as chunk size.
-	if length < max_chunk_length {
-		max_chunk_length = length
-	}
-
-	// Track read/written bytes so we know when we're done.
-	read_bytes := int64(0)
-
+func writePartFromSourceFileToTargetFile(inputFile io.ReadSeeker, outputFile io.Writer, offset int64, length int64) error {
 	if length <= 0 {
 		return nil
 	}
-
-	// Create a buffer for the chunks.
-	buf := make([]byte, max_chunk_length)
-	for {
-		// Read the chunk from the input file.
-		n, err := input_file.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		// If we got to the end of the file, break.
-		if err == io.EOF {
-			break
-		}
-
-		// If nothing was read, break.
-		if n == 0 {
-			break
-		}
-
-		// Write the chunk to the output file.
-		if _, err := output_file.Write(buf[:n]); err != nil {
-			return err
-		}
-
-		read_bytes += int64(n)
-
-		// If we read enough bytes, break.
-		if read_bytes >= length {
-			break
-		}
-
-		// If our next chunk will be too big, make a smaller buffer.
-		// If we won't do this, we might end up with more data than we want.
-		if length-read_bytes < max_chunk_length {
-			buf = make([]byte, length-read_bytes)
-		}
+	if _, err := inputFile.Seek(offset, io.SeekStart); err != nil {
+		return err
 	}
-
-	return nil
+	_, err := io.CopyN(outputFile, inputFile, length)
+	return err
 }
 
 var hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{

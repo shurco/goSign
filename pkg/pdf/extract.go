@@ -74,7 +74,7 @@ func GeneratePreview(input GeneratePreviewInput) (*GeneratePreviewResult, error)
 	// we need external tools like ghostscript or pdftoppm
 	// For now, create placeholder images
 	var images []string
-	
+
 	for pageNum := 1; pageNum <= pagesResult.PageCount; pageNum++ {
 		// For basic implementation, we'll note that full rendering
 		// requires external tools (ghostscript, poppler-utils, etc.)
@@ -154,7 +154,7 @@ func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, 
 	var result []FormField
 	for i := 0; i < fieldsArray.Len(); i++ {
 		fieldObj := fieldsArray.Index(i)
-		
+
 		// Use field object directly (digitorus/pdf handles references automatically)
 		fieldValue := fieldObj
 
@@ -166,7 +166,7 @@ func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, 
 
 		// Extract field type
 		fieldType := fieldValue.Key("FT").Name()
-		
+
 		// Extract field value
 		fieldVal := fieldValue.Key("V").Text()
 
@@ -189,13 +189,13 @@ func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, 
 		pageNum := 1 // Default to page 1 if can't determine
 
 		formField := FormField{
-			Name:  fieldName,
-			Value: fieldVal,
-			X:     x,
-			Y:     y,
-			Width: width,
+			Name:   fieldName,
+			Value:  fieldVal,
+			X:      x,
+			Y:      y,
+			Width:  width,
 			Height: height,
-			Page:  pageNum,
+			Page:   pageNum,
 		}
 
 		// Map field type
@@ -222,4 +222,3 @@ func ExtractFormFields(input ExtractFormFieldsInput) (*ExtractFormFieldsResult, 
 		Fields: result,
 	}, nil
 }
-

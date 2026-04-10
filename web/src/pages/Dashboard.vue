@@ -162,6 +162,15 @@ interface Event {
 
 const router = useRouter();
 
+interface Stats {
+  total_submissions: number;
+  pending_submissions: number;
+  completed_submissions: number;
+  total_templates: number;
+  active_templates: number;
+  total_submitters: number;
+}
+
 const stats = ref<Stats>({
   total_submissions: 0,
   pending_submissions: 0,
@@ -261,10 +270,6 @@ async function loadRecentEvents(): Promise<void> {
         recentEvents.value = data.data;
       } else {
         recentEvents.value = [];
-      }
-      // Debug: log events data to check location
-      if (recentEvents.value.length > 0) {
-        console.log("Events data:", recentEvents.value);
       }
     } else if (response.status === 401) {
       // Redirect to login is handled by fetchWithAuth

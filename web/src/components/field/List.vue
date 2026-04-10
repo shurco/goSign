@@ -26,8 +26,8 @@
       :field="field"
       :type-index="fields.filter((f: any) => f.type === field.type).indexOf(field)"
       :editable="editable && (!dragField || dragField !== field)"
-      :default-field="defaultFields.find((f: any) => f.name === field.name)"
-      :is-selected="selectedField && selectedField.id === field.id"
+      :default-field="(defaultFields as any[]).find((f: any) => typeof f === 'string' ? f === field.name : f.name === field.name) ?? null"
+      :is-selected="!!(selectedField && selectedField.id === field.id)"
       :draggable="editable"
       @dragstart="dragField = field"
       @dragend="dragField = null"
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref } from "vue";
+import { computed, inject, onMounted, ref, type PropType } from "vue";
 import Field from "@/components/field/Field.vue";
 import FieldSubmitter from "@/components/field/Submitter.vue";
 import { fieldIcons as fieldIconsConst, fieldNames as fieldNamesConst } from "@/components/field/constants.ts";
@@ -75,7 +75,7 @@ import { v4 } from "uuid";
 
 const props = defineProps({
   fields: {
-    type: Array,
+    type: Array as PropType<Record<string, any>[]>,
     required: true
   },
   editable: {
@@ -84,7 +84,7 @@ const props = defineProps({
     default: true
   },
   defaultFields: {
-    type: Array,
+    type: Array as PropType<string[]>,
     required: false,
     default: () => []
   },
@@ -94,21 +94,21 @@ const props = defineProps({
     default: true
   },
   defaultSubmitters: {
-    type: Array,
+    type: Array as PropType<Record<string, any>[]>,
     required: false,
     default: () => []
   },
   submitters: {
-    type: Array,
+    type: Array as PropType<Record<string, any>[]>,
     required: true
   },
   selectedSubmitter: {
-    type: Object,
+    type: Object as PropType<Record<string, any> | null>,
     required: false,
     default: null
   },
   selectedField: {
-    type: Object,
+    type: Object as PropType<Record<string, any> | null>,
     required: false,
     default: null
   }
@@ -122,7 +122,7 @@ const emit = defineEmits([
   "change-submitter"
 ]);
 
-const save = inject("save");
+const save = inject<() => void>("save", () => {});
 
 const dragField = ref();
 const fieldsRef = ref();
@@ -133,7 +133,7 @@ const submitterFields = computed(() => {
   if (!props.selectedSubmitter) {
     return [];
   }
-  return props.fields.filter((f: any) => f.submitter_id === props.selectedSubmitter.id);
+  return props.fields.filter((f: any) => f.submitter_id === props.selectedSubmitter?.id);
 });
 
 onMounted(() => {
@@ -165,8 +165,10 @@ function reorderFields(): void {
   Array.from(fieldsRef.value.children).forEach((el: any, index: number) => {
     if (el.dataset.id !== props.fields[index].id) {
       const field = props.fields.find((f: any) => f.id === el.dataset.id);
-      props.fields.splice(props.fields.indexOf(field), 1);
-      props.fields.splice(index, 0, field);
+      if (field) {
+        props.fields.splice(props.fields.indexOf(field), 1);
+        props.fields.splice(index, 0, field);
+      }
     }
   });
   save();

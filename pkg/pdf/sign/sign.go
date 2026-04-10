@@ -185,19 +185,13 @@ func (context *SignContext) SignPDF() error {
 	context.SignatureMaxLength = context.SignatureMaxLengthBase
 
 	switch context.SignData.Certificate.SignatureAlgorithm.String() {
-	case "SHA1-RSA":
-	case "ECDSA-SHA1":
-	case "DSA-SHA1":
+	case "SHA1-RSA", "ECDSA-SHA1", "DSA-SHA1":
 		context.SignatureMaxLength += uint32(hex.EncodedLen(128))
-	case "SHA256-RSA":
-	case "ECDSA-SHA256":
-	case "DSA-SHA256":
+	case "SHA256-RSA", "ECDSA-SHA256", "DSA-SHA256":
 		context.SignatureMaxLength += uint32(hex.EncodedLen(256))
-	case "SHA384-RSA":
-	case "ECDSA-SHA384":
+	case "SHA384-RSA", "ECDSA-SHA384":
 		context.SignatureMaxLength += uint32(hex.EncodedLen(384))
-	case "SHA512-RSA":
-	case "ECDSA-SHA512":
+	case "SHA512-RSA", "ECDSA-SHA512":
 		context.SignatureMaxLength += uint32(hex.EncodedLen(512))
 	}
 

@@ -94,7 +94,7 @@
           v-if="(item as LibraryItem).type === 'template' && ((item as LibraryItem).data as Template).category"
           class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800"
         >
-          {{ translateCategory(((item as LibraryItem).data as Template).category) }}
+          {{ translateCategory(((item as LibraryItem).data as Template).category!) }}
         </span>
         <span v-else-if="(item as LibraryItem).type !== 'parent'" class="text-sm text-gray-400">—</span>
       </template>
@@ -434,19 +434,12 @@ const currentPage = ref(1);
 const pageSize = ref(12);
 
 // Type for unified list item
-type LibraryItem = { 
+interface LibraryItem {
   id: string;
-  type: "parent";
+  type: "parent" | "folder" | "template";
   folderName?: string;
-} | { 
-  id: string;
-  type: "folder"; 
-  data: TemplateFolder 
-} | { 
-  id: string;
-  type: "template"; 
-  data: Template 
-};
+  data?: TemplateFolder | Template;
+}
 
 // Table columns
 const columns = computed(() => [
@@ -538,20 +531,22 @@ const libraryItems = computed((): LibraryItem[] => {
 
     // Both are folders - sort by name
     if (a.type === "folder" && b.type === "folder") {
-      return a.data.name.localeCompare(b.data.name);
+      return (a.data as TemplateFolder).name.localeCompare((b.data as TemplateFolder).name);
     }
 
     // Both are templates - sort by selected criteria
     if (a.type === "template" && b.type === "template") {
+      const at = a.data as Template;
+      const bt = b.data as Template;
       switch (sortBy.value) {
         case "name":
-          return a.data.name.localeCompare(b.data.name);
+          return at.name.localeCompare(bt.name);
         case "created_at":
-          return new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime();
+          return new Date(bt.created_at).getTime() - new Date(at.created_at).getTime();
         case "usage":
           return (
-            (b.data.submitter_count ?? b.data.submitters?.length ?? 0) -
-            (a.data.submitter_count ?? a.data.submitters?.length ?? 0)
+            ((bt as any).submitter_count ?? bt.submitters?.length ?? 0) -
+            ((at as any).submitter_count ?? at.submitters?.length ?? 0)
           );
         default:
           return 0;
@@ -846,8 +841,6 @@ const handleCreateTemplate = async (formData: any): Promise<void> => {
         file_base64: base64String,
         description: ""
       });
-      
-      console.log('Template creation response:', response);
       
       if (response && response.data) {
         let newTemplate = response.data;

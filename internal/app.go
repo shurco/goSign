@@ -1,8 +1,6 @@
 package app
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -14,129 +12,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/shurco/gosign/internal/assets"
 	"github.com/shurco/gosign/internal/config"
-	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/handlers/api"
 	public "github.com/shurco/gosign/internal/handlers/public"
-	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
 	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/internal/services/submission"
 	"github.com/shurco/gosign/internal/trust"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
+	"github.com/shurco/gosign/pkg/utils"
 )
-
-// simpleTemplateRepository is a simple implementation of ResourceRepository for templates
-type simpleTemplateRepository struct {
-	templateQueries *queries.TemplateQueries
-}
-
-func (r *simpleTemplateRepository) List(page, pageSize int, filters map[string]string) ([]models.Template, int, error) {
-	// TODO: Implement proper template listing with pagination and filters
-	return []models.Template{}, 0, nil
-}
-
-func (r *simpleTemplateRepository) Get(id string) (*models.Template, error) {
-	if r.templateQueries == nil {
-		return nil, fmt.Errorf("template queries not initialized")
-	}
-	return r.templateQueries.Template(context.Background(), id)
-}
-
-func (r *simpleTemplateRepository) Create(item *models.Template) error {
-	// TODO: Implement proper template creation
-	return fmt.Errorf("not implemented")
-}
-
-// Update updates a template by ID using the template queries service.
-func (r *simpleTemplateRepository) Update(id string, item *models.Template) error {
-	if r.templateQueries == nil {
-		return fmt.Errorf("template queries not initialized")
-	}
-	return r.templateQueries.UpdateTemplate(context.Background(), id, item)
-}
-
-func (r *simpleTemplateRepository) Delete(id string) error {
-	// TODO: Implement proper template deletion
-	return fmt.Errorf("not implemented")
-}
-
-// simpleSubmissionRepository is a simple implementation of ResourceRepository for submissions
-type simpleSubmissionRepository struct {
-	submissionRepo submission.Repository
-}
-
-func (r *simpleSubmissionRepository) List(page, pageSize int, filters map[string]string) ([]models.Submission, int, error) {
-	// TODO: Implement proper submission listing with pagination and filters
-	// For now, return empty list to avoid errors
-	return []models.Submission{}, 0, nil
-}
-
-func (r *simpleSubmissionRepository) Get(id string) (*models.Submission, error) {
-	if r.submissionRepo == nil {
-		return nil, fmt.Errorf("submission repository not initialized")
-	}
-	return r.submissionRepo.GetSubmission(context.Background(), id)
-}
-
-func (r *simpleSubmissionRepository) Create(item *models.Submission) error {
-	if r.submissionRepo == nil {
-		return fmt.Errorf("submission repository not initialized")
-	}
-	return r.submissionRepo.CreateSubmission(context.Background(), item)
-}
-
-func (r *simpleSubmissionRepository) Update(id string, item *models.Submission) error {
-	// TODO: Implement proper submission update
-	return fmt.Errorf("not implemented")
-}
-
-func (r *simpleSubmissionRepository) Delete(id string) error {
-	// TODO: Implement proper submission deletion
-	return fmt.Errorf("not implemented")
-}
-
-// simpleWebhookRepository is a simple implementation of ResourceRepository for webhooks
-type simpleWebhookRepository struct {
-	// TODO: Add webhook queries when needed
-}
-
-func (r *simpleWebhookRepository) List(page, pageSize int, filters map[string]string) ([]models.Webhook, int, error) {
-	// TODO: Implement proper webhook listing with pagination and filters
-	// For now, return empty list to avoid errors
-	return []models.Webhook{}, 0, nil
-}
-
-func (r *simpleWebhookRepository) Get(id string) (*models.Webhook, error) {
-	// TODO: Implement proper webhook retrieval
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Create(item *models.Webhook) error {
-	// TODO: Implement proper webhook creation
-	return fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Update(id string, item *models.Webhook) error {
-	// TODO: Implement proper webhook update
-	return fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Delete(id string) error {
-	// TODO: Implement proper webhook deletion
-	return fmt.Errorf("not implemented")
-}
 
 func New() error {
 	fmt.Print("✍️ Sign documents without stress\n")
@@ -223,80 +121,27 @@ func New() error {
 		log.Warn().Err(err).Msg("Failed to download GeoLite2 database, continuing without it")
 	}
 
-	// Schedule trust certs update every 12 hours
-	go func() {
-		ticker := time.NewTicker(12 * time.Hour)
-		defer ticker.Stop()
-
-		// Calculate initial delay to align with 12-hour intervals
-		now := time.Now()
-		nextRun := now.Truncate(12 * time.Hour).Add(12 * time.Hour)
-		if nextRun.Before(now) {
-			nextRun = nextRun.Add(12 * time.Hour)
-		}
-		initialDelay := time.Until(nextRun)
-
-		// Wait for initial delay
-		time.Sleep(initialDelay)
-
-		// Execute immediately on first run
+	startPeriodicTask(12*time.Hour, func() {
 		if err := trust.Update(); err != nil {
 			log.Err(err).Send()
 		}
-
-		// Periodic execution
-		for range ticker.C {
-			if err := trust.Update(); err != nil {
-				log.Err(err).Send()
-			}
-		}
-	}()
+	})
 
 	// web init
 	app := fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		BodyLimit:             50 * 1024 * 1024,
+		BodyLimit: 50 * 1024 * 1024,
 	})
 
-	// middleware.Fiber(app, log)
-	// routes.SiteRoutes(app)
-	app.Static("/drive/pages", appdir.LcPages())
-	app.Static("/drive/signed", appdir.LcSigned())
-	app.Static("/drive/uploads", appdir.LcUploads())
+	middleware.Fiber(app, log)
+	routes.SiteRoutes(app)
+	app.Use("/drive/pages", static.New(appdir.LcPages()))
+	app.Use("/drive/signed", static.New(appdir.LcSigned()))
+	app.Use("/drive/uploads", static.New(appdir.LcUploads()))
 
 	// Initialize webhook repository
 	webhookRepo := &simpleWebhookRepository{}
 
-	// Initialize notification service (with nil repository - can work without it)
-	notificationService := notification.NewService(nil)
-
-	// Register email and SMS providers from global settings in DB (best-effort).
-	ctxApp := context.Background()
-	if smtpMap, err := settingQueries.GetGlobalSetting(ctxApp, "smtp"); err == nil && getStringFromMap(smtpMap, "provider", "") == "smtp" {
-		port, _ := strconv.Atoi(getStringFromMap(smtpMap, "smtp_port", "1025"))
-		if port == 0 {
-			port = 1025
-		}
-		smtpCfg := notification.SMTPConfig{
-			Host:      getStringFromMap(smtpMap, "smtp_host", ""),
-			Port:      port,
-			User:      getStringFromMap(smtpMap, "smtp_user", ""),
-			Password:  getStringFromMap(smtpMap, "smtp_pass", ""),
-			FromEmail: getStringFromMap(smtpMap, "from_email", ""),
-			FromName:  getStringFromMap(smtpMap, "from_name", ""),
-		}
-		if smtpCfg.Host != "" && smtpCfg.FromEmail != "" {
-			notificationService.RegisterProvider(notification.NewEmailProvider(smtpCfg))
-		}
-	}
-	if smsMap, err := settingQueries.GetGlobalSetting(ctxApp, "sms"); err == nil && getStringFromMap(smsMap, "twilio_enabled", "") == "true" {
-		notificationService.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
-			AccountSID: getStringFromMap(smsMap, "twilio_account_sid", ""),
-			AuthToken:  getStringFromMap(smsMap, "twilio_auth_token", ""),
-			FromNumber: getStringFromMap(smsMap, "twilio_from_number", ""),
-			Enabled:    true,
-		}))
-	}
+	notificationService := initNotificationService(settingQueries)
 
 	// Completed document builder (filesystem-backed cache).
 	completedDoc := &services.CompletedDocumentBuilder{
@@ -324,9 +169,7 @@ func New() error {
 	scheduleGeoLite2Updates(pool, log, geolocationSvc)
 
 	// Initialize API key repository and service
-	// Convert pgxpool.Pool to sql.DB for APIKeyRepository
-	sqlDB := stdlib.OpenDBFromPool(pool)
-	apiKeyRepo := queries.NewAPIKeyRepository(sqlDB)
+	apiKeyRepo := queries.NewAPIKeyRepository(pool)
 	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
 
 	// Initialize email template queries
@@ -376,6 +219,27 @@ func New() error {
 	return app.Shutdown()
 }
 
+// startPeriodicTask launches a goroutine that aligns to the given interval,
+// executes fn once after the alignment, then repeats every interval.
+func startPeriodicTask(interval time.Duration, fn func()) {
+	go func() {
+		now := time.Now()
+		nextRun := now.Truncate(interval).Add(interval)
+		if nextRun.Before(now) {
+			nextRun = nextRun.Add(interval)
+		}
+		time.Sleep(time.Until(nextRun))
+
+		fn()
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for range ticker.C {
+			fn()
+		}
+	}()
+}
+
 func createDirs() error {
 	dirs := []string{
 		appdir.LcPages(),
@@ -393,16 +257,38 @@ func createDirs() error {
 	return nil
 }
 
-func getStringFromMap(m map[string]any, key, def string) string {
-	if m == nil {
-		return def
-	}
-	if v, ok := m[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
+func initNotificationService(settingQueries *queries.SettingQueries) *notification.Service {
+	svc := notification.NewService(nil)
+	ctx := context.Background()
+
+	if smtpMap, err := settingQueries.GetGlobalSetting(ctx, "smtp"); err == nil && utils.GetStringFromMap(smtpMap, "provider", "") == "smtp" {
+		port, _ := strconv.Atoi(utils.GetStringFromMap(smtpMap, "smtp_port", "1025"))
+		if port == 0 {
+			port = 1025
+		}
+		smtpCfg := notification.SMTPConfig{
+			Host:      utils.GetStringFromMap(smtpMap, "smtp_host", ""),
+			Port:      port,
+			User:      utils.GetStringFromMap(smtpMap, "smtp_user", ""),
+			Password:  utils.GetStringFromMap(smtpMap, "smtp_pass", ""),
+			FromEmail: utils.GetStringFromMap(smtpMap, "from_email", ""),
+			FromName:  utils.GetStringFromMap(smtpMap, "from_name", ""),
+		}
+		if smtpCfg.Host != "" && smtpCfg.FromEmail != "" {
+			svc.RegisterProvider(notification.NewEmailProvider(smtpCfg))
 		}
 	}
-	return def
+
+	if smsMap, err := settingQueries.GetGlobalSetting(ctx, "sms"); err == nil && utils.GetStringFromMap(smsMap, "twilio_enabled", "") == "true" {
+		svc.RegisterProvider(notification.NewSMSProvider(notification.TwilioConfig{
+			AccountSID: utils.GetStringFromMap(smsMap, "twilio_account_sid", ""),
+			AuthToken:  utils.GetStringFromMap(smsMap, "twilio_auth_token", ""),
+			FromNumber: utils.GetStringFromMap(smsMap, "twilio_from_number", ""),
+			Enabled:    true,
+		}))
+	}
+
+	return svc
 }
 
 // scheduleGeoLite2Updates mirrors the Adobe trust-list updater loop:
@@ -413,31 +299,10 @@ func scheduleGeoLite2Updates(pool *pgxpool.Pool, log *logging.Logger, geoSvc *ge
 	}
 
 	dbPath := filepath.Join(appdir.Base(), "GeoLite2-City.mmdb")
-	const (
-		checkEvery        = 12 * time.Hour
-		initialAlignEvery = 12 * time.Hour
-	)
 
-	go func() {
-		ticker := time.NewTicker(checkEvery)
-		defer ticker.Stop()
-
-		// Align initial run to a 12-hour boundary (same style as trust updater).
-		now := time.Now()
-		nextRun := now.Truncate(initialAlignEvery).Add(initialAlignEvery)
-		if nextRun.Before(now) {
-			nextRun = nextRun.Add(initialAlignEvery)
-		}
-		time.Sleep(time.Until(nextRun))
-
-		// First run.
+	startPeriodicTask(12*time.Hour, func() {
 		updateGeoLite2OnSchedule(pool, log, geoSvc, dbPath)
-
-		// Periodic runs.
-		for range ticker.C {
-			updateGeoLite2OnSchedule(pool, log, geoSvc, dbPath)
-		}
-	}()
+	})
 }
 
 func updateGeoLite2OnSchedule(pool *pgxpool.Pool, log *logging.Logger, geoSvc *geolocation.Service, dbPath string) {
@@ -664,8 +529,8 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 				return fmt.Errorf("failed to save archive: %w", err)
 			}
 
-			if err := extractGeoLite2FromTarGz(tmpFile.Name(), dbPath); err != nil {
-				if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), dbPath); gzErr != nil {
+			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), dbPath); err != nil {
+				if gzErr := geolocation.ExtractFromGzip(tmpFile.Name(), dbPath); gzErr != nil {
 					return fmt.Errorf("failed to extract database: tar.gz error: %w; gzip error: %v", err, gzErr)
 				}
 			}
@@ -710,8 +575,8 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 			return fmt.Errorf("failed to save archive: %w", err)
 		}
 
-		if err := extractGeoLite2FromTarGz(tmpFile.Name(), dbPath); err != nil {
-			if gzErr := extractGeoLite2FromGzipMMDB(tmpFile.Name(), dbPath); gzErr != nil {
+		if err := geolocation.ExtractFromTarGz(tmpFile.Name(), dbPath); err != nil {
+			if gzErr := geolocation.ExtractFromGzip(tmpFile.Name(), dbPath); gzErr != nil {
 				return fmt.Errorf("failed to extract database from tar.gz: %w; gzip error: %v", err, gzErr)
 			}
 		}
@@ -727,91 +592,4 @@ func downloadGeoLite2(pool *pgxpool.Pool, log *logging.Logger, licenseKey, downl
 	default:
 		return fmt.Errorf("unknown geolocation download method: %s", method)
 	}
-}
-
-// extractGeoLite2FromTarGz extracts GeoLite2-City.mmdb from tar.gz archive
-func extractGeoLite2FromTarGz(tarGzPath, outputPath string) error {
-	// Open tar.gz file
-	file, err := os.Open(tarGzPath)
-	if err != nil {
-		return fmt.Errorf("failed to open tar.gz file: %w", err)
-	}
-	defer file.Close()
-
-	// Create gzip reader
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	// Create tar reader
-	tarReader := tar.NewReader(gzReader)
-
-	// Find and extract GeoLite2-City.mmdb
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read tar: %w", err)
-		}
-
-		// Look for GeoLite2-City.mmdb file
-		if header.Typeflag == tar.TypeReg && strings.HasSuffix(header.Name, "GeoLite2-City.mmdb") {
-			// Create output directory if needed
-			if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-				return fmt.Errorf("failed to create output directory: %w", err)
-			}
-
-			// Create output file
-			outFile, err := os.Create(outputPath)
-			if err != nil {
-				return fmt.Errorf("failed to create output file: %w", err)
-			}
-			defer outFile.Close()
-
-			// Copy file content
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("failed to extract file: %w", err)
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("GeoLite2-City.mmdb not found in archive")
-}
-
-// extractGeoLite2FromGzipMMDB extracts GeoLite2-City.mmdb from a gzip-compressed mmdb file (GeoLite2-City.mmdb.gz).
-func extractGeoLite2FromGzipMMDB(gzPath, outputPath string) error {
-	file, err := os.Open(gzPath)
-	if err != nil {
-		return fmt.Errorf("failed to open gzip file: %w", err)
-	}
-	defer file.Close()
-
-	gzReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzReader.Close()
-
-	// Create output directory if needed
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	outFile, err := os.Create(outputPath)
-	if err != nil {
-		return fmt.Errorf("failed to create output file: %w", err)
-	}
-	defer outFile.Close()
-
-	if _, err := io.Copy(outFile, gzReader); err != nil {
-		return fmt.Errorf("failed to extract gzip file: %w", err)
-	}
-
-	return nil
 }

@@ -1,0 +1,15 @@
+.git
+.cursor
+.vscode
+node_modules
+web/node_modules
+web/dist
+web/.output
+docs
+migrations
+fixtures
+scripts
+
+*.md
+!README.md
+

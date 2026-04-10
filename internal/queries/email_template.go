@@ -60,9 +60,9 @@ func (q *EmailTemplateQueries) getTemplateByOrg(ctx context.Context, name, local
 }
 
 // getTemplateByQuery retrieves a template with a specific account_id (nil for system templates)
-func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, locale string, accountID interface{}) (*models.EmailTemplate, error) {
+func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, locale string, accountID any) (*models.EmailTemplate, error) {
 	var query string
-	var args []interface{}
+	var args []any
 
 	if accountID == nil {
 		query = `
@@ -71,7 +71,7 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 			WHERE name = $1 AND locale = $2 AND account_id IS NULL AND organization_id IS NULL
 			LIMIT 1
 		`
-		args = []interface{}{name, locale}
+		args = []any{name, locale}
 	} else {
 		query = `
 			SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
@@ -79,7 +79,7 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 			WHERE name = $1 AND locale = $2 AND account_id = $3
 			LIMIT 1
 		`
-		args = []interface{}{name, locale, accountID}
+		args = []any{name, locale, accountID}
 	}
 
 	var template models.EmailTemplate
@@ -113,7 +113,7 @@ func (q *EmailTemplateQueries) getTemplateByQuery(ctx context.Context, name, loc
 }
 
 // scanTemplateRow runs query with args and scans one row into EmailTemplate (query must return id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at)
-func (q *EmailTemplateQueries) scanTemplateRow(ctx context.Context, query string, args ...interface{}) (*models.EmailTemplate, error) {
+func (q *EmailTemplateQueries) scanTemplateRow(ctx context.Context, query string, args ...any) (*models.EmailTemplate, error) {
 	var template models.EmailTemplate
 	var accountIDScan, orgIDScan sql.NullString
 	var subjectNull sql.NullString
@@ -148,7 +148,7 @@ func (q *EmailTemplateQueries) scanTemplateRow(ctx context.Context, query string
 // When organizationID is set, returns org templates + system. When accountID is set, returns account + system.
 func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, accountID *string, organizationID *string, locale *string) ([]models.EmailTemplate, error) {
 	var query string
-	var args []interface{}
+	var args []any
 
 	if organizationID != nil && *organizationID != "" {
 		if locale != nil {
@@ -158,7 +158,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE locale = $1 AND (organization_id = $2 OR (organization_id IS NULL AND account_id IS NULL))
 				ORDER BY name, locale, organization_id NULLS LAST, account_id NULLS LAST
 			`
-			args = []interface{}{*locale, *organizationID}
+			args = []any{*locale, *organizationID}
 		} else {
 			query = `
 				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
@@ -166,7 +166,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE organization_id = $1 OR (organization_id IS NULL AND account_id IS NULL)
 				ORDER BY name, locale, organization_id NULLS LAST, account_id NULLS LAST
 			`
-			args = []interface{}{*organizationID}
+			args = []any{*organizationID}
 		}
 	} else if accountID != nil {
 		if locale != nil {
@@ -176,7 +176,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE locale = $1 AND (account_id = $2 OR (account_id IS NULL AND organization_id IS NULL))
 				ORDER BY name, locale, account_id NULLS LAST
 			`
-			args = []interface{}{*locale, *accountID}
+			args = []any{*locale, *accountID}
 		} else {
 			query = `
 				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
@@ -184,7 +184,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE account_id = $1 OR (account_id IS NULL AND organization_id IS NULL)
 				ORDER BY name, locale, account_id NULLS LAST
 			`
-			args = []interface{}{*accountID}
+			args = []any{*accountID}
 		}
 	} else {
 		if locale != nil {
@@ -194,7 +194,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE account_id IS NULL AND organization_id IS NULL AND locale = $1
 				ORDER BY name, locale
 			`
-			args = []interface{}{*locale}
+			args = []any{*locale}
 		} else {
 			query = `
 				SELECT id, account_id, organization_id, name, locale, subject, content, is_system, created_at, updated_at
@@ -202,7 +202,7 @@ func (q *EmailTemplateQueries) GetAllEmailTemplates(ctx context.Context, account
 				WHERE account_id IS NULL AND organization_id IS NULL
 				ORDER BY name, locale
 			`
-			args = []interface{}{}
+			args = []any{}
 		}
 	}
 

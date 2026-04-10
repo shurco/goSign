@@ -3,8 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -17,7 +18,7 @@ import (
 // It is intentionally separate from generic CRUD because it needs to create
 // both a submission and its submitter(s) and return the public signing URL.
 type SigningLinkHandler struct {
-	pool           *pgxpool.Pool
+	pool            *pgxpool.Pool
 	templateQueries *queries.TemplateQueries
 	completedDoc    *services.CompletedDocumentBuilder
 }
@@ -25,8 +26,8 @@ type SigningLinkHandler struct {
 func NewSigningLinkHandler(pool *pgxpool.Pool, templateQueries *queries.TemplateQueries, completedDoc *services.CompletedDocumentBuilder) *SigningLinkHandler {
 	return &SigningLinkHandler{
 		pool:            pool,
-		templateQueries:  templateQueries,
-		completedDoc:     completedDoc,
+		templateQueries: templateQueries,
+		completedDoc:    completedDoc,
 	}
 }
 
@@ -56,8 +57,8 @@ type CreatedSubmitterLink struct {
 }
 
 type CreateSigningLinkResponse struct {
-	SubmissionID string                `json:"submission_id"`
-	TemplateID   string                `json:"template_id"`
+	SubmissionID string                 `json:"submission_id"`
+	TemplateID   string                 `json:"template_id"`
 	Links        []CreatedSubmitterLink `json:"links"`
 }
 
@@ -74,19 +75,19 @@ type ListSigningLinksItem struct {
 }
 
 type SigningLinkDetail struct {
-	SubmissionID   string                 `json:"submission_id"`
-	TemplateID     string                 `json:"template_id"`
-	TemplateName   string                 `json:"template_name"`
-	CreatedAt      string                 `json:"created_at"`
-	CreatedIP      string                 `json:"created_ip,omitempty"`
-	Status         string                 `json:"status"`
-	CompletedCount int                    `json:"completed_count"`
-	TotalCount     int                    `json:"total_count"`
-	Submitters     []map[string]any       `json:"submitters"`
-	Links          []CreatedSubmitterLink `json:"links"`
-	DeclineEvents  []map[string]any       `json:"decline_events,omitempty"`
-	OpenedEvents   []map[string]any       `json:"opened_events,omitempty"`
-	CompletedEvents []map[string]any      `json:"completed_events,omitempty"`
+	SubmissionID    string                 `json:"submission_id"`
+	TemplateID      string                 `json:"template_id"`
+	TemplateName    string                 `json:"template_name"`
+	CreatedAt       string                 `json:"created_at"`
+	CreatedIP       string                 `json:"created_ip,omitempty"`
+	Status          string                 `json:"status"`
+	CompletedCount  int                    `json:"completed_count"`
+	TotalCount      int                    `json:"total_count"`
+	Submitters      []map[string]any       `json:"submitters"`
+	Links           []CreatedSubmitterLink `json:"links"`
+	DeclineEvents   []map[string]any       `json:"decline_events,omitempty"`
+	OpenedEvents    []map[string]any       `json:"opened_events,omitempty"`
+	CompletedEvents []map[string]any       `json:"completed_events,omitempty"`
 }
 
 // Create creates a new submission and N submitters (defined by template), and returns public signing URLs.
@@ -101,7 +102,7 @@ type SigningLinkDetail struct {
 // @Failure 400 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/signing-links [post]
-func (h *SigningLinkHandler) Create(c *fiber.Ctx) error {
+func (h *SigningLinkHandler) Create(c fiber.Ctx) error {
 	var req CreateSigningLinkRequest
 	if err := parseAndValidateJSON(c, &req); err != nil {
 		return err
@@ -175,7 +176,7 @@ func (h *SigningLinkHandler) Create(c *fiber.Ctx) error {
 
 		meta := map[string]any{
 			"template_submitter_id": tpl.Submitters[i].ID,
-			"order":                i,
+			"order":                 i,
 		}
 		metaJSON, _ := json.Marshal(meta)
 
@@ -215,20 +216,31 @@ func (h *SigningLinkHandler) Create(c *fiber.Ctx) error {
 
 // List returns submissions created via direct-link flow, including signer status and links.
 // @Summary List direct-link signings
+// @Description Returns direct-link submissions created by the current user, including per-submitters' status and generated signing links.
 // @Tags signing-links
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(20)
 // @Success 200 {object} map[string]any
 // @Router /api/v1/signing-links [get]
-func (h *SigningLinkHandler) List(c *fiber.Ctx) error {
+func (h *SigningLinkHandler) List(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
 		return err
 	}
 
-	page := c.QueryInt("page", 1)
-	pageSize := c.QueryInt("page_size", 20)
+	page := 1
+	if raw := c.Query("page"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			page = v
+		}
+	}
+	pageSize := 20
+	if raw := c.Query("page_size"); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			pageSize = v
+		}
+	}
 	if page < 1 {
 		page = 1
 	}
@@ -343,12 +355,13 @@ func (h *SigningLinkHandler) List(c *fiber.Ctx) error {
 // - Otherwise -> allow access only to submissions created by the user.
 //
 // @Summary Get direct-link signing details
+// @Description Returns detailed status and event history for a specific direct-link submission. Access is limited to submissions created by the user (or organization-scoped templates when in org context).
 // @Tags signing-links
 // @Produce json
 // @Param submission_id path string true "Submission ID"
 // @Success 200 {object} map[string]any
 // @Router /api/v1/signing-links/{submission_id} [get]
-func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
+func (h *SigningLinkHandler) Get(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -375,165 +388,97 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 		submittersJSON []byte
 	)
 
+	// Build the access filter: org context → match template's organization; otherwise → match creator.
+	var accessFilter string
+	var filterParam string
 	if orgID != "" {
-		err = h.pool.QueryRow(c.Context(), `
-			SELECT
-				sub.id AS submission_id,
-				sub.template_id,
-				COALESCE(t.name, '') AS template_name,
-				sub.created_at::text AS created_at,
-				host(created_event.ip) AS created_ip,
-				CASE
-					WHEN bool_and(COALESCE(s.status, 'pending') = 'completed') THEN 'completed'
-					WHEN bool_or(COALESCE(s.status, 'pending') = 'declined') THEN 'declined'
-					WHEN bool_or(COALESCE(s.status, 'pending') = 'opened')
-						OR sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END) > 0
-						THEN 'in_progress'
-					ELSE 'pending'
-				END AS status,
-				sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END)::int AS completed_count,
-				count(*)::int AS total_count,
-				jsonb_agg(
-					jsonb_build_object(
-						'id', s.id,
-						'name', COALESCE(s.name, ''),
-						'email', COALESCE(s.email, ''),
-						'phone', COALESCE(s.phone, ''),
-						'slug', s.slug,
-						'status', COALESCE(s.status, 'pending'),
-						'created_at', s.created_at::text,
-						'opened_at', CASE WHEN s.opened_at IS NULL THEN NULL ELSE s.opened_at::text END,
-						'opened_ip', host(opened_event.ip),
-						'opened_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'completed_at', CASE WHEN s.completed_at IS NULL THEN NULL ELSE s.completed_at::text END,
-						'completed_ip', host(completed_event.ip),
-						'completed_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'declined_at', CASE WHEN s.declined_at IS NULL THEN NULL ELSE s.declined_at::text END,
-						'declined_ip', host(declined_event.ip),
-						'declined_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'decline_reason', s.metadata->>'decline_reason'
-					)
-					ORDER BY s.created_at ASC
-				) AS submitters
-			FROM submission sub
-			JOIN template t ON t.id = sub.template_id
-			JOIN submitter s ON s.submission_id = sub.id
-			LEFT JOIN event created_event ON created_event.type = 'submission.created'
-				AND created_event.resource_type = 'submission'
-				AND created_event.resource_id = sub.id
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) opened_event ON true
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) completed_event ON true
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) declined_event ON true
-			WHERE sub.id = $1
-			  AND COALESCE(sub.source, '') = 'direct_link'
-			  AND t.organization_id = $2
-			GROUP BY sub.id, sub.template_id, t.name, sub.created_at, created_event.ip
-			LIMIT 1
-		`, submissionID, orgID).Scan(&submissionID, &templateID, &templateName, &createdAt, &createdIP, &status, &completedCount, &totalCount, &submittersJSON)
+		accessFilter = "AND t.organization_id = $2"
+		filterParam = orgID
 	} else {
-		err = h.pool.QueryRow(c.Context(), `
-			SELECT
-				sub.id AS submission_id,
-				sub.template_id,
-				COALESCE(t.name, '') AS template_name,
-				sub.created_at::text AS created_at,
-				host(created_event.ip) AS created_ip,
-				CASE
-					WHEN bool_and(COALESCE(s.status, 'pending') = 'completed') THEN 'completed'
-					WHEN bool_or(COALESCE(s.status, 'pending') = 'declined') THEN 'declined'
-					WHEN bool_or(COALESCE(s.status, 'pending') = 'opened')
-						OR sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END) > 0
-						THEN 'in_progress'
-					ELSE 'pending'
-				END AS status,
-				sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END)::int AS completed_count,
-				count(*)::int AS total_count,
-				jsonb_agg(
-					jsonb_build_object(
-						'id', s.id,
-						'name', COALESCE(s.name, ''),
-						'email', COALESCE(s.email, ''),
-						'phone', COALESCE(s.phone, ''),
-						'slug', s.slug,
-						'status', COALESCE(s.status, 'pending'),
-						'created_at', s.created_at::text,
-						'opened_at', CASE WHEN s.opened_at IS NULL THEN NULL ELSE s.opened_at::text END,
-						'opened_ip', host(opened_event.ip),
-						'opened_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'completed_at', CASE WHEN s.completed_at IS NULL THEN NULL ELSE s.completed_at::text END,
-						'completed_ip', host(completed_event.ip),
-						'completed_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'declined_at', CASE WHEN s.declined_at IS NULL THEN NULL ELSE s.declined_at::text END,
-						'declined_ip', host(declined_event.ip),
-						'declined_location', CASE 
-							WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
-							WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
-							ELSE NULL
-						END,
-						'decline_reason', s.metadata->>'decline_reason'
-					)
-					ORDER BY s.created_at ASC
-				) AS submitters
-			FROM submission sub
-			JOIN template t ON t.id = sub.template_id
-			JOIN submitter s ON s.submission_id = sub.id
-			LEFT JOIN event created_event ON created_event.type = 'submission.created'
-				AND created_event.resource_type = 'submission'
-				AND created_event.resource_id = sub.id
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) opened_event ON true
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) completed_event ON true
-			LEFT JOIN LATERAL (
-				SELECT e.ip FROM event e
-				WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
-				ORDER BY e.created_at DESC LIMIT 1
-			) declined_event ON true
-			WHERE sub.id = $1
-			  AND COALESCE(sub.source, '') = 'direct_link'
-			  AND sub.created_by_user_id = $2
-			GROUP BY sub.id, sub.template_id, t.name, sub.created_at, created_event.ip
-			LIMIT 1
-		`, submissionID, userID).Scan(&submissionID, &templateID, &templateName, &createdAt, &createdIP, &status, &completedCount, &totalCount, &submittersJSON)
+		accessFilter = "AND sub.created_by_user_id = $2"
+		filterParam = userID
 	}
+
+	detailQuery := `
+		SELECT
+			sub.id AS submission_id,
+			sub.template_id,
+			COALESCE(t.name, '') AS template_name,
+			sub.created_at::text AS created_at,
+			host(created_event.ip) AS created_ip,
+			CASE
+				WHEN bool_and(COALESCE(s.status, 'pending') = 'completed') THEN 'completed'
+				WHEN bool_or(COALESCE(s.status, 'pending') = 'declined') THEN 'declined'
+				WHEN bool_or(COALESCE(s.status, 'pending') = 'opened')
+					OR sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END) > 0
+					THEN 'in_progress'
+				ELSE 'pending'
+			END AS status,
+			sum(CASE WHEN COALESCE(s.status, 'pending') = 'completed' THEN 1 ELSE 0 END)::int AS completed_count,
+			count(*)::int AS total_count,
+			jsonb_agg(
+				jsonb_build_object(
+					'id', s.id,
+					'name', COALESCE(s.name, ''),
+					'email', COALESCE(s.email, ''),
+					'phone', COALESCE(s.phone, ''),
+					'slug', s.slug,
+					'status', COALESCE(s.status, 'pending'),
+					'created_at', s.created_at::text,
+					'opened_at', CASE WHEN s.opened_at IS NULL THEN NULL ELSE s.opened_at::text END,
+					'opened_ip', host(opened_event.ip),
+					'opened_location', CASE 
+						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
+						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
+						ELSE NULL
+					END,
+					'completed_at', CASE WHEN s.completed_at IS NULL THEN NULL ELSE s.completed_at::text END,
+					'completed_ip', host(completed_event.ip),
+					'completed_location', CASE 
+						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
+						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
+						ELSE NULL
+					END,
+					'declined_at', CASE WHEN s.declined_at IS NULL THEN NULL ELSE s.declined_at::text END,
+					'declined_ip', host(declined_event.ip),
+					'declined_location', CASE 
+						WHEN s.metadata->'location'->>'full' IS NOT NULL THEN s.metadata->'location'->>'full'
+						WHEN s.metadata->>'location' IS NOT NULL AND jsonb_typeof(s.metadata->'location') = 'string' THEN s.metadata->>'location'
+						ELSE NULL
+					END,
+					'decline_reason', s.metadata->>'decline_reason'
+				)
+				ORDER BY s.created_at ASC
+			) AS submitters
+		FROM submission sub
+		JOIN template t ON t.id = sub.template_id
+		JOIN submitter s ON s.submission_id = sub.id
+		LEFT JOIN event created_event ON created_event.type = 'submission.created'
+			AND created_event.resource_type = 'submission'
+			AND created_event.resource_id = sub.id
+		LEFT JOIN LATERAL (
+			SELECT e.ip FROM event e
+			WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+			ORDER BY e.created_at DESC LIMIT 1
+		) opened_event ON true
+		LEFT JOIN LATERAL (
+			SELECT e.ip FROM event e
+			WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+			ORDER BY e.created_at DESC LIMIT 1
+		) completed_event ON true
+		LEFT JOIN LATERAL (
+			SELECT e.ip FROM event e
+			WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = sub.id AND e.metadata_json->>'submitter_id' = s.id::text
+			ORDER BY e.created_at DESC LIMIT 1
+		) declined_event ON true
+		WHERE sub.id = $1
+		  AND COALESCE(sub.source, '') = 'direct_link'
+		  ` + accessFilter + `
+		GROUP BY sub.id, sub.template_id, t.name, sub.created_at, created_event.ip
+		LIMIT 1`
+
+	err = h.pool.QueryRow(c.Context(), detailQuery, submissionID, filterParam).
+		Scan(&submissionID, &templateID, &templateName, &createdAt, &createdIP, &status, &completedCount, &totalCount, &submittersJSON)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusNotFound, "Signing not found", nil)
 	}
@@ -555,111 +500,28 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 		})
 	}
 
-	openedEvents := make([]map[string]any, 0)
-	if rowsOpened, errOpen := h.pool.Query(c.Context(), `
-		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip)
-		FROM event e
-		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
-		WHERE e.type = 'submitter.opened' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
-		ORDER BY e.created_at ASC
-	`, submissionID, submissionID); errOpen == nil {
-		for rowsOpened.Next() {
-			var at, subID, name string
-			var ip *string
-			if rowsOpened.Scan(&at, &subID, &name, &ip) == nil {
-				ipStr := ""
-				if ip != nil {
-					ipStr = *ip
-				}
-				openedEvents = append(openedEvents, map[string]any{
-					"at":             at,
-					"submitter_id":   subID,
-					"submitter_name": name,
-					"ip":             ipStr,
-				})
-			}
-		}
-		rowsOpened.Close()
-	}
-
-	completedEvents := make([]map[string]any, 0)
-	if rowsCompleted, errComp := h.pool.Query(c.Context(), `
-		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip)
-		FROM event e
-		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
-		WHERE e.type = 'submitter.completed' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
-		ORDER BY e.created_at ASC
-	`, submissionID, submissionID); errComp == nil {
-		for rowsCompleted.Next() {
-			var at, subID, name string
-			var ip *string
-			if rowsCompleted.Scan(&at, &subID, &name, &ip) == nil {
-				ipStr := ""
-				if ip != nil {
-					ipStr = *ip
-				}
-				completedEvents = append(completedEvents, map[string]any{
-					"at":             at,
-					"submitter_id":   subID,
-					"submitter_name": name,
-					"ip":             ipStr,
-				})
-			}
-		}
-		rowsCompleted.Close()
-	}
-
-	declineEvents := make([]map[string]any, 0)
-	rowsDecline, errDecline := h.pool.Query(c.Context(), `
-		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip), e.metadata_json->>'reason'
-		FROM event e
-		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
-		WHERE e.type = 'submitter.declined' AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
-		ORDER BY e.created_at ASC
-	`, submissionID, submissionID)
-	if errDecline == nil {
-		defer rowsDecline.Close()
-		for rowsDecline.Next() {
-			var at, subID, name string
-			var ip, reason *string
-			if rowsDecline.Scan(&at, &subID, &name, &ip, &reason) == nil {
-				ipStr := ""
-				if ip != nil {
-					ipStr = *ip
-				}
-				reasonStr := ""
-				if reason != nil {
-					reasonStr = *reason
-				}
-				declineEvents = append(declineEvents, map[string]any{
-					"at":             at,
-					"submitter_id":   subID,
-					"submitter_name": name,
-					"ip":             ipStr,
-					"reason":         reasonStr,
-				})
-			}
-		}
-	}
+	openedEvents := h.querySubmitterEvents(c, submissionID, "submitter.opened", false)
+	completedEvents := h.querySubmitterEvents(c, submissionID, "submitter.completed", false)
+	declineEvents := h.querySubmitterEvents(c, submissionID, "submitter.declined", true)
 
 	createdIPStr := ""
 	if createdIP != nil {
 		createdIPStr = *createdIP
 	}
 	detail := SigningLinkDetail{
-		SubmissionID:   submissionID,
-		TemplateID:     templateID,
-		TemplateName:   templateName,
-		CreatedAt:      createdAt,
-		CreatedIP:      createdIPStr,
-		Status:         status,
-		CompletedCount: completedCount,
-		TotalCount:     totalCount,
-		Submitters:     submitters,
-		Links:            links,
-		DeclineEvents:    declineEvents,
-		OpenedEvents:     openedEvents,
-		CompletedEvents:  completedEvents,
+		SubmissionID:    submissionID,
+		TemplateID:      templateID,
+		TemplateName:    templateName,
+		CreatedAt:       createdAt,
+		CreatedIP:       createdIPStr,
+		Status:          status,
+		CompletedCount:  completedCount,
+		TotalCount:      totalCount,
+		Submitters:      submitters,
+		Links:           links,
+		DeclineEvents:   declineEvents,
+		OpenedEvents:    openedEvents,
+		CompletedEvents: completedEvents,
 	}
 	return webutil.Response(c, fiber.StatusOK, "signing_link", detail)
 }
@@ -668,6 +530,7 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 // Only the creator of the submission can download it.
 //
 // @Summary Download completed document
+// @Description Downloads the completed PDF document for a direct-link submission. Only the submission creator can download it and the submission must be fully completed.
 // @Tags signing-links
 // @Produce application/pdf
 // @Param submission_id path string true "Submission ID"
@@ -675,7 +538,7 @@ func (h *SigningLinkHandler) Get(c *fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /api/v1/signing-links/{submission_id}/document [get]
-func (h *SigningLinkHandler) DownloadCompletedDocument(c *fiber.Ctx) error {
+func (h *SigningLinkHandler) DownloadCompletedDocument(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -729,9 +592,70 @@ func (h *SigningLinkHandler) DownloadCompletedDocument(c *fiber.Ctx) error {
 	return c.Download(path, fmt.Sprintf("submission_%s.pdf", submissionID))
 }
 
+// querySubmitterEvents fetches event rows for a given submission and event type.
+// When includeReason is true, a "reason" field from metadata_json is also extracted.
+func (h *SigningLinkHandler) querySubmitterEvents(c fiber.Ctx, submissionID, eventType string, includeReason bool) []map[string]any {
+	results := make([]map[string]any, 0)
+
+	query := `
+		SELECT e.created_at::text, e.metadata_json->>'submitter_id', COALESCE(s.name, ''), host(e.ip)` +
+		func() string {
+			if includeReason {
+				return `, e.metadata_json->>'reason'`
+			}
+			return ``
+		}() + `
+		FROM event e
+		LEFT JOIN submitter s ON s.id = (e.metadata_json->>'submitter_id')::uuid AND s.submission_id = $1::uuid
+		WHERE e.type = $2 AND e.resource_type = 'submission' AND e.resource_id = $1::uuid
+		ORDER BY e.created_at ASC`
+
+	rows, err := h.pool.Query(c.Context(), query, submissionID, eventType)
+	if err != nil {
+		return results
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var at, subID, name string
+		var ip *string
+
+		if includeReason {
+			var reason *string
+			if rows.Scan(&at, &subID, &name, &ip, &reason) != nil {
+				continue
+			}
+			reasonStr := ""
+			if reason != nil {
+				reasonStr = *reason
+			}
+			results = append(results, map[string]any{
+				"at": at, "submitter_id": subID, "submitter_name": name,
+				"ip": derefStr(ip), "reason": reasonStr,
+			})
+		} else {
+			if rows.Scan(&at, &subID, &name, &ip) != nil {
+				continue
+			}
+			results = append(results, map[string]any{
+				"at": at, "submitter_id": subID, "submitter_name": name,
+				"ip": derefStr(ip),
+			})
+		}
+	}
+	return results
+}
+
+func derefStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
 // parseAndValidateJSON is a small helper to keep handler code minimal.
-func parseAndValidateJSON(c *fiber.Ctx, v interface{}) error {
-	if err := c.BodyParser(v); err != nil {
+func parseAndValidateJSON(c fiber.Ctx, v any) error {
+	if err := c.Bind().JSON(v); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
 	if err := webutil.ValidateStruct(v); err != nil {
@@ -739,4 +663,3 @@ func parseAndValidateJSON(c *fiber.Ctx, v interface{}) error {
 	}
 	return nil
 }
-

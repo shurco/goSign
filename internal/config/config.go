@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -15,17 +16,19 @@ var cfg *Config
 // Config is the application configuration (infrastructure only; app settings are in DB).
 // All values are read from environment variables with GOSIGN_ prefix.
 type Config struct {
-	HTTPAddr string
-	DevMode  bool
-	Postgres postgres.Config
-	Redis    redis.Config
+	HTTPAddr  string
+	DevMode   bool
+	JWTSecret string
+	Postgres  postgres.Config
+	Redis     redis.Config
 }
 
 // Default returns config with default values (used when env vars are not set).
 func Default() *Config {
 	return &Config{
-		DevMode:  false,
-		HTTPAddr: "0.0.0.0:8088",
+		DevMode:   false,
+		HTTPAddr:  "0.0.0.0:8088",
+		JWTSecret: "",
 		Postgres: postgres.Config{
 			URL: "postgres://goSign:postgresPassword@localhost:5432/goSign?pool_max_conns=10",
 		},
@@ -60,6 +63,10 @@ func Load() error {
 	config.Postgres.URL = getenv("POSTGRES_URL", config.Postgres.URL)
 	config.Redis.Address = getenv("REDIS_ADDRESS", config.Redis.Address)
 	config.Redis.Password = getenv("REDIS_PASSWORD", config.Redis.Password)
+	config.JWTSecret = getenv("JWT_SECRET", config.JWTSecret)
+	if config.JWTSecret == "" {
+		return fmt.Errorf("GOSIGN_JWT_SECRET environment variable is required")
+	}
 	cfg = config
 	return nil
 }

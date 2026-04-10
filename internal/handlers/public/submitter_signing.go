@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -65,7 +65,7 @@ type getBySlugResponse struct {
 // @Success 200 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /public/sign/{slug} [get]
-func (h *PublicSigningHandler) GetBySlug(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) GetBySlug(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -216,11 +216,12 @@ type completeRequest struct {
 
 // Open marks the submitter as opened (best-effort).
 // @Summary Mark submitter opened
+// @Description Marks the submitter as opened (best-effort) and records a dashboard activity event.
 // @Tags public-signing
 // @Param slug path string true "Submitter slug"
 // @Success 200 {object} map[string]any
 // @Router /public/sign/{slug}/open [post]
-func (h *PublicSigningHandler) Open(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) Open(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -254,6 +255,7 @@ type updateSubmitterRequest struct {
 
 // UpdateSubmitter updates submitter with email and name, links to user account if exists, and sends confirmation.
 // @Summary Update submitter info
+// @Description Updates submitter email and name, optionally links the submission to an existing user account, and sends a confirmation email (best-effort).
 // @Tags public-signing
 // @Accept json
 // @Produce json
@@ -262,7 +264,7 @@ type updateSubmitterRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /public/sign/{slug}/update [post]
-func (h *PublicSigningHandler) UpdateSubmitter(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) UpdateSubmitter(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -343,6 +345,7 @@ func (h *PublicSigningHandler) UpdateSubmitter(c *fiber.Ctx) error {
 
 // Complete stores field values and marks submitter completed.
 // @Summary Complete signing
+// @Description Stores the submitter fields, marks the submitter as completed, and triggers finalization of the completed document (best-effort).
 // @Tags public-signing
 // @Accept json
 // @Produce json
@@ -351,7 +354,7 @@ func (h *PublicSigningHandler) UpdateSubmitter(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Router /public/sign/{slug}/complete [post]
-func (h *PublicSigningHandler) Complete(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) Complete(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -445,6 +448,7 @@ type declineRequest struct {
 
 // Decline marks submitter declined.
 // @Summary Decline signing
+// @Description Marks the submitter as declined (optionally recording a decline reason) and records a dashboard activity event.
 // @Tags public-signing
 // @Accept json
 // @Produce json
@@ -453,14 +457,14 @@ type declineRequest struct {
 // @Success 200 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Router /public/sign/{slug}/decline [post]
-func (h *PublicSigningHandler) Decline(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) Decline(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
 	}
 
 	var req declineRequest
-	_ = c.BodyParser(&req) // optional
+	_ = c.Bind().JSON(&req) // optional
 
 	clientIP := getClientIP(c)
 	tag, err := h.pool.Exec(c.Context(), `
@@ -491,7 +495,7 @@ func (h *PublicSigningHandler) Decline(c *fiber.Ctx) error {
 
 // GetCompletedDocument returns the final PDF only when the whole submission is completed.
 // Public access is protected by submitter slug entropy.
-func (h *PublicSigningHandler) GetCompletedDocument(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) GetCompletedDocument(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -539,7 +543,7 @@ func (h *PublicSigningHandler) GetCompletedDocument(c *fiber.Ctx) error {
 
 // GetCertificate returns the certificate PDF only when the whole submission is completed.
 // Public access is protected by submitter slug entropy.
-func (h *PublicSigningHandler) GetCertificate(c *fiber.Ctx) error {
+func (h *PublicSigningHandler) GetCertificate(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -681,7 +685,7 @@ func (h *PublicSigningHandler) finalizeIfCompleted(ctx context.Context, submissi
 
 // getClientIP extracts the real client IP address from the request
 // It checks X-Forwarded-For, X-Real-IP headers first, then falls back to c.IP()
-func getClientIP(c *fiber.Ctx) string {
+func getClientIP(c fiber.Ctx) string {
 	// Check X-Forwarded-For header (first IP in the chain)
 	forwardedFor := c.Get("X-Forwarded-For")
 	if forwardedFor != "" {

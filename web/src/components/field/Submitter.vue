@@ -59,7 +59,7 @@
               "
             >
               <SvgIcon name="user-plus" width="20" height="20" stroke-width="1.6" />
-              <span class="py-1"> Add {{ names[submitters.length] }} </span>
+              <span class="py-1"> Add {{ subNames[submitters.length] }} </span>
             </a>
           </li>
         </ul>
@@ -161,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, type PropType } from "vue";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import { subColors, subNames } from "@/components/field/constants.ts";
 import { useDropdown } from "@/composables/ui";
@@ -169,7 +169,7 @@ import { v4 } from "uuid";
 
 const props = defineProps({
   submitters: {
-    type: Array,
+    type: Array as PropType<Record<string, any>[]>,
     required: true
   },
   editable: {
@@ -200,7 +200,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:model-value", "remove", "new-submitter", "name-change"]);
 
-const save = inject("save");
+const save = inject<() => void>("save", () => {});
 
 const dropdownRef = ref<HTMLElement | null>(null);
 const mobileDropdownRef = ref<HTMLElement | null>(null);

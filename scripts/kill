@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 
-#set -e
+# Process kill script for goSign project
+# Usage: ./scripts/kill [backend|frontend|all]
 
-ROOT_PATH="$(git rev-parse --show-toplevel)"
-source ${ROOT_PATH}/scripts/_helper
+set -euo pipefail
+IFS=$'\n\t'
+
+ROOT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_PATH}/scripts/_helper"
 
 kill_backend() {
   is_pid_in_project() {
@@ -14,7 +18,7 @@ kill_backend() {
 
     # Prefer /proc when available (Linux). Fallback to ps for limited environments.
     local cwd exe_file args
-    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ')
+    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ' || true)
     exe_file=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
     args=$(ps -p "$pid" -o args= 2>/dev/null || echo "")
 
@@ -38,21 +42,21 @@ kill_backend() {
   # First, try to find processes by name patterns
   arr_backend=("goSign" "__debug_bin" "cmd/goSign/main.go serve")
   for process_name in "${arr_backend[@]}"; do
-    pids=$(pgrep -f "$process_name" 2>/dev/null)
+    pids="$(pgrep -f "$process_name" 2>/dev/null || true)"
     for pid in $pids; do
       if [ -z "$pid" ]; then
         continue
       fi
       if is_pid_in_project "$pid"; then
         print_header "Killed backend process ${pid}"
-        kill -9 $pid 2>/dev/null
+        kill -9 "$pid" 2>/dev/null
         print_answer "SUCCESS" green
       fi
     done
   done
 
   # Also check processes listening on backend port (8088)
-  backend_port_pids=$(lsof -ti :8088 2>/dev/null)
+  backend_port_pids="$(lsof -ti :8088 2>/dev/null || true)"
   for pid in $backend_port_pids; do
     if [ -z "$pid" ]; then
       continue
@@ -60,20 +64,20 @@ kill_backend() {
     # Kill only if we can attribute the PID to THIS repo.
     if is_pid_in_project "$pid"; then
       print_header "Killed backend process ${pid} (port 8088)"
-      kill -9 $pid 2>/dev/null
+      kill -9 "$pid" 2>/dev/null
       print_answer "SUCCESS" green
       continue
     fi
 
     # Secondary heuristic: if the listener itself isn't attributable, but its parent
     # is a go-run process started from THIS repo, treat it as ours.
-    ppid=$(ps -p $pid -o ppid= 2>/dev/null | tr -d ' ')
-    parent_cmd=$(ps -p $ppid -o args= 2>/dev/null || echo "")
-    parent_cwd=$(readlink -f /proc/$ppid/cwd 2>/dev/null || ps -p $ppid -o cwd= 2>/dev/null | tr -d ' ' || echo "")
-    if [[ -n $parent_cmd && $parent_cmd == *"go run"* && ($parent_cmd == *"main.go serve"* || $parent_cmd == *"cmd/goSign"*) ]]; then
-      if [[ -n $parent_cwd && ($parent_cwd == "$ROOT_PATH"* || $parent_cwd == "$ROOT_PATH/cmd/goSign"*) ]]; then
+    ppid="$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || true)"
+    parent_cmd="$(ps -p "$ppid" -o args= 2>/dev/null || echo "")"
+    parent_cwd="$(readlink -f "/proc/$ppid/cwd" 2>/dev/null || ps -p "$ppid" -o cwd= 2>/dev/null | tr -d ' ' || true)"
+    if [[ -n "$parent_cmd" && "$parent_cmd" == *"go run"* && ("$parent_cmd" == *"main.go serve"* || "$parent_cmd" == *"cmd/goSign"*) ]]; then
+      if [[ -n "$parent_cwd" && ("$parent_cwd" == "$ROOT_PATH"* || "$parent_cwd" == "$ROOT_PATH/cmd/goSign"*) ]]; then
         print_header "Killed backend process ${pid} (port 8088)"
-        kill -9 $pid 2>/dev/null
+        kill -9 "$pid" 2>/dev/null
         print_answer "SUCCESS" green
       fi
     fi
@@ -83,23 +87,23 @@ kill_backend() {
 kill_frontend() {
   arr_frontend=("vite")
   for process_name in "${arr_frontend[@]}"; do
-    pids=$(pgrep -f "$process_name" 2>/dev/null)
+    pids="$(pgrep -f "$process_name" 2>/dev/null || true)"
     for pid in $pids; do
       if [ -z "$pid" ]; then
         continue
       fi
       # Get current working directory of the process
-      cwd=$(readlink -f /proc/$pid/cwd 2>/dev/null || ps -p $pid -o cwd= 2>/dev/null | tr -d ' ')
-      if [[ -n $cwd && $cwd == "$ROOT_PATH/web"* ]]; then
+      cwd="$(readlink -f "/proc/$pid/cwd" 2>/dev/null || ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ' || true)"
+      if [[ -n "$cwd" && "$cwd" == "$ROOT_PATH/web"* ]]; then
         print_header "Killed frontend process ${pid}"
-        kill -9 $pid 2>/dev/null
+        kill -9 "$pid" 2>/dev/null
         print_answer "SUCCESS" green
       fi
     done
   done
 }
 
-TARGET=${1:-all}
+TARGET="${1:-all}"
 
 case "$TARGET" in
 backend)
@@ -127,4 +131,3 @@ all)
   exit 1
   ;;
 esac
-

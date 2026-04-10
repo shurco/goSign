@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -42,22 +42,15 @@ func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries, us
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations [post]
-func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
-	userIDStr, err := GetUserID(c)
+func (h *OrganizationHandler) CreateOrganization(c fiber.Ctx) error {
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
 
-	// Get account_id from user_id
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user account ID")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
-	}
-
 	// Parse request body
 	var req models.Organization
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse organization request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -101,7 +94,7 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 		// Don't return error as organization was created successfully
 	}
 
-	return webutil.Response(c, fiber.StatusCreated, "Organization created successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusCreated, "Organization created successfully", map[string]any{
 		"organization": org,
 	})
 }
@@ -115,17 +108,10 @@ func (h *OrganizationHandler) CreateOrganization(c *fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations [get]
-func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
-	userIDStr, err := GetUserID(c)
+func (h *OrganizationHandler) GetUserOrganizations(c fiber.Ctx) error {
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
-	}
-
-	// Get account_id from user_id
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user account ID")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
 	}
 
 	// Get organizations
@@ -135,7 +121,7 @@ func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get organizations", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Organizations retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Organizations retrieved successfully", map[string]any{
 		"organizations": organizations,
 	})
 }
@@ -152,7 +138,7 @@ func (h *OrganizationHandler) GetUserOrganizations(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [get]
-func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) GetOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -170,25 +156,20 @@ func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
 	}
 
 	// Check if user has permission to view this organization
-	userIDStr, err := GetUserID(c)
-	if err == nil {
-		// Get account_id from user_id
-		accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
-		if err == nil {
-			// Check if user is a member
-			member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to check organization membership")
-				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
-			}
+	accountID, resolveErr := ResolveAccountID(c, h.userQueries)
+	if resolveErr == nil {
+		member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to check organization membership")
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
+		}
 
-			if member == nil {
-				return webutil.Response(c, fiber.StatusForbidden, "Access denied", nil)
-			}
+		if member == nil {
+			return webutil.Response(c, fiber.StatusForbidden, "Access denied", nil)
 		}
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Organization retrieved successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Organization retrieved successfully", map[string]any{
 		"organization": org,
 	})
 }
@@ -208,7 +189,7 @@ func (h *OrganizationHandler) GetOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [put]
-func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) UpdateOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
@@ -216,7 +197,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 
 	// Parse request body
 	var req map[string]string
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().JSON(&req); err != nil {
 		log.Error().Err(err).Msg("Failed to parse update request")
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -236,20 +217,11 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization description too long", nil)
 	}
 
-	// Check if user has permission to update organization
-	userIDStr, err := GetUserID(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
 
-	// Get account_id from user_id
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user account ID")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
-	}
-
-	// Check membership and role
 	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
@@ -279,7 +251,7 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Organization updated successfully", map[string]any{
 		"organization": updatedOrg,
 	})
 }
@@ -296,26 +268,17 @@ func (h *OrganizationHandler) UpdateOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id} [delete]
-func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) DeleteOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
 	}
 
-	// Check if user has permission to delete organization (owner only)
-	userIDStr, err := GetUserID(c)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
 		return err
 	}
 
-	// Get account_id from user_id
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user account ID")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
-	}
-
-	// Check membership and role
 	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
@@ -352,7 +315,7 @@ func (h *OrganizationHandler) DeleteOrganization(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/{organization_id}/switch [post]
-func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) SwitchOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -371,14 +334,11 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID is required", nil)
 	}
 
-	// Get account_id from user_id
-	accountID, err := h.userQueries.GetUserAccountID(c.Context(), userIDStr)
+	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user account ID")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get user account", nil)
+		return err
 	}
 
-	// Check if user is a member of this organization
 	member, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, accountID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check organization membership")
@@ -400,38 +360,15 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Organization not found", nil)
 	}
 
-	// Create new tokens with organization context
-	// Note: We need to import the handlers package to access createAuthTokensWithOrg
-	// For now, we'll create tokens directly using middleware
-	modelUser := &models.User{
-		ID:    userRecord.ID,
-		Name:  fmt.Sprintf("%s %s", userRecord.FirstName, userRecord.LastName),
-		Email: userRecord.Email,
-	}
-
-	accessToken, err := middleware.CreateTokenWithOrg(modelUser, orgID)
+	tokens, err := issueOrgTokens(userRecord, orgID)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create access token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create access token", nil)
+		return webutil.Response(c, fiber.StatusInternalServerError, err.Error(), nil)
 	}
 
-	refreshToken, err := middleware.CreateRefreshToken(userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create refresh token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create refresh token", nil)
-	}
-
-	// Store refresh token in Redis
-	refreshKey := fmt.Sprintf("refresh_token:%s", userIDStr)
-	if err := redis.Conn.Set(refreshKey, refreshToken, 7*24*time.Hour); err != nil {
-		log.Error().Err(err).Msg("Failed to store refresh token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to store refresh token", nil)
-	}
-
-	return webutil.Response(c, fiber.StatusOK, "Organization switched successfully", map[string]interface{}{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"organization": map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Organization switched successfully", map[string]any{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"organization": map[string]any{
 			"id":   org.ID,
 			"name": org.Name,
 		},
@@ -449,7 +386,7 @@ func (h *OrganizationHandler) SwitchOrganization(c *fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Router /api/v1/organizations/switch [post]
-func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
+func (h *OrganizationHandler) ExitOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
 		return err
@@ -463,38 +400,46 @@ func (h *OrganizationHandler) ExitOrganization(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusForbidden, "Only administrators can exit organization", nil)
 	}
 
-	// Create new tokens without organization context (personal account)
+	tokens, err := issueOrgTokens(userRecord, "")
+	if err != nil {
+		return webutil.Response(c, fiber.StatusInternalServerError, err.Error(), nil)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Exited organization successfully", map[string]any{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"organization":  nil,
+	})
+}
+
+type orgTokens struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+func issueOrgTokens(userRecord *queries.UserRecord, orgID string) (*orgTokens, error) {
 	modelUser := &models.User{
 		ID:    userRecord.ID,
 		Name:  fmt.Sprintf("%s %s", userRecord.FirstName, userRecord.LastName),
 		Email: userRecord.Email,
 	}
 
-	// Use empty string for organizationID to create personal account token
-	accessToken, err := middleware.CreateTokenWithOrg(modelUser, "")
+	accessToken, err := middleware.CreateTokenWithOrg(modelUser, orgID)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create access token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create access token", nil)
+		return nil, fmt.Errorf("failed to create access token: %w", err)
 	}
 
-	refreshToken, err := middleware.CreateRefreshToken(userIDStr)
+	refreshToken, err := middleware.CreateRefreshToken(userRecord.ID)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create refresh token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create refresh token", nil)
+		return nil, fmt.Errorf("failed to create refresh token: %w", err)
 	}
 
-	// Store refresh token in Redis
-	refreshKey := fmt.Sprintf("refresh_token:%s", userIDStr)
-	if err := redis.Conn.Set(refreshKey, refreshToken, 7*24*time.Hour); err != nil {
-		log.Error().Err(err).Msg("Failed to store refresh token")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to store refresh token", nil)
+	refreshKey := fmt.Sprintf("refresh_token:%s", refreshToken)
+	if err := redis.Conn.Set(refreshKey, userRecord.ID, 7*24*time.Hour); err != nil {
+		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Exited organization successfully", map[string]interface{}{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"organization": nil,
-	})
+	return &orgTokens{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
 // RegisterRoutes registers all organization routes

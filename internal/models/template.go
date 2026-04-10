@@ -147,7 +147,7 @@ const (
 type FieldCondition struct {
 	FieldID  string            `json:"field_id"`  // target field to check
 	Operator ConditionOperator `json:"operator"`
-	Value    interface{}       `json:"value"` // value to compare against
+	Value    any               `json:"value"` // value to compare against
 }
 
 // FieldConditionGroup allows AND/OR logic

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { useConditions } from '../useConditions'
 import type { Field, FieldCondition, FieldConditionGroup, ConditionOperator } from '@/models/template'
 
 describe('useConditions - Condition Evaluation Logic', () => {
-  let fields: ReturnType<typeof ref<Field[]>>
-  let formData: ReturnType<typeof ref<Record<string, any>>>
+  let fields: Ref<Field[]>
+  let formData: Ref<Record<string, any>>
 
   beforeEach(() => {
     fields = ref<Field[]>([
@@ -13,18 +13,21 @@ describe('useConditions - Condition Evaluation Logic', () => {
         id: 'field_1',
         type: 'text',
         name: 'Field 1',
+        submitter_id: '',
         required: false,
       },
       {
         id: 'field_2',
         type: 'number',
         name: 'Field 2',
+        submitter_id: '',
         required: false,
       },
       {
         id: 'field_3',
         type: 'text',
         name: 'Field 3',
+        submitter_id: '',
         required: false,
       },
     ])

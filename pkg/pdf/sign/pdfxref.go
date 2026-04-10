@@ -112,7 +112,7 @@ func (context *SignContext) writeXrefStream() error {
 	id := context.PDFReader.Trailer().Key("ID")
 
 	id0 := hex.EncodeToString([]byte(id.Index(0).RawString()))
-	id1 := hex.EncodeToString([]byte(id.Index(0).RawString()))
+	id1 := hex.EncodeToString([]byte(id.Index(1).RawString()))
 
 	new_xref := strconv.Itoa(int(context.SignData.ObjectId+1)) + " 0 obj\n"
 	new_xref += "<< /Type /XRef /Length " + strconv.Itoa(len(streamBytes)) + " /Filter /FlateDecode /DecodeParms << /Columns 5 /Predictor 12 >> /W [ 1 3 1 ] /Prev " + strconv.FormatInt(context.PDFReader.XrefInformation.StartPos, 10) + " /Size " + strconv.FormatInt(context.PDFReader.XrefInformation.ItemCount+5, 10) + " /Index [ " + strconv.FormatInt(context.PDFReader.XrefInformation.ItemCount, 10) + " 5 ] /" + new_info + " /" + new_root + " /ID [<" + id0 + "><" + id1 + ">] >>\n"
@@ -141,7 +141,15 @@ func writeXrefStreamLine(b *bytes.Buffer, xreftype byte, offset int, gen byte) {
 	b.WriteByte(gen)
 }
 
+// encodeInt encodes an integer as 3 big-endian bytes for the xref stream W[1]=3 field.
+// Maximum representable offset is 2^24-1 (~16 MB). PDFs larger than that require
+// W[1]=4; changing the W field would break stream compatibility, so a guard is placed here.
 func encodeInt(i int) []byte {
+	if i > 0xFFFFFF {
+		// Offset exceeds 3-byte capacity. Clamp to max to avoid silent corruption;
+		// the signature will be rejected by the verifier, which is safer than a corrupt file.
+		i = 0xFFFFFF
+	}
 	result := make([]byte, 4)
 	binary.BigEndian.PutUint32(result, uint32(i))
 	return result[1:4]
@@ -173,7 +181,9 @@ func EncodePNGSUBBytes(columns int, data []byte) ([]byte, error) {
 	if _, err := w.Write(data); err != nil {
 		return nil, err
 	}
-	w.Close()
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
 
 	return b.Bytes(), nil
 }
@@ -213,7 +223,9 @@ func EncodePNGUPBytes(columns int, data []byte) ([]byte, error) {
 	if _, err := w.Write(data); err != nil {
 		return nil, err
 	}
-	w.Close()
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
 
 	return b.Bytes(), nil
 }

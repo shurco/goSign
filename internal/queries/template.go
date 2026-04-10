@@ -139,14 +139,14 @@ func (q *TemplateQueries) CreateTemplate(ctx context.Context, template *models.T
 	`
 
 	// Handle UUID fields - convert empty strings to nil
-	var folderID interface{}
+	var folderID any
 	if template.FolderID != "" {
 		folderID = template.FolderID
 	} else {
 		folderID = nil
 	}
 
-	var orgID interface{}
+	var orgID any
 	if template.OrganizationID != "" {
 		orgID = template.OrganizationID
 	} else {
@@ -266,7 +266,7 @@ type TemplateUpdatePatch struct {
 // Always updates updated_at.
 func (q *TemplateQueries) UpdateTemplatePatch(ctx context.Context, templateID string, patch TemplateUpdatePatch) error {
 	var setParts []string
-	var args []interface{}
+	var args []any
 	argIndex := 1
 
 	if patch.Name != nil {
@@ -378,7 +378,7 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 
 	// Build WHERE conditions
 	whereConditions := []string{}
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 
 	// Base condition - not archived
@@ -821,7 +821,7 @@ func (q *TemplateQueries) DeleteTemplateFolder(ctx context.Context, folderID, us
 // MoveTemplateToFolder moves a template to a different folder
 // userID is used to verify ownership via account_id
 func (q *TemplateQueries) MoveTemplateToFolder(ctx context.Context, templateID, folderID, userID string) error {
-	var args []interface{}
+	var args []any
 
 	baseQuery := `
 		UPDATE "template" t

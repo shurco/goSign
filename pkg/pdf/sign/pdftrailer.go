@@ -32,9 +32,9 @@ func (context *SignContext) writeTrailer() error {
 		new_info := "Info " + strconv.FormatInt(int64(context.InfoData.ObjectId), 10) + " 0 R"
 
 		trailer_string := string(trailer_buf)
-		trailer_string = strings.Replace(trailer_string, root_string, new_root, -1)
-		trailer_string = strings.Replace(trailer_string, size_string, new_size, -1)
-		trailer_string = strings.Replace(trailer_string, info_string, new_info, -1)
+		trailer_string = strings.ReplaceAll(trailer_string, root_string, new_root)
+		trailer_string = strings.ReplaceAll(trailer_string, size_string, new_size)
+		trailer_string = strings.ReplaceAll(trailer_string, info_string, new_info)
 
 		// Write the new trailer.
 		if _, err := context.OutputBuffer.Write([]byte(trailer_string)); err != nil {

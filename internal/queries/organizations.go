@@ -2,10 +2,12 @@ package queries
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shurco/gosign/internal/models"
@@ -68,11 +70,12 @@ func (q *OrganizationQueries) GetOrganization(ctx context.Context, id string) (*
 		&org.CreatedAt,
 		&org.UpdatedAt,
 	)
-
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-
 	return &org, nil
 }
 

@@ -1,39 +1,13 @@
 package pdf
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/signintech/gopdf"
+	"github.com/shurco/gosign/internal/models"
 )
-
-func makePDFBytes(t *testing.T, pages int) []byte {
-	t.Helper()
-	if pages <= 0 {
-		pages = 1
-	}
-	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-	fonts := addStandardFonts(&pdf, "")
-	if !fonts.NormalOK {
-		t.Skip("no TTF fonts available for gopdf")
-	}
-	for i := 0; i < pages; i++ {
-		pdf.AddPage()
-		if err := pdf.SetFont(fonts.NormalName, "", 10); err != nil {
-			t.Fatalf("failed to set font: %v", err)
-		}
-		pdf.SetXY(50, 50)
-		pdf.Cell(nil, "test")
-	}
-	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
-		t.Fatalf("failed to build test PDF: %v", err)
-	}
-	return buf.Bytes()
-}
 
 func TestFillFields(t *testing.T) {
 	tests := []struct {
@@ -80,32 +54,23 @@ func TestFillFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip if test file doesn't exist and test doesn't expect error
 			if _, err := os.Stat(tt.input.PDFPath); os.IsNotExist(err) && !tt.wantErr {
 				t.Skip("Test PDF file not found")
 			}
 
 			result, err := FillFields(tt.input)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FillFields() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
-
-			if !tt.wantErr && tt.checkFunc != nil {
-				if !tt.checkFunc(result) {
-					t.Errorf("FillFields() result validation failed")
-				}
+			if !tt.wantErr && tt.checkFunc != nil && !tt.checkFunc(result) {
+				t.Errorf("FillFields() result validation failed")
 			}
 		})
 	}
 }
 
 func TestMergeSignatures(t *testing.T) {
-	// Create sample PNG signature for testing
-	sampleSignature := []byte{
-		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG header
-	}
+	sampleSignature := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
 
 	tests := []struct {
 		name      string
@@ -116,7 +81,7 @@ func TestMergeSignatures(t *testing.T) {
 		{
 			name: "empty signatures returns original PDF",
 			input: MergeSignaturesInput{
-				BasePDF:    makePDFBytes(t, 1),
+				BasePDF:    buildTestPDF(t, 1, ""),
 				Signatures: []SignatureInfo{},
 			},
 			wantErr: false,
@@ -127,7 +92,7 @@ func TestMergeSignatures(t *testing.T) {
 		{
 			name: "merge single signature",
 			input: MergeSignaturesInput{
-				BasePDF: makePDFBytes(t, 1),
+				BasePDF: buildTestPDF(t, 1, ""),
 				Signatures: []SignatureInfo{
 					{
 						ImageData: sampleSignature,
@@ -149,23 +114,18 @@ func TestMergeSignatures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := MergeSignatures(tt.input)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MergeSignatures() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
-
-			if !tt.wantErr && tt.checkFunc != nil {
-				if !tt.checkFunc(result) {
-					t.Errorf("MergeSignatures() result validation failed")
-				}
+			if !tt.wantErr && tt.checkFunc != nil && !tt.checkFunc(result) {
+				t.Errorf("MergeSignatures() result validation failed")
 			}
 		})
 	}
 }
 
 func TestAppendAuditTrail(t *testing.T) {
-	minimalPDF := makePDFBytes(t, 1)
+	minimalPDF := buildTestPDF(t, 1, "")
 
 	tests := []struct {
 		name        string
@@ -200,55 +160,72 @@ func TestAppendAuditTrail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := AppendAuditTrail(tt.basePDF, tt.auditTrail)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("AppendAuditTrail() error = %v, wantErr %v", err, tt.wantErr)
+			if !assertErrorWants(t, err, tt.wantErr) {
 				return
 			}
-
-			if !tt.wantErr && tt.checkResult != nil {
-				if !tt.checkResult(result) {
-					t.Errorf("AppendAuditTrail() result validation failed")
-				}
+			if !tt.wantErr && tt.checkResult != nil && !tt.checkResult(result) {
+				t.Errorf("AppendAuditTrail() result validation failed")
 			}
 		})
 	}
 }
 
-func TestMain(m *testing.M) {
-	// Setup test data directory
-	testDataDir := "testdata"
-	if err := os.MkdirAll(testDataDir, 0755); err != nil {
-		panic(err)
+func TestGenerateAuditTrail(t *testing.T) {
+	ts := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	done := ts.Add(time.Hour)
+	sub := &models.Submission{ID: "sub-1", CreatedAt: ts}
+	signers := []*models.Submitter{
+		{Name: "Alice", Email: "a@example.com", CompletedAt: &done},
+	}
+	events := []*models.Event{
+		{Type: models.EventSubmissionCreated, CreatedAt: ts},
 	}
 
-	// Create a minimal test PDF if it doesn't exist
-	testPDFPath := filepath.Join(testDataDir, "sample.pdf")
-	if _, err := os.Stat(testPDFPath); os.IsNotExist(err) {
-		pdf := gopdf.GoPdf{}
-		pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
-		pdf.AddPage()
-		fonts := addStandardFonts(&pdf, "")
-		if fonts.NormalOK {
-			_ = pdf.SetFont(fonts.NormalName, "", 10)
-		}
-		pdf.SetXY(50, 50)
-		pdf.Cell(nil, "test")
-		var buf bytes.Buffer
-		if err := pdf.Write(&buf); err != nil {
-			panic(err)
-		}
-		pdfBytes := buf.Bytes()
-		if err := os.WriteFile(testPDFPath, pdfBytes, 0644); err != nil {
-			panic(err)
-		}
+	out, err := GenerateAuditTrail(GenerateAuditTrailInput{
+		Submission: sub,
+		Submitters: signers,
+		Events:     events,
+	})
+	if err != nil {
+		t.Fatalf("GenerateAuditTrail: %v", err)
 	}
-
-	// Run tests
-	code := m.Run()
-
-	// Cleanup can be added here if needed
-
-	os.Exit(code)
+	assertPDFHeader(t, out)
+	if n := pageCountFromBytes(t, out); n < 1 {
+		t.Fatalf("expected ≥1 page, got %d", n)
+	}
 }
 
+func TestAssembleDocument(t *testing.T) {
+	base := buildTestPDF(t, 1, "")
+	pngHeader := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+	ts := time.Date(2024, 1, 2, 15, 4, 5, 0, time.UTC)
+
+	out, err := AssembleDocument(base, []SignatureInfo{
+		{Page: 1, X: 10, Y: 10, Width: 20, Height: 20, ImageData: pngHeader},
+	}, GenerateAuditTrailInput{
+		Submission: &models.Submission{ID: "s1", CreatedAt: ts},
+		Submitters: []*models.Submitter{{Name: "Bob", Email: "b@example.com"}},
+		Events:     nil,
+	})
+	if err != nil {
+		t.Fatalf("AssembleDocument: %v", err)
+	}
+	assertPDFHeader(t, out)
+	if n := pageCountFromBytes(t, out); n < 2 {
+		t.Fatalf("expected at least base + audit pages, got %d", n)
+	}
+}
+
+func TestMain(m *testing.M) {
+	testDataDir := "testdata"
+	if err := os.MkdirAll(testDataDir, 0o755); err != nil {
+		panic(err)
+	}
+	testPDFPath := filepath.Join(testDataDir, "sample.pdf")
+	if _, err := os.Stat(testPDFPath); os.IsNotExist(err) {
+		if b, err := buildTestPDFData(1, "test"); err == nil {
+			_ = os.WriteFile(testPDFPath, b, 0o644)
+		}
+	}
+	os.Exit(m.Run())
+}

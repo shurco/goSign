@@ -1,31 +1,35 @@
 package queries
 
 import (
-	"database/sql"
+	"context"
+	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shurco/gosign/internal/models"
 )
 
 // APIKeyRepository implements API key storage operations
 type APIKeyRepository struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
 // NewAPIKeyRepository creates new API key repository
-func NewAPIKeyRepository(db *sql.DB) *APIKeyRepository {
-	return &APIKeyRepository{db: db}
+func NewAPIKeyRepository(pool *pgxpool.Pool) *APIKeyRepository {
+	return &APIKeyRepository{pool: pool}
 }
 
-// GetByKeyHash retrieves API key by hash
+// GetByKeyHash retrieves API key by hash; returns nil, nil when not found.
 func (r *APIKeyRepository) GetByKeyHash(keyHash string) (*models.APIKey, error) {
-	var apiKey models.APIKey
-	query := `
+	const query = `
 		SELECT id, name, key_hash, account_id, enabled, last_used_at, expires_at, created_at, updated_at
-		FROM api_keys
+		FROM api_key
 		WHERE key_hash = $1
 	`
-	err := r.db.QueryRow(query, keyHash).Scan(
+	var apiKey models.APIKey
+	err := r.pool.QueryRow(context.Background(), query, keyHash).Scan(
 		&apiKey.ID,
 		&apiKey.Name,
 		&apiKey.KeyHash,
@@ -36,7 +40,7 @@ func (r *APIKeyRepository) GetByKeyHash(keyHash string) (*models.APIKey, error) 
 		&apiKey.CreatedAt,
 		&apiKey.UpdatedAt,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -45,21 +49,28 @@ func (r *APIKeyRepository) GetByKeyHash(keyHash string) (*models.APIKey, error) 
 	return &apiKey, nil
 }
 
-// UpdateLastUsed updates last used timestamp
+// UpdateLastUsed updates last used timestamp; returns pgx.ErrNoRows if key not found.
 func (r *APIKeyRepository) UpdateLastUsed(keyID string, lastUsed time.Time) error {
-	query := `UPDATE api_keys SET last_used_at = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, lastUsed, keyID)
-	return err
+	const query = `UPDATE api_key SET last_used_at = $1 WHERE id = $2`
+	tag, err := r.pool.Exec(context.Background(), query, lastUsed, keyID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
-// Create creates new API key
+// Create inserts a new API key and populates its ID from RETURNING.
 func (r *APIKeyRepository) Create(apiKey *models.APIKey) error {
-	query := `
-		INSERT INTO api_keys (name, key_hash, account_id, enabled, expires_at, created_at, updated_at)
+	const query = `
+		INSERT INTO api_key (name, key_hash, account_id, enabled, expires_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	return r.db.QueryRow(
+	return r.pool.QueryRow(
+		context.Background(),
 		query,
 		apiKey.Name,
 		apiKey.KeyHash,
@@ -71,14 +82,15 @@ func (r *APIKeyRepository) Create(apiKey *models.APIKey) error {
 	).Scan(&apiKey.ID)
 }
 
-// Update updates API key
+// Update saves changes to an existing API key; returns pgx.ErrNoRows if key not found.
 func (r *APIKeyRepository) Update(apiKey *models.APIKey) error {
-	query := `
-		UPDATE api_keys
+	const query = `
+		UPDATE api_key
 		SET name = $1, enabled = $2, expires_at = $3, updated_at = $4
 		WHERE id = $5
 	`
-	_, err := r.db.Exec(
+	tag, err := r.pool.Exec(
+		context.Background(),
 		query,
 		apiKey.Name,
 		apiKey.Enabled,
@@ -86,25 +98,37 @@ func (r *APIKeyRepository) Update(apiKey *models.APIKey) error {
 		apiKey.UpdatedAt,
 		apiKey.ID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
-// Delete deletes API key
+// Delete removes an API key by ID; returns pgx.ErrNoRows if key not found.
 func (r *APIKeyRepository) Delete(keyID string) error {
-	query := `DELETE FROM api_keys WHERE id = $1`
-	_, err := r.db.Exec(query, keyID)
-	return err
+	const query = `DELETE FROM api_key WHERE id = $1`
+	tag, err := r.pool.Exec(context.Background(), query, keyID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
-// ListByAccount lists all API keys for account
+// ListByAccount returns all API keys for an account ordered by creation date.
 func (r *APIKeyRepository) ListByAccount(accountID string) ([]*models.APIKey, error) {
-	query := `
+	const query = `
 		SELECT id, name, key_hash, account_id, enabled, last_used_at, expires_at, created_at, updated_at
-		FROM api_keys
+		FROM api_key
 		WHERE account_id = $1
 		ORDER BY created_at DESC
 	`
-	rows, err := r.db.Query(query, accountID)
+	rows, err := r.pool.Query(context.Background(), query, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +137,7 @@ func (r *APIKeyRepository) ListByAccount(accountID string) ([]*models.APIKey, er
 	var keys []*models.APIKey
 	for rows.Next() {
 		var key models.APIKey
-		err := rows.Scan(
+		if err := rows.Scan(
 			&key.ID,
 			&key.Name,
 			&key.KeyHash,
@@ -123,13 +147,10 @@ func (r *APIKeyRepository) ListByAccount(accountID string) ([]*models.APIKey, er
 			&key.ExpiresAt,
 			&key.CreatedAt,
 			&key.UpdatedAt,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
 		keys = append(keys, &key)
 	}
-
 	return keys, rows.Err()
 }
-
