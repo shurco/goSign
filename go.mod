@@ -11,7 +11,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/peterldowns/pgtestdb v0.1.1
