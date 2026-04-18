@@ -42,7 +42,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "sass": "^1.98.0",
     "tailwindcss": "^4.2.2",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.57.1",
     "vite": "^8.0.1",
     "vite-plugin-svg-icons": "^2.0.1",
