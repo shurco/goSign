@@ -132,7 +132,7 @@ func New() error {
 		BodyLimit: 50 * 1024 * 1024,
 	})
 
-	middleware.Fiber(app, log)
+	middleware.Fiber(app, log, cfg)
 	routes.SiteRoutes(app)
 	app.Use("/drive/pages", static.New(appdir.LcPages()))
 	app.Use("/drive/signed", static.New(appdir.LcSigned()))
@@ -205,7 +205,7 @@ func New() error {
 
 	// Listen on port
 	go func() {
-		if err := app.Listen(cfg.HTTPAddr); err != nil {
+		if err := app.Listen(cfg.HTTPAddr, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
 			log.Err(err).Send()
 		}
 	}()

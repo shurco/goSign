@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -11,8 +13,8 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/rs/zerolog"
-	"time"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/pkg/logging"
 )
 
@@ -48,28 +50,38 @@ func requestLogger(logger *zerolog.Logger) fiber.Handler {
 	}
 }
 
-// Fiber applies common middleware to the Fiber app
-func Fiber(a *fiber.App, log *logging.Logger) {
+// Fiber applies common middleware to the Fiber app.
+// With GOSIGN_CORS_ALLOWED_ORIGINS (or dev defaults when GOSIGN_DEV_MODE), credentialed
+// cross-origin requests are allowed for those origins only. Otherwise credentials are off
+// so Fiber v3 accepts the default wildcard AllowOrigins.
+func Fiber(a *fiber.App, log *logging.Logger, cfg *config.Config) {
+	corsCfg := cors.Config{
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-API-Key",
+			"X-Organization-ID",
+		},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"PATCH",
+			"DELETE",
+			"OPTIONS",
+		},
+	}
+	if len(cfg.CORSAllowedOrigins) > 0 {
+		corsCfg.AllowCredentials = true
+		corsCfg.AllowOrigins = cfg.CORSAllowedOrigins
+	} else {
+		corsCfg.AllowCredentials = false
+	}
+
 	a.Use(
-		cors.New(cors.Config{
-			AllowCredentials: true,
-			AllowHeaders: []string{
-				"Origin",
-				"Content-Type",
-				"Accept",
-				"Authorization",
-				"X-API-Key",
-				"X-Organization-ID",
-			},
-			AllowMethods: []string{
-				"GET",
-				"POST",
-				"PUT",
-				"PATCH",
-				"DELETE",
-				"OPTIONS",
-			},
-		}),
+		cors.New(corsCfg),
 		earlydata.New(),
 		helmet.New(),
 		etag.New(),

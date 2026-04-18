@@ -1,4 +1,9 @@
-import { createRouter, createWebHistory, type RouteLocationNormalized } from "vue-router";
+import {
+  createRouter,
+  createWebHistory,
+  type NavigationGuardReturn,
+  type RouteLocationNormalized
+} from "vue-router";
 import * as NProgress from "nprogress";
 
 const router = createRouter({
@@ -190,7 +195,7 @@ const router = createRouter({
   ]
 });
 
-let pendingNavigation: Promise<void> | null = null;
+let pendingNavigation: Promise<NavigationGuardReturn> | null = null;
 let cachedAdminRole: { role: number | null; checkedAt: number } = { role: null, checkedAt: 0 };
 const ADMIN_CACHE_TTL = 5 * 60 * 1000;
 
@@ -198,7 +203,7 @@ window.addEventListener("gosign:clear-admin-cache", () => {
   cachedAdminRole = { role: null, checkedAt: 0 };
 });
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   if (pendingNavigation) {
     try {
       await pendingNavigation;
@@ -209,15 +214,14 @@ router.beforeEach(async (to, from, next) => {
 
   NProgress.start();
 
-  pendingNavigation = (async () => {
+  pendingNavigation = (async (): Promise<NavigationGuardReturn> => {
     try {
       await loadLayoutMiddleware(to);
 
       if (to.meta.requiresAuth) {
         const token = localStorage.getItem("access_token");
         if (!token) {
-          next({ name: "signin", query: { redirect: to.fullPath } });
-          return;
+          return { name: "signin", query: { redirect: to.fullPath } };
         }
       }
 
@@ -231,13 +235,11 @@ router.beforeEach(async (to, from, next) => {
           } catch (error) {
             console.error("Failed to check admin access:", error);
             cachedAdminRole = { role: null, checkedAt: 0 };
-            next({ name: "signin", query: { redirect: to.fullPath } });
-            return;
+            return { name: "signin", query: { redirect: to.fullPath } };
           }
         }
         if (cachedAdminRole.role !== 3) {
-          next({ name: "dashboard" });
-          return;
+          return { name: "dashboard" };
         }
       }
 
@@ -245,18 +247,17 @@ router.beforeEach(async (to, from, next) => {
       if (authPages.includes(to.name as string)) {
         const token = localStorage.getItem("access_token");
         if (token) {
-          next({ name: "dashboard" });
-          return;
+          return { name: "dashboard" };
         }
       }
 
-      next();
+      return true;
     } finally {
       pendingNavigation = null;
     }
   })();
 
-  await pendingNavigation;
+  return await pendingNavigation;
 });
 
 router.afterEach(() => {
