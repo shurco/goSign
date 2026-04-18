@@ -26,7 +26,10 @@
       :field="field"
       :type-index="fields.filter((f: any) => f.type === field.type).indexOf(field)"
       :editable="editable && (!dragField || dragField !== field)"
-      :default-field="(defaultFields as any[]).find((f: any) => typeof f === 'string' ? f === field.name : f.name === field.name) ?? null"
+      :default-field="
+        (defaultFields as any[]).find((f: any) => (typeof f === 'string' ? f === field.name : f.name === field.name)) ??
+        null
+      "
       :is-selected="!!(selectedField && selectedField.id === field.id)"
       :draggable="editable"
       @dragstart="dragField = field"
@@ -67,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, type PropType } from "vue";
+import { computed, inject, onMounted, type PropType, ref } from "vue";
 import Field from "@/components/field/Field.vue";
 import FieldSubmitter from "@/components/field/Submitter.vue";
 import { fieldIcons as fieldIconsConst, fieldNames as fieldNamesConst } from "@/components/field/constants.ts";
@@ -114,13 +117,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits([
-  "set-draw",
-  "set-drag",
-  "drag-end",
-  "scroll-to-area",
-  "change-submitter"
-]);
+const emit = defineEmits(["set-draw", "set-drag", "drag-end", "scroll-to-area", "change-submitter"]);
 
 const save = inject<() => void>("save", () => {});
 

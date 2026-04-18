@@ -7,43 +7,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// NormalizePassword func for a returning the users input as a byte slice.
-func NormalizePassword(p string) []byte {
-	return []byte(p)
-}
+// DefaultCost is the bcrypt cost used for hashing user passwords.
+// Kept configurable (not hardcoded) to simplify tuning.
+const DefaultCost = bcrypt.MinCost
 
-// GeneratePassword func for a making hash & salt with user password.
-func GeneratePassword(p string) string {
-	bytePwd := NormalizePassword(p)
-
-	hash, err := bcrypt.GenerateFromPassword(bytePwd, bcrypt.MinCost)
+// GeneratePassword returns a bcrypt hash of the plain-text password.
+// It returns an empty string and a non-nil error on failure (e.g. input longer
+// than 72 bytes) so that callers cannot mistake an error message for a hash.
+func GeneratePassword(p string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(p), DefaultCost)
 	if err != nil {
-		return err.Error()
+		return "", err
 	}
-
-	return string(hash)
+	return string(hash), nil
 }
 
-// ComparePasswords func for a comparing password.
+// ComparePasswords reports whether inputPwd matches hashedPwd.
 func ComparePasswords(hashedPwd, inputPwd string) bool {
-	byteHash := NormalizePassword(hashedPwd)
-	byteInput := NormalizePassword(inputPwd)
-
-	if err := bcrypt.CompareHashAndPassword(byteHash, byteInput); err != nil {
-		return false
-	}
-
-	return true
+	return bcrypt.CompareHashAndPassword([]byte(hashedPwd), []byte(inputPwd)) == nil
 }
 
-// NewToken ...
+// NewToken returns a short, hex-encoded MD5 digest of a bcrypt hash of text.
+// It is used as a one-shot opaque token (NOT for authenticating passwords).
 func NewToken(text string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}
 
-	newMD5 := md5.New()
-	newMD5.Write(hash)
-	return hex.EncodeToString(newMD5.Sum(nil)), nil
+	digest := md5.Sum(hash)
+	return hex.EncodeToString(digest[:]), nil
 }

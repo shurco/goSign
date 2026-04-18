@@ -7,7 +7,10 @@
       @change="handleFileChange"
       @clear="handleClear"
     />
-    <div v-if="type === 'image' && modelValue" class="mt-2 rounded-md border border-[var(--color-base-300)] bg-[--color-base-100] p-2">
+    <div
+      v-if="type === 'image' && modelValue"
+      class="mt-2 rounded-md border border-[var(--color-base-300)] bg-[--color-base-100] p-2"
+    >
       <img :src="modelValue" alt="" class="max-h-32 w-full object-contain" />
     </div>
     <div v-if="error" class="mt-2 text-sm text-[var(--color-error)]">{{ error }}</div>
@@ -64,7 +67,9 @@ function handleFileChange(file: File): void {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      if (result) emit("update:modelValue", result);
+      if (result) {
+        emit("update:modelValue", result);
+      }
       emit("blur");
     };
     reader.readAsDataURL(file);

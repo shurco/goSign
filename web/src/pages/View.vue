@@ -135,8 +135,7 @@ const templateId = computed(() => {
   // - /templates/:id/view
   // - /templates/:id/view?template_id=... (or ?id=...)
   const fromParams = (route.params?.id as string | undefined) || "";
-  const fromQuery =
-    (route.query?.template_id as string | undefined) || (route.query?.id as string | undefined) || "";
+  const fromQuery = (route.query?.template_id as string | undefined) || (route.query?.id as string | undefined) || "";
   return (fromParams || fromQuery || "").trim();
 });
 
@@ -560,7 +559,6 @@ function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
 }
 
 async function save({ force } = { force: false }): Promise<object> {
-
   if (!autosave.value && !force) {
     return Promise.resolve({});
   }

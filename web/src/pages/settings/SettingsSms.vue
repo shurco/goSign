@@ -71,7 +71,9 @@ onMounted(async () => {
 async function load(): Promise<void> {
   try {
     const res = await fetchWithAuth("/api/v1/settings");
-    if (!res.ok) return;
+    if (!res.ok) {
+      return;
+    }
     const data = await res.json();
     const settings = data.data || data;
     if (settings.sms) {
@@ -138,4 +140,3 @@ async function sendTest(): Promise<void> {
   }
 }
 </script>
-

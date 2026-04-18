@@ -3,8 +3,8 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">{{ $t('dashboard.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-600">{{ $t('dashboard.description') }}</p>
+        <h1 class="text-3xl font-bold">{{ $t("dashboard.title") }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t("dashboard.description") }}</p>
       </div>
     </div>
 
@@ -13,9 +13,11 @@
       <Card>
         <div class="flex items-center justify-between">
           <div>
-            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.totalSubmissions') }}</div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t("dashboard.totalSubmissions") }}</div>
             <div class="mb-1 text-3xl font-bold text-[var(--color-primary)]">{{ stats.total_submissions }}</div>
-            <div class="text-sm text-gray-500">{{ stats.pending_submissions }} {{ $t('dashboard.pendingSubmissions').toLowerCase() }}</div>
+            <div class="text-sm text-gray-500">
+              {{ stats.pending_submissions }} {{ $t("dashboard.pendingSubmissions").toLowerCase() }}
+            </div>
           </div>
           <SvgIcon name="document" class="h-12 w-12 text-[var(--color-primary)] opacity-20" />
         </div>
@@ -24,9 +26,9 @@
       <Card>
         <div class="flex items-center justify-between">
           <div>
-            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.completedSubmissions') }}</div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t("dashboard.completedSubmissions") }}</div>
             <div class="mb-1 text-3xl font-bold text-[var(--color-success)]">{{ stats.completed_submissions }}</div>
-            <div class="text-sm text-gray-500">{{ completionRate }}% {{ $t('common.complete') }}</div>
+            <div class="text-sm text-gray-500">{{ completionRate }}% {{ $t("common.complete") }}</div>
           </div>
           <SvgIcon name="check-circle" class="h-12 w-12 text-[var(--color-success)] opacity-20" />
         </div>
@@ -35,9 +37,9 @@
       <Card>
         <div class="flex items-center justify-between">
           <div>
-            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.totalTemplates') }}</div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t("dashboard.totalTemplates") }}</div>
             <div class="mb-1 text-3xl font-bold text-[var(--color-primary)]">{{ stats.total_templates }}</div>
-            <div class="text-sm text-gray-500">{{ stats.active_templates || 0 }} {{ $t('dashboard.active') }}</div>
+            <div class="text-sm text-gray-500">{{ stats.active_templates || 0 }} {{ $t("dashboard.active") }}</div>
           </div>
           <SvgIcon name="templates" class="h-12 w-12 text-[var(--color-primary)] opacity-20" />
         </div>
@@ -46,9 +48,9 @@
       <Card>
         <div class="flex items-center justify-between">
           <div>
-            <div class="mb-1 text-sm text-gray-600">{{ $t('dashboard.submitters') }}</div>
+            <div class="mb-1 text-sm text-gray-600">{{ $t("dashboard.submitters") }}</div>
             <div class="mb-1 text-3xl font-bold text-[var(--color-info)]">{{ stats.total_submitters }}</div>
-            <div class="text-sm text-gray-500">{{ $t('dashboard.thisMonth') }}</div>
+            <div class="text-sm text-gray-500">{{ $t("dashboard.thisMonth") }}</div>
           </div>
           <SvgIcon name="users" class="h-12 w-12 text-[var(--color-info)] opacity-20" />
         </div>
@@ -60,7 +62,7 @@
       <!-- Recent Submissions -->
       <Card>
         <template #header>
-          <h2 class="text-lg font-semibold">{{ $t('dashboard.recentSubmissions') }}</h2>
+          <h2 class="text-lg font-semibold">{{ $t("dashboard.recentSubmissions") }}</h2>
         </template>
         <ResourceTable
           :data="recentSubmissions"
@@ -73,17 +75,17 @@
           @row-click="viewSubmission"
         >
           <template #cell-title="{ value, item }">
-            <button
-              type="button"
-              class="link text-left"
-              @click.stop="openCompletedDocument(item as Submission)"
-            >
+            <button type="button" class="link text-left" @click.stop="openCompletedDocument(item as Submission)">
               {{ String(value || "") }}
             </button>
           </template>
 
           <template #cell-status="{ value, item }">
-            <button type="button" class="inline-flex cursor-pointer" @click.stop="openStatusHistory(item as Submission)">
+            <button
+              type="button"
+              class="inline-flex cursor-pointer"
+              @click.stop="openStatusHistory(item as Submission)"
+            >
               <Badge size="sm" :variant="getBadgeVariantForSubmissionStatus(value)">
                 {{ statusLabel(value) }}
               </Badge>
@@ -92,7 +94,9 @@
         </ResourceTable>
         <template #footer>
           <div class="flex justify-end">
-            <Button variant="ghost" size="sm" @click="$router.push('/submissions')">{{ $t('common.viewAll') }} →</Button>
+            <Button variant="ghost" size="sm" @click="$router.push('/submissions')"
+              >{{ $t("common.viewAll") }} →</Button
+            >
           </div>
         </template>
       </Card>
@@ -100,25 +104,34 @@
       <!-- Activity Timeline -->
       <Card>
         <template #header>
-          <h2 class="text-lg font-semibold">{{ $t('dashboard.recentActivity') }}</h2>
+          <h2 class="text-lg font-semibold">{{ $t("dashboard.recentActivity") }}</h2>
         </template>
         <div class="pt-4">
-          <div v-if="recentEvents.length === 0" class="py-6 text-center text-gray-500">{{ $t('dashboard.noActivity') }}</div>
+          <div v-if="recentEvents.length === 0" class="py-6 text-center text-gray-500">
+            {{ $t("dashboard.noActivity") }}
+          </div>
           <div v-else class="space-y-4">
             <div v-for="event in recentEvents" :key="event.id" class="flex items-start gap-3">
-              <div class="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-base-200)]">
+              <div
+                class="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-base-200)]"
+              >
                 <span class="text-base">{{ getEventIcon(event.type) }}</span>
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <div class="font-medium">{{ event.message }}</div>
-                  <span v-if="event.document_name" class="rounded-full bg-[var(--color-base-200)] px-2 py-0.5 text-xs text-gray-700">
+                  <span
+                    v-if="event.document_name"
+                    class="rounded-full bg-[var(--color-base-200)] px-2 py-0.5 text-xs text-gray-700"
+                  >
                     {{ event.document_name }}
                   </span>
                 </div>
                 <div class="text-sm text-gray-500">{{ formatEventDate(event.created_at) }}</div>
-                <div v-if="event.reason" class="text-sm text-gray-500 font-mono">{{ $t('common.reasonLabel') }} {{ event.reason }}</div>
-                <div v-if="event.ip" class="text-sm text-gray-500 font-mono">IP address: {{ event.ip }}</div>
+                <div v-if="event.reason" class="font-mono text-sm text-gray-500">
+                  {{ $t("common.reasonLabel") }} {{ event.reason }}
+                </div>
+                <div v-if="event.ip" class="font-mono text-sm text-gray-500">IP address: {{ event.ip }}</div>
                 <div v-if="event.location" class="text-sm text-gray-500">Location: {{ event.location }}</div>
               </div>
             </div>
@@ -186,11 +199,11 @@ const recentEvents = ref<Event[]>([]);
 const { t, te } = useI18n();
 
 const submissionColumns = computed(() => [
-  { key: "title", label: t('submissions.titleField'), sortable: true },
-  { key: "status", label: t('submissions.status'), sortable: true },
+  { key: "title", label: t("submissions.titleField"), sortable: true },
+  { key: "status", label: t("submissions.status"), sortable: true },
   {
     key: "created_at",
-    label: t('submissions.created'),
+    label: t("submissions.created"),
     sortable: true,
     formatter: (value: unknown): string => new Date(String(value)).toLocaleDateString()
   }
@@ -310,16 +323,16 @@ function formatDate(dateString: string): string {
   const days = Math.floor(diff / 86400000);
 
   if (minutes < 1) {
-    return t('time.justNow');
+    return t("time.justNow");
   }
   if (minutes < 60) {
-    return t('time.minutesAgo', { minutes });
+    return t("time.minutesAgo", { minutes });
   }
   if (hours < 24) {
-    return t('time.hoursAgo', { hours });
+    return t("time.hoursAgo", { hours });
   }
   if (days < 7) {
-    return t('time.daysAgo', { days });
+    return t("time.daysAgo", { days });
   }
 
   return date.toLocaleDateString();

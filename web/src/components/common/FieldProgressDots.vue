@@ -4,10 +4,10 @@
       v-for="(field, index) in fields"
       :key="field.id"
       type="button"
-      class="field-dot relative h-2 w-2 shrink-0 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+      class="field-dot focus-visible:ring-primary relative h-2 w-2 shrink-0 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
       :class="dotClasses(field)"
-      :title="getFieldLabel ? getFieldLabel(field) : (field.label || field.name || `Field ${index + 1}`)"
-      :aria-label="getFieldLabel ? getFieldLabel(field) : (field.label || field.name || `Field ${index + 1}`)"
+      :title="getFieldLabel ? getFieldLabel(field) : field.label || field.name || `Field ${index + 1}`"
+      :aria-label="getFieldLabel ? getFieldLabel(field) : field.label || field.name || `Field ${index + 1}`"
       :aria-current="currentFieldId === field.id ? 'true' : undefined"
       @click="onSelect(field.id)"
     />
@@ -34,7 +34,7 @@ function dotClasses(field: Field): Record<string, boolean> {
   return {
     "bg-neutral-400 hover:bg-neutral-500": !filled && !current,
     "bg-success": filled && !current,
-    "bg-primary": current,
+    "bg-primary": current
   };
 }
 

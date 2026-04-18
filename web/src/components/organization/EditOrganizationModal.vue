@@ -16,7 +16,13 @@
           :label="$t('organizations.organizationName')"
           :placeholder="$t('organizations.enterOrganizationName')"
           required
-          @update:model-value="(val: string | boolean | string[]) => { const s = String(val); formData.name = s; localName = s; }"
+          @update:model-value="
+            (val: string | boolean | string[]) => {
+              const s = String(val);
+              formData.name = s;
+              localName = s;
+            }
+          "
         />
 
         <FormControl :label="$t('organizations.description')">
@@ -25,19 +31,25 @@
             rows="3"
             class="min-h-[3rem] w-full rounded-lg border border-[var(--color-base-300)] bg-[var(--color-base-100)] px-4 py-3 text-sm text-[var(--color-base-content)] transition-all duration-200 hover:border-[var(--color-base-content)]/20 focus:border-[var(--color-primary)] focus:outline-2 focus:outline-offset-2 focus:outline-[var(--color-primary)] focus:outline-none"
             :placeholder="$t('organizations.describeOrganization')"
-            @input="(e: Event) => { const val = (e.target as HTMLTextAreaElement).value; formData.description = val; localDescription = val; }"
+            @input="
+              (e: Event) => {
+                const val = (e.target as HTMLTextAreaElement).value;
+                formData.description = val;
+                localDescription = val;
+              }
+            "
           ></textarea>
         </FormControl>
       </div>
     </template>
-    
+
     <template #footer="{ submit, cancel, isSubmitting }">
       <div class="flex justify-end gap-3">
         <Button variant="ghost" :disabled="isSubmitting" @click="cancel">
-          {{ $t('common.cancel') }}
+          {{ $t("common.cancel") }}
         </Button>
         <Button variant="primary" :loading="isSubmitting" :disabled="isSubmitting" @click="submit">
-          {{ $t('common.save') }}
+          {{ $t("common.save") }}
         </Button>
       </div>
     </template>
@@ -99,13 +111,13 @@ watch(
       // Initialize local values immediately
       localName.value = org.name || "";
       localDescription.value = org.description || "";
-      
+
       // Wait for modal to fully render
       await nextTick();
       await nextTick();
-      
+
       // Initialize formData in FormModal
-      if (formModalRef.value && typeof formModalRef.value.setFormData === 'function') {
+      if (formModalRef.value && typeof formModalRef.value.setFormData === "function") {
         formModalRef.value.setFormData({
           name: localName.value,
           description: localDescription.value
@@ -115,7 +127,7 @@ watch(
       // Reset form when modal closes
       localName.value = "";
       localDescription.value = "";
-      if (formModalRef.value && typeof formModalRef.value.resetForm === 'function') {
+      if (formModalRef.value && typeof formModalRef.value.resetForm === "function") {
         formModalRef.value.resetForm();
       }
     }
@@ -131,7 +143,7 @@ const updateOrganization = async (formData: Record<string, unknown>) => {
   // Use local values if formData is empty, otherwise use formData
   const name = ((formData.name as string) || localName.value)?.trim();
   const description = ((formData.description as string) || localDescription.value)?.trim() || "";
-  
+
   if (!name) {
     return;
   }
@@ -142,15 +154,14 @@ const updateOrganization = async (formData: Record<string, unknown>) => {
       description: description
     });
 
-
     // Response structure: { success: true, message: "...", data: { organization: {...} } }
     let organization = null;
 
     if (response && response.data) {
       // Check if data.organization exists (nested structure)
-      if (response.data.organization && typeof response.data.organization === 'object') {
+      if (response.data.organization && typeof response.data.organization === "object") {
         organization = response.data.organization;
-      } 
+      }
       // Check if data itself is the organization (has id field)
       else if (response.data.id) {
         organization = response.data;
@@ -173,14 +184,14 @@ const updateOrganization = async (formData: Record<string, unknown>) => {
       emit("close");
     } else {
       console.error("Invalid response structure - no valid organization found:", response);
-      alert(t('organizations.updateError') || 'Failed to update organization');
+      alert(t("organizations.updateError") || "Failed to update organization");
     }
   } catch (error: any) {
     const isRedirecting = window.location.pathname.includes("/auth/") || window.location.pathname.includes("/signin");
 
     if (!isRedirecting) {
       console.error("Failed to update organization:", error);
-      alert(error.message || t('organizations.updateError') || 'Failed to update organization');
+      alert(error.message || t("organizations.updateError") || "Failed to update organization");
     }
     if (isRedirecting) {
       isOpen.value = false;
@@ -188,5 +199,4 @@ const updateOrganization = async (formData: Record<string, unknown>) => {
     }
   }
 };
-
 </script>

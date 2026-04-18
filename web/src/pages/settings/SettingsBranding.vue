@@ -24,7 +24,7 @@
     </FormControl>
 
     <div class="flex justify-end pt-4">
-      <Button variant="primary" @click="saveBranding">{{ $t('common.save') }}</Button>
+      <Button variant="primary" @click="saveBranding">{{ $t("common.save") }}</Button>
     </div>
   </div>
 </template>
@@ -84,13 +84,13 @@ async function saveBranding(): Promise<void> {
 
     if (response.ok) {
       await loadBranding();
-      alert(t('success.saved'));
+      alert(t("success.saved"));
     } else {
-      alert(t('settings.brandingSaveError'));
+      alert(t("settings.brandingSaveError"));
     }
   } catch (error) {
     console.error("Failed to save branding settings:", error);
-    alert(t('settings.brandingSaveError'));
+    alert(t("settings.brandingSaveError"));
   }
 }
 

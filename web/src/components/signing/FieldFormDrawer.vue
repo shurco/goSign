@@ -2,20 +2,22 @@
   <div
     ref="drawerEl"
     tabindex="-1"
-    class="field-form-drawer pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+    class="field-form-drawer pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
     role="region"
     aria-label="Signing actions"
     @keydown="onKeydown"
   >
     <div class="field-form-drawer__panel relative flex flex-col">
-      <div class="container mx-auto w-full max-w-4xl px-4 pb-safe">
-        <div class="field-form-drawer__card pointer-events-auto overflow-hidden rounded-t-lg border border-b-0 border-[var(--color-base-300)] bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:border-neutral-600 dark:bg-neutral-800">
+      <div class="pb-safe container mx-auto w-full max-w-4xl px-4">
+        <div
+          class="field-form-drawer__card pointer-events-auto overflow-hidden rounded-t-lg border border-b-0 border-[var(--color-base-300)] bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)] dark:border-neutral-600 dark:bg-neutral-800"
+        >
           <!-- Expandable: dots + form (no handle, no extra nav row) -->
           <Transition name="drawer-expand">
-            <div v-show="isOpen" class="flex flex-col max-h-[45vh] overflow-y-auto">
+            <div v-show="isOpen" class="flex max-h-[45vh] flex-col overflow-y-auto">
               <!-- Current field form -->
               <template v-if="field">
-                <div class="border-t border-[var(--color-base-200)] dark:border-neutral-600 px-3 py-3 first:border-t-0">
+                <div class="border-t border-[var(--color-base-200)] px-3 py-3 first:border-t-0 dark:border-neutral-600">
                   <div class="mx-auto max-w-md">
                     <label class="mb-1.5 block text-xs font-medium text-[--color-base-content]/80">
                       {{ getFieldLabel(field) }}
@@ -36,7 +38,9 @@
                       :cell-count="getCellCount(field)"
                       :price="field.preferences?.price"
                       :currency="field.preferences?.currency"
-                      :date-format="field.type === 'date' ? (field.preferences as { format?: string })?.format : undefined"
+                      :date-format="
+                        field.type === 'date' ? (field.preferences as { format?: string })?.format : undefined
+                      "
                       :signature-format="getSignatureFormat(field)"
                       :number-min="field.type === 'number' ? (field as any).validation?.min : undefined"
                       :number-max="field.type === 'number' ? (field as any).validation?.max : undefined"
@@ -48,7 +52,8 @@
                       v-if="hasWithSignatureId(field) && isFieldFilled(field) && signatureIds[field.id]"
                       class="mt-1.5 text-[11px] text-[--color-base-content]/60"
                     >
-                      {{ field.type === 'stamp' ? t('signing.stampId') : t('signing.signatureId') }}: <span class="font-mono">{{ signatureIds[field.id] }}</span>
+                      {{ field.type === "stamp" ? t("signing.stampId") : t("signing.signatureId") }}:
+                      <span class="font-mono">{{ signatureIds[field.id] }}</span>
                     </p>
                   </div>
                 </div>
@@ -57,7 +62,9 @@
           </Transition>
 
           <!-- Action bar: compact, always visible -->
-          <div class="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 border-t border-[var(--color-base-200)] dark:border-neutral-600 px-3 py-2">
+          <div
+            class="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 border-t border-[var(--color-base-200)] px-3 py-2 dark:border-neutral-600"
+          >
             <Button
               type="button"
               variant="outline"
@@ -66,9 +73,9 @@
               :disabled="prevUnfilledIndex < 0"
               @click="onNavigate('prev')"
             >
-              {{ t('common.previous') }}
+              {{ t("common.previous") }}
             </Button>
-            <div class="flex flex-1 justify-center min-w-0 py-0.5">
+            <div class="flex min-w-0 flex-1 justify-center py-0.5">
               <FieldProgressDots
                 :fields="allFields"
                 :filled-field-ids="filledFieldIds"
@@ -79,7 +86,7 @@
             </div>
             <template v-if="isFormValid">
               <Button type="button" variant="ghost" size="sm" class="min-w-0" :disabled="isSubmitting" @click="onReset">
-                {{ t('common.reset') }}
+                {{ t("common.reset") }}
               </Button>
               <Button
                 type="button"
@@ -90,7 +97,7 @@
                 :disabled="isSubmitting"
                 @click="onSubmit"
               >
-                {{ t('signing.sign') }}
+                {{ t("signing.sign") }}
               </Button>
             </template>
             <Button
@@ -101,7 +108,7 @@
               :disabled="nextUnfilledIndex < 0"
               @click="onNavigate('next')"
             >
-              {{ t('common.next') }}
+              {{ t("common.next") }}
             </Button>
           </div>
         </div>
@@ -214,7 +221,9 @@ function onSubmit(): void {
 }
 .drawer-expand-enter-active,
 .drawer-expand-leave-active {
-  transition: opacity 0.2s ease, max-height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    opacity 0.2s ease,
+    max-height 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   overflow: hidden;
 }
 .drawer-expand-enter-from,

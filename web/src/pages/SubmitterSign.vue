@@ -18,10 +18,10 @@
       <div class="mx-auto max-w-2xl rounded-lg border border-[var(--color-base-300)] bg-white">
         <div class="px-6 py-5 text-center">
           <div class="text-success mb-4 text-6xl">✓</div>
-          <h2 class="card-title justify-center text-2xl">{{ t('signing.completedTitle') }}</h2>
-          <p>{{ t('signing.completedThanks') }}</p>
+          <h2 class="card-title justify-center text-2xl">{{ t("signing.completedTitle") }}</h2>
+          <p>{{ t("signing.completedThanks") }}</p>
           <p class="text-sm text-[--color-base-content]/60">
-            {{ t('signing.completedOn') }}: {{ formatDate(submitter.completed_at) }}
+            {{ t("signing.completedOn") }}: {{ formatDate(submitter.completed_at) }}
           </p>
 
           <div class="mt-5 flex flex-col items-center gap-2">
@@ -32,10 +32,10 @@
               target="_blank"
               rel="noopener"
             >
-              {{ t('common.download') }}
+              {{ t("common.download") }}
             </a>
             <p v-else class="text-sm text-[--color-base-content]/60">
-              {{ t('signing.waitingForOthers') }}
+              {{ t("signing.waitingForOthers") }}
             </p>
           </div>
         </div>
@@ -47,10 +47,10 @@
       <div class="mx-auto max-w-2xl rounded-lg border border-[var(--color-base-300)] bg-white">
         <div class="px-6 py-5 text-center">
           <div class="text-error mb-4 text-6xl">✕</div>
-          <h2 class="card-title justify-center text-2xl">{{ t('signing.declinedTitle') }}</h2>
-          <p>{{ t('signing.declinedText') }}</p>
+          <h2 class="card-title justify-center text-2xl">{{ t("signing.declinedTitle") }}</h2>
+          <p>{{ t("signing.declinedText") }}</p>
           <p class="text-sm text-[--color-base-content]/60">
-            {{ t('signing.declinedOn') }}: {{ formatDate(submitter.declined_at) }}
+            {{ t("signing.declinedOn") }}: {{ formatDate(submitter.declined_at) }}
           </p>
         </div>
       </div>
@@ -60,64 +60,64 @@
     <div v-else-if="needsEmailOrName" class="container mx-auto px-4 py-8">
       <div class="mx-auto max-w-2xl rounded-lg border border-[var(--color-base-300)] bg-white">
         <div class="px-6 py-5">
-          <h2 class="card-title mb-4 text-2xl">{{ t('signing.enterYourInfo') }}</h2>
-          <p class="mb-6 text-[--color-base-content]/60">{{ t('signing.enterYourInfoDescription') }}</p>
+          <h2 class="card-title mb-4 text-2xl">{{ t("signing.enterYourInfo") }}</h2>
+          <p class="mb-6 text-[--color-base-content]/60">{{ t("signing.enterYourInfoDescription") }}</p>
 
-          <form @submit.prevent="handleUpdateSubmitter" novalidate>
+          <form novalidate @submit.prevent="handleUpdateSubmitter">
             <div class="space-y-4">
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-semibold">
-                  {{ t('auth.firstName') }}
-                  <span class="text-error">*</span>
-                </span>
-              </label>
-              <input
-                v-model="submitterInfo.name"
-                type="text"
-                class="input input-bordered"
-                :class="{ 'input-error': submitterInfoErrors.name }"
-                :placeholder="t('auth.firstName')"
-                @blur="validateSubmitterInfo"
-                @input="submitterInfoErrors.name = ''"
-              />
-              <label v-if="submitterInfoErrors.name" class="label">
-                <span class="label-text-alt text-error">{{ submitterInfoErrors.name }}</span>
-              </label>
-            </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-semibold">
+                    {{ t("auth.firstName") }}
+                    <span class="text-error">*</span>
+                  </span>
+                </label>
+                <input
+                  v-model="submitterInfo.name"
+                  type="text"
+                  class="input input-bordered"
+                  :class="{ 'input-error': submitterInfoErrors.name }"
+                  :placeholder="t('auth.firstName')"
+                  @blur="validateSubmitterInfo"
+                  @input="submitterInfoErrors.name = ''"
+                />
+                <label v-if="submitterInfoErrors.name" class="label">
+                  <span class="label-text-alt text-error">{{ submitterInfoErrors.name }}</span>
+                </label>
+              </div>
 
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text font-semibold">
-                  {{ t('auth.email') }}
-                  <span class="text-error">*</span>
-                </span>
-              </label>
-              <input
-                v-model="submitterInfo.email"
-                type="text"
-                class="input input-bordered"
-                :class="{ 'input-error': submitterInfoErrors.email }"
-                :placeholder="t('auth.email')"
-                @blur="validateSubmitterInfo"
-                @input="submitterInfoErrors.email = ''"
-              />
-              <label v-if="submitterInfoErrors.email" class="label">
-                <span class="label-text-alt text-error">{{ submitterInfoErrors.email }}</span>
-              </label>
-            </div>
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-semibold">
+                    {{ t("auth.email") }}
+                    <span class="text-error">*</span>
+                  </span>
+                </label>
+                <input
+                  v-model="submitterInfo.email"
+                  type="text"
+                  class="input input-bordered"
+                  :class="{ 'input-error': submitterInfoErrors.email }"
+                  :placeholder="t('auth.email')"
+                  @blur="validateSubmitterInfo"
+                  @input="submitterInfoErrors.email = ''"
+                />
+                <label v-if="submitterInfoErrors.email" class="label">
+                  <span class="label-text-alt text-error">{{ submitterInfoErrors.email }}</span>
+                </label>
+              </div>
 
-            <div class="card-actions mt-6">
-              <Button
-                type="submit"
-                variant="primary"
-                :loading="isUpdatingSubmitter"
-                :disabled="!isSubmitterInfoValid || isUpdatingSubmitter"
-              >
-                {{ t('common.continue') }}
-              </Button>
+              <div class="card-actions mt-6">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  :loading="isUpdatingSubmitter"
+                  :disabled="!isSubmitterInfoValid || isUpdatingSubmitter"
+                >
+                  {{ t("common.continue") }}
+                </Button>
+              </div>
             </div>
-          </div>
           </form>
         </div>
       </div>
@@ -141,15 +141,26 @@
             <!-- Language + Decline -->
             <div class="flex flex-wrap items-end gap-3">
               <div v-if="showLanguageSelector" class="w-full sm:w-48">
-                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t('settings.language') }}</label>
-                <select class="select select-bordered select-sm w-full" :value="signingLocale" @change="onSigningLocaleChange">
+                <label class="mb-1 block text-xs font-medium text-gray-600">{{ t("settings.language") }}</label>
+                <select
+                  class="select select-bordered select-sm w-full"
+                  :value="signingLocale"
+                  @change="onSigningLocaleChange"
+                >
                   <option v-for="(name, code) in SUPPORTED_LOCALES" :key="code" :value="code">
                     {{ name }}
                   </option>
                 </select>
               </div>
-              <Button type="button" variant="ghost" size="sm" class="border-red-300 text-red-700 hover:bg-red-50" :disabled="isSubmitting" @click="openDeclineModal">
-                {{ t('signing.decline') }}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="border-red-300 text-red-700 hover:bg-red-50"
+                :disabled="isSubmitting"
+                @click="openDeclineModal"
+              >
+                {{ t("signing.decline") }}
               </Button>
             </div>
           </div>
@@ -157,110 +168,107 @@
       </div>
 
       <!-- Full-width document preview (padding for fixed bottom panel) -->
-      <div
-        class="relative"
-        @click="onSigningAreaClick"
-      >
-              <div class="overflow-hidden">
-                <div v-for="(doc, docIndex) in sortedDocuments" :key="doc.id">
-                  <div v-for="(page, pageIndex) in getSortedPreviewImages(doc)" :key="page.id" class="relative mb-4">
-                    <div class="relative">
+      <div class="relative" @click="onSigningAreaClick">
+        <div class="overflow-hidden">
+          <div v-for="(doc, docIndex) in sortedDocuments" :key="doc.id">
+            <div v-for="(page, pageIndex) in getSortedPreviewImages(doc)" :key="page.id" class="relative mb-4">
+              <div class="relative">
+                <img
+                  :src="`${page.url}/${page.filename}`"
+                  :alt="`Page ${pageIndex + 1}`"
+                  :width="page.metadata?.width"
+                  :height="page.metadata?.height"
+                  class="mb-4 rounded border border-[#e7e2df]"
+                  loading="lazy"
+                  @load="onImageLoad"
+                />
+                <!-- Field Overlays: label outside, bordered block unchanged -->
+                <div
+                  v-for="field in getFieldsForPage(doc.id, pageNumberFromPreview(page, pageIndex))"
+                  :id="`doc-field-${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
+                  :key="`${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
+                  class="doc-field-overlay absolute cursor-pointer rounded transition"
+                  :data-field-id="field.id"
+                  :style="getFieldStyle(field, doc.id, pageNumberFromPreview(page, pageIndex))"
+                  @click="scrollToField(field.id)"
+                >
+                  <span
+                    class="absolute left-0 w-full truncate text-xs text-[--color-base-content]/80"
+                    style="bottom: 100%; margin-bottom: 2px"
+                  >
+                    {{ getFieldLabel(field) }}
+                  </span>
+                  <div
+                    class="bg-primary/10 hover:bg-primary/20 border-primary absolute inset-0 flex items-center justify-center overflow-hidden rounded border-2"
+                  >
+                    <template v-if="getFieldDisplayValue(field)">
                       <img
-                        :src="`${page.url}/${page.filename}`"
-                        :alt="`Page ${pageIndex + 1}`"
-                        :width="page.metadata?.width"
-                        :height="page.metadata?.height"
-                        class="mb-4 rounded border border-[#e7e2df]"
-                        loading="lazy"
-                        @load="onImageLoad"
+                        v-if="isFieldDisplayImage(field)"
+                        :src="getFieldDisplayValue(field)"
+                        class="max-h-full max-w-full object-contain"
+                        alt=""
                       />
-                      <!-- Field Overlays: label outside, bordered block unchanged -->
-                      <div
-                        v-for="field in getFieldsForPage(doc.id, pageNumberFromPreview(page, pageIndex))"
-                        :key="`${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
-                        :id="`doc-field-${field.id}-${doc.id}-${pageNumberFromPreview(page, pageIndex)}`"
-                        class="doc-field-overlay absolute cursor-pointer rounded transition"
-                        :data-field-id="field.id"
-                        :style="getFieldStyle(field, doc.id, pageNumberFromPreview(page, pageIndex))"
-                        @click="scrollToField(field.id)"
-                      >
-                        <span
-                          class="absolute left-0 w-full truncate text-xs text-[--color-base-content]/80"
-                          style="bottom: 100%; margin-bottom: 2px"
-                        >
-                          {{ getFieldLabel(field) }}
-                        </span>
-                        <div
-                          class="bg-primary/10 hover:bg-primary/20 border-primary absolute inset-0 flex items-center justify-center overflow-hidden rounded border-2"
-                        >
-                          <template v-if="getFieldDisplayValue(field)">
-                            <img
-                              v-if="isFieldDisplayImage(field)"
-                              :src="getFieldDisplayValue(field)"
-                              class="max-h-full max-w-full object-contain"
-                              alt=""
-                            />
-                            <span v-else class="truncate px-1 text-xs">
-                              {{ getFieldDisplayValue(field) }}
-                            </span>
-                          </template>
-                          <SvgIcon
-                            v-else-if="fieldIcons[field.type]"
-                            :name="fieldIcons[field.type]"
-                            width="20"
-                            height="20"
-                            class="flex-shrink-0 opacity-50"
-                            stroke-width="1.6"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                      <span v-else class="truncate px-1 text-xs">
+                        {{ getFieldDisplayValue(field) }}
+                      </span>
+                    </template>
+                    <SvgIcon
+                      v-else-if="fieldIcons[field.type]"
+                      :name="fieldIcons[field.type]"
+                      width="20"
+                      height="20"
+                      class="flex-shrink-0 opacity-50"
+                      stroke-width="1.6"
+                    />
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-          <!-- Single floating panel: drawer (when field open) + action bar (always) -->
-          <FieldFormDrawer
-            ref="drawerRef"
-            :is-open="expandedFieldId !== null"
-            :field="activeField"
-            :model-value="activeField ? formData[activeField.id] : undefined"
-            :all-fields="visibleFields"
-            :filled-field-ids="filledFieldIds"
-            :field-states="fieldStates"
-            :field-errors="fieldErrors"
-            :calculated-values="calculatedValues"
-            :signature-ids="signatureIds"
-            :get-field-label="getFieldLabel"
-            :get-cell-count="getCellCount"
-            :get-signature-format="getSignatureFormat"
-            :has-with-signature-id="hasWithSignatureId"
-            :is-field-filled="isFieldFilled"
-            :can-go-prev="prevUnfilledIndex >= 0"
-            :can-go-next="nextUnfilledIndex >= 0"
-            :is-form-valid="isFormValid"
-            :is-submitting="isSubmitting"
-            :prev-unfilled-index="prevUnfilledIndex"
-            :next-unfilled-index="nextUnfilledIndex"
-            @update:model-value="onDrawerUpdateValue"
-            @close="closeDrawer"
-            @navigate="onDrawerNavigate"
-            @field-select="onDrawerFieldSelect"
-            @blur="validateField"
-            @reset="handleReset"
-            @submit="handleSubmit"
-          />
+        <!-- Single floating panel: drawer (when field open) + action bar (always) -->
+        <FieldFormDrawer
+          ref="drawerRef"
+          :is-open="expandedFieldId !== null"
+          :field="activeField"
+          :model-value="activeField ? formData[activeField.id] : undefined"
+          :all-fields="visibleFields"
+          :filled-field-ids="filledFieldIds"
+          :field-states="fieldStates"
+          :field-errors="fieldErrors"
+          :calculated-values="calculatedValues"
+          :signature-ids="signatureIds"
+          :get-field-label="getFieldLabel"
+          :get-cell-count="getCellCount"
+          :get-signature-format="getSignatureFormat"
+          :has-with-signature-id="hasWithSignatureId"
+          :is-field-filled="isFieldFilled"
+          :can-go-prev="prevUnfilledIndex >= 0"
+          :can-go-next="nextUnfilledIndex >= 0"
+          :is-form-valid="isFormValid"
+          :is-submitting="isSubmitting"
+          :prev-unfilled-index="prevUnfilledIndex"
+          :next-unfilled-index="nextUnfilledIndex"
+          @update:model-value="onDrawerUpdateValue"
+          @close="closeDrawer"
+          @navigate="onDrawerNavigate"
+          @field-select="onDrawerFieldSelect"
+          @blur="validateField"
+          @reset="handleReset"
+          @submit="handleSubmit"
+        />
       </div>
 
       <!-- Decline modal -->
       <Modal v-model="declineModalOpen" :title="t('signing.decline')" size="md" @close="declineModalOpen = false">
         <div class="space-y-3">
           <label class="block text-sm font-medium text-[--color-base-content]">
-            {{ t('signing.declineReasonLabel') }}
+            {{ t("signing.declineReasonLabel") }}
           </label>
           <textarea
             v-model="declineReason"
-            class="textarea textarea-bordered w-full min-h-[100px] resize-y"
+            class="textarea textarea-bordered min-h-[100px] w-full resize-y"
             :placeholder="t('signing.declineReasonPlaceholder')"
             rows="4"
           />
@@ -268,10 +276,16 @@
         <template #footer>
           <div class="flex justify-end gap-2">
             <Button type="button" variant="ghost" :disabled="isSubmitting" @click="declineModalOpen = false">
-              {{ t('common.cancel') }}
+              {{ t("common.cancel") }}
             </Button>
-            <Button type="button" variant="error" :loading="isSubmitting" :disabled="isSubmitting" @click="handleDeclineSubmit">
-              {{ t('signing.decline') }}
+            <Button
+              type="button"
+              variant="error"
+              :loading="isSubmitting"
+              :disabled="isSubmitting"
+              @click="handleDeclineSubmit"
+            >
+              {{ t("signing.decline") }}
             </Button>
           </div>
         </template>
@@ -292,7 +306,7 @@ import Modal from "@/components/ui/Modal.vue";
 import { useConditions } from "@/composables/useConditions";
 import { useFormulas } from "@/composables/useFormulas";
 import type { Field } from "@/models/template";
-import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
+import { type Locale, SUPPORTED_LOCALES } from "@/i18n";
 import { fieldIcons, fieldNames, subNames } from "@/components/field/constants";
 import { formatDateByPattern } from "@/utils/time";
 
@@ -305,7 +319,9 @@ function getDraftStorageKey(s: string): string {
 function loadDraftFromStorage(s: string): Record<string, unknown> | null {
   try {
     const raw = localStorage.getItem(getDraftStorageKey(s));
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
   } catch {
@@ -414,10 +430,10 @@ const { calculatedValues } = useFormulas(
 
 // Filter visible fields based on conditions
 const visibleFields = computed(() => {
-  return myFields.value.filter(field => {
-    const state = fieldStates.value[field.id]
-    return state ? state.visible : true
-  })
+  return myFields.value.filter((field) => {
+    const state = fieldStates.value[field.id];
+    return state ? state.visible : true;
+  });
 });
 
 const filledFieldIds = computed(() => {
@@ -427,7 +443,9 @@ const filledFieldIds = computed(() => {
 });
 
 const activeField = computed(() => {
-  if (!expandedFieldId.value) return null;
+  if (!expandedFieldId.value) {
+    return null;
+  }
   return visibleFields.value.find((f) => f.id === expandedFieldId.value) ?? null;
 });
 
@@ -438,7 +456,7 @@ const completedFieldsCount = computed(() => {
     if (!required) {
       return true;
     }
-    
+
     // Special handling for image/file types
     if (field.type === "image" || field.type === "file") {
       // For image, value is base64 string (starts with "data:"); for file, filename string
@@ -448,13 +466,13 @@ const completedFieldsCount = computed(() => {
     if (field.type === "signature" || field.type === "initials" || field.type === "stamp") {
       return typeof value === "string" && value.trim() !== "" && value.startsWith("data:");
     }
-    
+
     // Special handling for cells type - check if all cells are filled
     if (field.type === "cells") {
       const cellCount = getCellCount(field);
       return typeof value === "string" && value.length === cellCount;
     }
-    
+
     if (typeof value === "string") {
       return value.trim() !== "";
     }
@@ -491,7 +509,7 @@ function getSortedPreviewImages(doc: any): any[] {
   if (!doc || !doc.preview_images || doc.preview_images.length === 0) {
     return [];
   }
-  
+
   const numberOfPages = doc.metadata?.pdf?.number_of_pages || doc.preview_images.length;
   const previewImagesIndex = doc.preview_images.reduce(
     (acc: any, e: any) => {
@@ -500,7 +518,7 @@ function getSortedPreviewImages(doc: any): any[] {
     },
     {} as Record<number, any>
   );
-  
+
   const lazyloadMetadata = doc.preview_images[doc.preview_images.length - 1].metadata;
   return [...Array(numberOfPages).keys()].map((i) => {
     return (
@@ -515,7 +533,9 @@ function getSortedPreviewImages(doc: any): any[] {
 }
 
 const needsEmailOrName = computed(() => {
-  if (!submitter.value) return false;
+  if (!submitter.value) {
+    return false;
+  }
   return !submitter.value.email || !submitter.value.name;
 });
 
@@ -568,7 +588,13 @@ onMounted(async () => {
   await loadSubmission();
   // Auto-open drawer for first unfilled field when signing form is shown
   await nextTick();
-  if (submitter.value && submitter.value.status !== "completed" && submitter.value.status !== "declined" && !needsEmailOrName && visibleFields.value.length > 0) {
+  if (
+    submitter.value &&
+    submitter.value.status !== "completed" &&
+    submitter.value.status !== "declined" &&
+    !needsEmailOrName.value &&
+    visibleFields.value.length > 0
+  ) {
     const firstUnfilled = visibleFields.value.find((f) => !isFieldFilled(f));
     if (firstUnfilled) {
       expandedFieldId.value = firstUnfilled.id;
@@ -591,16 +617,24 @@ let draftSaveTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(
   () => formData.value,
   () => {
-    if (!slug.value || !submitter.value) return;
+    if (!slug.value || !submitter.value) {
+      return;
+    }
     const status = submitter.value.status;
-    if (status === "completed" || status === "declined") return;
-    if (draftSaveTimeout) clearTimeout(draftSaveTimeout);
+    if (status === "completed" || status === "declined") {
+      return;
+    }
+    if (draftSaveTimeout) {
+      clearTimeout(draftSaveTimeout);
+    }
     draftSaveTimeout = setTimeout(() => {
       draftSaveTimeout = null;
       const fieldIds = new Set(myFields.value.map((f) => f.id));
       const draft: Record<string, unknown> = {};
       fieldIds.forEach((id) => {
-        if (formData.value[id] !== undefined) draft[id] = formData.value[id];
+        if (formData.value[id] !== undefined) {
+          draft[id] = formData.value[id];
+        }
       });
       try {
         localStorage.setItem(getDraftStorageKey(slug.value), JSON.stringify(draft));
@@ -617,7 +651,9 @@ watch(
   () => formData.value,
   () => {
     myFields.value.forEach((field) => {
-      if (!hasWithSignatureId(field)) return;
+      if (!hasWithSignatureId(field)) {
+        return;
+      }
       const v = formData.value[field.id];
       if (v != null && String(v).trim() !== "" && !signatureIds.value[field.id]) {
         signatureIds.value[field.id] = generateSignatureId(field);
@@ -689,17 +725,25 @@ function getFieldLabel(field: Field): string {
 /** Value to show on document overlay when field is filled (or empty string). */
 function getFieldDisplayValue(field: Field): string {
   const value = formData.value[field.id];
-  if (value == null || value === "") return "";
+  if (value == null || value === "") {
+    return "";
+  }
   if (field.type === "signature" || field.type === "initials" || field.type === "stamp" || field.type === "image") {
     return typeof value === "string" && value.startsWith("data:") ? value : "";
   }
-  if (field.type === "checkbox") return value ? "✓" : "";
-  if (field.type === "file") return typeof value === "string" ? value : "";
+  if (field.type === "checkbox") {
+    return value ? "✓" : "";
+  }
+  if (field.type === "file") {
+    return typeof value === "string" ? value : "";
+  }
   if (field.type === "date") {
     const format = (field as { preferences?: { format?: string } }).preferences?.format || "DD/MM/YYYY";
     return formatDateByPattern(String(value), format);
   }
-  if (Array.isArray(value)) return value.join(", ");
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
   if (field.type === "number" && value !== "") {
     const format = (field as any).preferences?.format;
     const num = Number(value);
@@ -768,15 +812,21 @@ function isFieldFilled(field: Field): boolean {
 
 /** Signature/initials/stamp format from field preferences for signing UI (drawn, typed, upload, etc.). Stamp: upload only. */
 function getSignatureFormat(field: Field): string {
-  if (field.type === "stamp") return "upload";
-  if (field.type !== "signature" && field.type !== "initials") return "";
+  if (field.type === "stamp") {
+    return "upload";
+  }
+  if (field.type !== "signature" && field.type !== "initials") {
+    return "";
+  }
   const prefs = field.preferences as { format?: string } | undefined;
   const format = prefs?.format;
   return typeof format === "string" ? format : "";
 }
 
 function hasWithSignatureId(field: Field): boolean {
-  if (field.type !== "signature" && field.type !== "initials" && field.type !== "stamp") return false;
+  if (field.type !== "signature" && field.type !== "initials" && field.type !== "stamp") {
+    return false;
+  }
   const prefs = field.preferences as { with_signature_id?: boolean } | undefined;
   return !!prefs?.with_signature_id;
 }
@@ -838,7 +888,9 @@ function normalizeTemplateForSigning(tpl: Template | null): void {
   // Backend historically used `z` for height. Some parts of the UI expect `h`.
   for (const f of tpl.fields || []) {
     for (const a of (f.areas as any[]) || []) {
-      if (!a) continue;
+      if (!a) {
+        continue;
+      }
       if (a.h === undefined && a.z !== undefined) {
         a.h = a.z;
       }
@@ -976,7 +1028,9 @@ function expandFieldAndScrollToDocument(fieldId: string): void {
 function getPrevUnfilledIndex(): number {
   const fields = visibleFields.value;
   for (let i = currentFieldIndex.value - 1; i >= 0; i--) {
-    if (!isFieldFilled(fields[i])) return i;
+    if (!isFieldFilled(fields[i])) {
+      return i;
+    }
   }
   return -1;
 }
@@ -984,7 +1038,9 @@ function getPrevUnfilledIndex(): number {
 function getNextUnfilledIndex(): number {
   const fields = visibleFields.value;
   for (let i = currentFieldIndex.value + 1; i < fields.length; i++) {
-    if (!isFieldFilled(fields[i])) return i;
+    if (!isFieldFilled(fields[i])) {
+      return i;
+    }
   }
   return -1;
 }
@@ -1002,18 +1058,26 @@ const nextUnfilledIndex = computed(() => {
 
 function goToPrevField(): void {
   const idx = getPrevUnfilledIndex();
-  if (idx < 0) return;
+  if (idx < 0) {
+    return;
+  }
   currentFieldIndex.value = idx;
   const field = visibleFields.value[idx];
-  if (field) scrollToField(field.id, true);
+  if (field) {
+    scrollToField(field.id, true);
+  }
 }
 
 function goToNextField(): void {
   const idx = getNextUnfilledIndex();
-  if (idx < 0) return;
+  if (idx < 0) {
+    return;
+  }
   currentFieldIndex.value = idx;
   const field = visibleFields.value[idx];
-  if (field) scrollToField(field.id, true);
+  if (field) {
+    scrollToField(field.id, true);
+  }
 }
 
 function scrollToFieldOnDocument(fieldId: string): void {
@@ -1030,10 +1094,16 @@ function scrollToFieldOnDocument(fieldId: string): void {
 const drawerRef = ref<InstanceType<typeof FieldFormDrawer> | null>(null);
 
 function onSigningAreaClick(e: MouseEvent): void {
-  if (!expandedFieldId.value) return;
+  if (!expandedFieldId.value) {
+    return;
+  }
   const target = e.target as HTMLElement;
-  if (drawerRef.value?.$el?.contains(target)) return;
-  if (target.closest(".doc-field-overlay")) return;
+  if (drawerRef.value?.$el?.contains(target)) {
+    return;
+  }
+  if (target.closest(".doc-field-overlay")) {
+    return;
+  }
   closeDrawer();
 }
 
@@ -1048,8 +1118,11 @@ function onDrawerUpdateValue(value: any): void {
 }
 
 function onDrawerNavigate(direction: "prev" | "next"): void {
-  if (direction === "prev") goToPrevField();
-  else goToNextField();
+  if (direction === "prev") {
+    goToPrevField();
+  } else {
+    goToNextField();
+  }
 }
 
 function onDrawerFieldSelect(fieldId: string): void {
@@ -1204,10 +1277,14 @@ function handleReset(event?: Event): void {
 }
 
 function formatDate(dateString?: string | null): string {
-  if (!dateString) return "—";
+  if (!dateString) {
+    return "—";
+  }
 
   const d = new Date(dateString);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
 
   const loc = (signingLocale.value || locale.value || "en").toString();
   return d.toLocaleString(loc, {
@@ -1220,11 +1297,7 @@ function formatDate(dateString?: string | null): string {
 }
 
 /** Format number for overlay display (comma, dot, space, usd, eur, gbp). */
-function formatNumberForDisplay(
-  num: number,
-  format: string,
-  currency?: string
-): string {
+function formatNumberForDisplay(num: number, format: string, currency?: string): string {
   if (format === "usd" || format === "eur" || format === "gbp") {
     const cur = currency || (format === "eur" ? "EUR" : format === "gbp" ? "GBP" : "USD");
     return new Intl.NumberFormat([], { style: "currency", currency: cur }).format(num);
@@ -1258,7 +1331,7 @@ function validateSubmitterInfo(): void {
 
 async function handleUpdateSubmitter(event?: Event): Promise<void> {
   event?.preventDefault?.();
-  
+
   if (isUpdatingSubmitter.value) {
     return;
   }
@@ -1287,7 +1360,7 @@ async function handleUpdateSubmitter(event?: Event): Promise<void> {
     // Check content type before parsing
     const contentType = response.headers.get("content-type");
     let data: any = {};
-    
+
     if (contentType && contentType.includes("application/json")) {
       try {
         data = await response.json();
@@ -1307,7 +1380,7 @@ async function handleUpdateSubmitter(event?: Event): Promise<void> {
     if (!response.ok) {
       // Try to extract validation errors
       const errorMsg = data.message || data.error || t("signing.updateFailed");
-      
+
       // Check if it's an email validation error
       if (errorMsg.toLowerCase().includes("email") && errorMsg.toLowerCase().includes("valid")) {
         submitterInfoErrors.value.email = t("signing.invalidEmail");

@@ -1,11 +1,11 @@
 <template>
   <label
     :for="inputId"
-    class="relative block w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 hover:bg-gray-50 transition-colors"
+    class="relative block w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-50"
     :class="[
       heightClass,
-      selectedLabel ? 'bg-gray-50 border-blue-400' : '',
-      disabled ? 'opacity-60 cursor-not-allowed' : ''
+      selectedLabel ? 'border-blue-400 bg-gray-50' : '',
+      disabled ? 'cursor-not-allowed opacity-60' : ''
     ]"
     @dragover.prevent
     @drop.prevent="onDrop"
@@ -13,13 +13,13 @@
     <div class="absolute inset-0 flex items-center justify-center p-2">
       <div class="flex flex-col items-center text-center">
         <template v-if="!selectedLabel">
-          <SvgIcon name="cloud-upload" class="h-8 w-8 text-gray-400 shrink-0" />
+          <SvgIcon name="cloud-upload" class="h-8 w-8 shrink-0 text-gray-400" />
           <div class="mt-2 text-sm font-medium text-gray-700">{{ clickLabel }}</div>
           <div class="text-xs text-gray-500">{{ dragLabel }}</div>
         </template>
         <template v-else>
-          <SvgIcon name="document" class="h-8 w-8 text-blue-500 shrink-0" />
-          <div class="mt-2 text-sm font-medium text-gray-900 truncate max-w-full">{{ selectedLabel }}</div>
+          <SvgIcon name="document" class="h-8 w-8 shrink-0 text-blue-500" />
+          <div class="mt-2 max-w-full truncate text-sm font-medium text-gray-900">{{ selectedLabel }}</div>
           <button
             v-if="!disabled"
             type="button"
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import SvgIcon from "@/components/SvgIcon.vue";
 
@@ -93,18 +93,26 @@ const removeLabel = computed(() => props.removeLabel || t("templates.removeFile"
 function onChange(e: Event): void {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
-  if (file) emit("change", file);
+  if (file) {
+    emit("change", file);
+  }
   input.value = "";
 }
 
 function onDrop(e: DragEvent): void {
-  if (props.disabled) return;
+  if (props.disabled) {
+    return;
+  }
   const file = e.dataTransfer?.files?.[0];
-  if (file) emit("change", file);
+  if (file) {
+    emit("change", file);
+  }
 }
 
 function clear(): void {
-  if (inputRef.value) inputRef.value.value = "";
+  if (inputRef.value) {
+    inputRef.value.value = "";
+  }
   emit("clear");
 }
 </script>

@@ -15,7 +15,9 @@
           {{ statusLabel(detail.status) }}
         </Badge>
         <div v-if="detail" class="text-sm text-gray-600">
-          {{ t("submissionStatus.progressCompleted", { completed: detail.completed_count, total: detail.total_count }) }}
+          {{
+            t("submissionStatus.progressCompleted", { completed: detail.completed_count, total: detail.total_count })
+          }}
         </div>
         <Button
           v-if="detail && String(detail.status) === 'completed'"
@@ -29,7 +31,6 @@
     </div>
 
     <Card>
-
       <div v-if="loading" class="py-10 text-center text-gray-600">{{ t("common.loading") }}</div>
       <div v-else-if="error" class="py-10 text-center text-red-600">{{ error }}</div>
 
@@ -47,19 +48,26 @@
 
             <div v-else class="space-y-4">
               <div v-for="e in timeline" :key="e.key" class="flex items-start gap-3">
-                <div class="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-base-200)]">
+                <div
+                  class="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-base-200)]"
+                >
                   <span class="text-base">{{ e.icon }}</span>
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <div class="font-medium">{{ e.title }}</div>
-                    <span v-if="e.signer" class="rounded-full bg-[var(--color-base-200)] px-2 py-0.5 text-xs text-gray-700">
+                    <span
+                      v-if="e.signer"
+                      class="rounded-full bg-[var(--color-base-200)] px-2 py-0.5 text-xs text-gray-700"
+                    >
                       {{ e.signer }}
                     </span>
                   </div>
                   <div class="text-sm text-gray-500">{{ formatDate(e.at) }}</div>
-                  <div v-if="e.reason" class="text-sm text-gray-500 font-mono">{{ t('common.reasonLabel') }} {{ e.reason }}</div>
-                  <div v-if="e.ip" class="text-sm text-gray-500 font-mono">IP address: {{ e.ip }}</div>
+                  <div v-if="e.reason" class="font-mono text-sm text-gray-500">
+                    {{ t("common.reasonLabel") }} {{ e.reason }}
+                  </div>
+                  <div v-if="e.ip" class="font-mono text-sm text-gray-500">IP address: {{ e.ip }}</div>
                   <div v-if="e.location" class="text-sm text-gray-500">Location: {{ e.location }}</div>
                 </div>
               </div>
@@ -116,7 +124,11 @@ import Card from "@/components/ui/Card.vue";
 import Badge from "@/components/ui/Badge.vue";
 import Button from "@/components/ui/Button.vue";
 import { fetchWithAuth } from "@/utils/auth";
-import { getBadgeVariantForSubmissionStatus, getBadgeVariantForSubmitterStatus, getI18nStatusKey } from "@/utils/status";
+import {
+  getBadgeVariantForSubmissionStatus,
+  getBadgeVariantForSubmitterStatus,
+  getI18nStatusKey
+} from "@/utils/status";
 import { useI18n } from "vue-i18n";
 import { openBlobInNewTab } from "@/utils/file";
 
@@ -363,4 +375,3 @@ async function openCompletedDocument(submissionId: string): Promise<void> {
   }
 }
 </script>
-

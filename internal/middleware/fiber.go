@@ -22,30 +22,21 @@ func requestLogger(logger *zerolog.Logger) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
-
 		status := c.Response().StatusCode()
 
-		evt := logger.Info().
+		// Escalate log level when the handler failed or produced a server error.
+		event := logger.Info()
+		if err != nil || status >= 500 {
+			event = logger.Error().Err(err)
+		}
+		event.
 			Str("method", c.Method()).
 			Str("path", c.Path()).
 			Str("url", c.OriginalURL()).
 			Str("ip", c.IP()).
 			Int("status", status).
-			Dur("latency", time.Since(start))
-
-		// If the handler returned an error or we produced 5xx - bump log level.
-		if err != nil || status >= 500 {
-			evt = logger.Error().
-				Str("method", c.Method()).
-				Str("path", c.Path()).
-				Str("url", c.OriginalURL()).
-				Str("ip", c.IP()).
-				Int("status", status).
-				Dur("latency", time.Since(start)).
-				Err(err)
-		}
-
-		evt.Msg("http request")
+			Dur("latency", time.Since(start)).
+			Msg("http request")
 		return err
 	}
 }
@@ -73,11 +64,11 @@ func Fiber(a *fiber.App, log *logging.Logger, cfg *config.Config) {
 			"OPTIONS",
 		},
 	}
+	// Credentialed CORS requires an explicit allow-list; without one we fall back
+	// to Fiber v3's default wildcard origin (no credentials).
 	if len(cfg.CORSAllowedOrigins) > 0 {
 		corsCfg.AllowCredentials = true
 		corsCfg.AllowOrigins = cfg.CORSAllowedOrigins
-	} else {
-		corsCfg.AllowCredentials = false
 	}
 
 	a.Use(
@@ -97,22 +88,27 @@ func Fiber(a *fiber.App, log *logging.Logger, cfg *config.Config) {
 	)
 }
 
-// RateLimiter creates rate limiting middleware with customizable limits
+// rateLimitKey derives a stable rate-limit bucket from the authenticated
+// principal (API key or user) and falls back to the client IP.
+func rateLimitKey(c fiber.Ctx) string {
+	auth := GetAuthContext(c)
+	if auth != nil {
+		switch auth.Type {
+		case AuthTypeAPIKey:
+			return "apikey:" + auth.UserID
+		case AuthTypeJWT:
+			return "user:" + auth.UserID
+		}
+	}
+	return c.IP()
+}
+
+// RateLimiter creates rate limiting middleware with customizable limits.
 func RateLimiter(max int, duration time.Duration) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:        max,
-		Expiration: duration,
-		KeyGenerator: func(c fiber.Ctx) string {
-			// Use API key or IP as rate limit key
-			auth := GetAuthContext(c)
-			if auth != nil && auth.Type == AuthTypeAPIKey {
-				return "apikey:" + auth.UserID
-			}
-			if auth != nil && auth.Type == AuthTypeJWT {
-				return "user:" + auth.UserID
-			}
-			return c.IP()
-		},
+		Max:          max,
+		Expiration:   duration,
+		KeyGenerator: rateLimitKey,
 		LimitReached: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"success": false,

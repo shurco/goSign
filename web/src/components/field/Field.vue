@@ -127,7 +127,7 @@
                     <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Number format</label>
                   </div>
                   <div class="flex items-center gap-1 py-1.5">
-                    <div class="relative flex-1 min-w-0 max-w-20">
+                    <div class="relative max-w-20 min-w-0 flex-1">
                       <input
                         v-model.number="field.validation.min"
                         type="number"
@@ -136,8 +136,8 @@
                       />
                       <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Min</label>
                     </div>
-                    <span class="shrink-0 text-xs text-base-content/60"> – </span>
-                    <div class="relative flex-1 min-w-0 max-w-20">
+                    <span class="text-base-content/60 shrink-0 text-xs"> – </span>
+                    <div class="relative max-w-20 min-w-0 flex-1">
                       <input
                         v-model.number="field.validation.max"
                         type="number"
@@ -343,31 +343,19 @@
               </li>
               <hr v-if="editable && !defaultField" class="mt-0.5 pb-0.5" />
               <li v-if="editable && !defaultField" @click.stop>
-                <a
-                  href="#"
-                  class="px-2 py-1 text-sm"
-                  @click.prevent="openConditionBuilder"
-                >
+                <a href="#" class="px-2 py-1 text-sm" @click.prevent="openConditionBuilder">
                   <SvgIcon name="settings" width="18" height="18" />
                   Conditional Logic
                 </a>
               </li>
               <li v-if="editable && !defaultField && ['number', 'text'].includes(field.type)" @click.stop>
-                <a
-                  href="#"
-                  class="px-2 py-1 text-sm"
-                  @click.prevent="openFormulaBuilder"
-                >
+                <a href="#" class="px-2 py-1 text-sm" @click.prevent="openFormulaBuilder">
                   <SvgIcon name="settings" width="18" height="18" />
                   Formula
                 </a>
               </li>
               <li v-if="editable && !defaultField" @click.stop>
-                <a
-                  href="#"
-                  class="px-2 py-1 text-sm"
-                  @click.prevent="openDescriptionModal"
-                >
+                <a href="#" class="px-2 py-1 text-sm" @click.prevent="openDescriptionModal">
                   <SvgIcon name="settings" width="18" height="18" />
                   Description
                 </a>
@@ -451,16 +439,18 @@
     <!-- Condition Builder Modal -->
     <Modal v-model="showConditionBuilder" size="lg">
       <template #header>
-        <h3 class="text-lg font-semibold">{{ t('fields.conditions.title') }}</h3>
+        <h3 class="text-lg font-semibold">{{ t("fields.conditions.title") }}</h3>
       </template>
       <template #default>
         <ConditionBuilder
-          :field="(field as any)"
+          :field="field as any"
           :available-fields="availableFieldsForConditions"
-          @update:conditions="(conditions) => {
-            field.condition_groups = conditions;
-            save();
-          }"
+          @update:conditions="
+            (conditions) => {
+              field.condition_groups = conditions;
+              save();
+            }
+          "
         />
       </template>
       <template #footer>
@@ -469,7 +459,7 @@
             class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
             @click="closeConditionBuilder"
           >
-            {{ t('common.close') }}
+            {{ t("common.close") }}
           </button>
         </div>
       </template>
@@ -478,14 +468,10 @@
     <!-- Formula Builder Modal -->
     <Modal v-model="showFormulaBuilder" size="lg">
       <template #header>
-        <h3 class="text-lg font-semibold">{{ t('fields.formula.title') }}</h3>
+        <h3 class="text-lg font-semibold">{{ t("fields.formula.title") }}</h3>
       </template>
       <template #default>
-        <FormulaBuilder
-          ref="formulaBuilderRef"
-          :field="(field as any)"
-          :available-fields="availableFieldsForFormula"
-        />
+        <FormulaBuilder ref="formulaBuilderRef" :field="field as any" :available-fields="availableFieldsForFormula" />
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
@@ -493,13 +479,13 @@
             class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
             @click="closeFormulaBuilder"
           >
-            {{ t('common.cancel') }}
+            {{ t("common.cancel") }}
           </button>
           <button
             class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
             @click="applyFormulaAndClose"
           >
-            {{ t('common.save') }}
+            {{ t("common.save") }}
           </button>
         </div>
       </template>
@@ -513,21 +499,23 @@
       <template #default>
         <div class="space-y-4">
           <div>
-            <label class="label text-xs py-0"><span>Description</span></label>
+            <label class="label py-0 text-xs"><span>Description</span></label>
             <textarea
               v-model="field.description"
-              class="textarea textarea-bordered textarea-sm mt-1 w-full resize-y min-h-24 font-normal !outline-0"
+              class="textarea textarea-bordered textarea-sm mt-1 min-h-24 w-full resize-y font-normal !outline-0"
               placeholder="Field description or instructions"
               rows="4"
               @change="save"
             />
           </div>
           <div>
-            <label class="label text-xs py-0"><span>Display title</span> <span class="text-base-content/60">(optional)</span></label>
+            <label class="label py-0 text-xs"
+              ><span>Display title</span> <span class="text-base-content/60">(optional)</span></label
+            >
             <input
               v-model="field.title"
               type="text"
-              class="input-bordered input input-sm h-9 w-full font-normal !outline-0 mt-1"
+              class="input-bordered input input-sm mt-1 h-9 w-full font-normal !outline-0"
               placeholder="Optional display title"
               @change="save"
             />
@@ -540,13 +528,13 @@
             class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-50"
             @click="closeDescriptionModal"
           >
-            {{ t('common.close') }}
+            {{ t("common.close") }}
           </button>
           <button
             class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
             @click="saveDescriptionAndClose"
           >
-            {{ t('common.save') }}
+            {{ t("common.save") }}
           </button>
         </div>
       </template>
@@ -558,7 +546,7 @@
 // This component intentionally mutates props.field because field is part of a reactive template object
 // managed by the parent component. Direct mutation is used for performance optimization.
 // Rule vue/no-mutating-props is disabled for this file in eslint.config.mjs
-import { computed, inject, nextTick, ref, watch, type PropType } from "vue";
+import { computed, inject, nextTick, type PropType, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import FieldType from "@/components/field/Type.vue";
@@ -705,7 +693,9 @@ const dateFormats = computed(() => [
 
 // Generate default field name for any field (used in conditions/formula dropdowns)
 function getDefaultFieldName(f: any): string {
-  if (!template?.value?.fields) return f.id || "Field";
+  if (!template?.value?.fields) {
+    return f.id || "Field";
+  }
   if (f.type === "payment" && f.preferences?.price) {
     const { price, currency } = f.preferences || {};
     const formattedPrice = new Intl.NumberFormat([], { style: "currency", currency }).format(price);
@@ -735,9 +725,7 @@ const availableFieldsForConditions = computed(() => {
 const availableFieldsForFormula = computed(() => {
   const list = (template?.value?.fields ?? []).filter(
     (f: any) =>
-      f.id !== props.field.id &&
-      f.submitter_id === props.field.submitter_id &&
-      ["number", "text"].includes(f.type)
+      f.id !== props.field.id && f.submitter_id === props.field.submitter_id && ["number", "text"].includes(f.type)
   );
   return list.map((f: any) => ({ ...f, displayName: (f.name && String(f.name).trim()) || getDefaultFieldName(f) }));
 });
@@ -781,13 +769,20 @@ watch(
         : "DD/MM/YYYY";
     }
     if (newType === "payment") {
-      if (props.field.preferences.price == null) props.field.preferences.price = 0;
-      if (!props.field.preferences.currency) props.field.preferences.currency = "USD";
+      if (props.field.preferences.price == null) {
+        props.field.preferences.price = 0;
+      }
+      if (!props.field.preferences.currency) {
+        props.field.preferences.currency = "USD";
+      }
     }
     if (newType === "number" && (!props.field.validation || typeof props.field.validation !== "object")) {
       props.field.validation = {};
     }
-    if (["text", "cells"].includes(newType) && (!props.field.validation || typeof props.field.validation !== "object")) {
+    if (
+      ["text", "cells"].includes(newType) &&
+      (!props.field.validation || typeof props.field.validation !== "object")
+    ) {
       props.field.validation = {};
     }
   },
@@ -908,8 +903,12 @@ function removeOption(option: any): void {
 }
 
 function getEffectiveCellW(area: { w: number; h: number; cell_w?: number }): number {
-  if (area.cell_w != null && area.cell_w > 0) return area.cell_w;
-  if (area.w <= 0) return 0;
+  if (area.cell_w != null && area.cell_w > 0) {
+    return area.cell_w;
+  }
+  if (area.w <= 0) {
+    return 0;
+  }
   if (area.h > 0) {
     const denom = Math.floor(area.w / area.h);
     return denom > 0 ? (area.w * 2) / denom : area.w / 5;
@@ -919,7 +918,9 @@ function getEffectiveCellW(area: { w: number; h: number; cell_w?: number }): num
 
 function getCellCountFromArea(area: { w: number; h: number; cell_w?: number }): number {
   const cellWidth = getEffectiveCellW(area);
-  if (!cellWidth || cellWidth <= 0 || area.w <= 0) return 0;
+  if (!cellWidth || cellWidth <= 0 || area.w <= 0) {
+    return 0;
+  }
   let currentWidth = 0;
   let count = 0;
   while (currentWidth + (cellWidth + cellWidth / 4) < area.w) {

@@ -3,8 +3,8 @@
     :class="inputClasses"
     :type="type"
     :value="modelValue"
-    @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     v-bind="$attrs"
+    @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
   />
 </template>
 

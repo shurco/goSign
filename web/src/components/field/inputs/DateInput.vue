@@ -50,7 +50,9 @@ const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
 
 const formattedDisplay = computed(() => {
-  if (!props.dateFormat || !localValue.value) return "";
+  if (!props.dateFormat || !localValue.value) {
+    return "";
+  }
   return formatDateByPattern(localValue.value, props.dateFormat);
 });
 
@@ -69,4 +71,3 @@ function handleBlur(): void {
   emit("blur");
 }
 </script>
-

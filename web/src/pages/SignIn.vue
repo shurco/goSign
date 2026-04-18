@@ -2,11 +2,11 @@
   <div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
     <div class="w-full max-w-md space-y-8">
       <div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">{{ $t('auth.signin') }}</h2>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">{{ $t("auth.signin") }}</h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          {{ $t('common.or') }}
+          {{ $t("common.or") }}
           <router-link to="/auth/signup" class="font-medium text-indigo-600 hover:text-indigo-500">
-            {{ $t('auth.createAccount') }}
+            {{ $t("auth.createAccount") }}
           </router-link>
         </p>
       </div>
@@ -68,20 +68,14 @@
         <div class="flex items-center justify-between">
           <div class="text-sm">
             <router-link to="/auth/password/forgot" class="font-medium text-indigo-600 hover:text-indigo-500">
-              {{ $t('auth.forgotPassword') }}
+              {{ $t("auth.forgotPassword") }}
             </router-link>
           </div>
         </div>
 
         <div>
-          <Button
-            type="submit"
-            variant="primary"
-            class="w-full"
-            :loading="isLoading"
-            :disabled="isLoading"
-          >
-            {{ $t('auth.signin') }}
+          <Button type="submit" variant="primary" class="w-full" :loading="isLoading" :disabled="isLoading">
+            {{ $t("auth.signin") }}
           </Button>
         </div>
 
@@ -92,12 +86,8 @@
         </div>
 
         <div v-if="!requires2FA" class="grid grid-cols-2 gap-3">
-          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn">
-            Google
-          </Button>
-          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn">
-            GitHub
-          </Button>
+          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn"> Google </Button>
+          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn"> GitHub </Button>
         </div>
       </form>
     </div>
@@ -106,7 +96,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import Button from "@/components/ui/Button.vue";
 
 const router = useRouter();

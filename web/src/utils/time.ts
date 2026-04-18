@@ -7,7 +7,9 @@ export const toDate = (unixTimestamp: number): string =>
 /** Format a date (ISO string or Date) using pattern: DD, MM, YYYY, MMM, etc. */
 export function formatDateByPattern(dateInput: string | Date, format: string): string {
   const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  if (Number.isNaN(date.getTime())) return "";
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
   const monthFormats: Record<string, "numeric" | "2-digit" | "short" | "long"> = {
     M: "numeric",
     MM: "2-digit",

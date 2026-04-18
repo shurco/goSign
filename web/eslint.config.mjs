@@ -7,7 +7,6 @@ import vueParser from "vue-eslint-parser";
 
 import pluginVue from "eslint-plugin-vue";
 import pluginPrettier from "eslint-plugin-prettier";
-import pluginImportPath from "eslint-plugin-no-relative-import-paths";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
 
 export default [
@@ -41,7 +40,6 @@ export default [
 
     plugins: {
       'prettier': pluginPrettier,
-      'no-relative-import-paths': pluginImportPath,
       'unused-imports': pluginUnusedImports,
     },
 
@@ -70,7 +68,13 @@ export default [
       'no-var': 2, // Disallow 'var' keyword
       'prettier/prettier': 'warn', // Integrate Prettier and warn about style discrepancies
       'no-void': ['error', { allowAsStatement: true }], // Disallow 'void' operator, except as a statement
-      'no-relative-import-paths/no-relative-import-paths': ['warn', { allowSameFolder: true, rootDir: 'src', prefix: '@' }], // No relative imports
+      // Forbid parent-relative imports; prefer the '@/' alias for anything outside the current folder.
+      'no-restricted-imports': ['warn', {
+        patterns: [{
+          group: ['../*'],
+          message: "Use the '@/' alias instead of parent-relative imports."
+        }]
+      }],
 
       "@typescript-eslint/no-explicit-any": "off", // Disallow 'any' type
       "@typescript-eslint/unified-signatures": "off", // Disable due to incompatibility with Vue SFC files

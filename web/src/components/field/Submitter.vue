@@ -161,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, type PropType } from "vue";
+import { computed, inject, type PropType, ref } from "vue";
 import Contenteditable from "@/components/field/Contenteditable.vue";
 import { subColors, subNames } from "@/components/field/constants.ts";
 import { useDropdown } from "@/composables/ui";

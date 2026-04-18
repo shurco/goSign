@@ -3,150 +3,147 @@
     <div class="space-y-6">
       <!-- Download options -->
       <div class="grid gap-4 md:grid-cols-2">
-          <!-- Option 1: Download from MaxMind (First Priority) -->
-          <div class="rounded-lg border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-300">
-            <div class="mb-3 flex items-center gap-2">
-              <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              <h5 class="font-semibold text-gray-900">{{ $t('settings.downloadFromMaxMind') }}</h5>
+        <!-- Option 1: Download from MaxMind (First Priority) -->
+        <div class="rounded-lg border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-300">
+          <div class="mb-3 flex items-center gap-2">
+            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+              />
+            </svg>
+            <h5 class="font-semibold text-gray-900">{{ $t("settings.downloadFromMaxMind") }}</h5>
+          </div>
+          <p class="mb-4 text-sm text-gray-600">
+            {{ $t("settings.downloadFromMaxMindDescription") }}
+          </p>
+
+          <!-- Saved key (more visible) -->
+          <div v-if="maxmindLicenseKeyMasked" class="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-xs font-medium text-gray-600">{{ $t("settings.savedKeyLabel") }}</div>
+                <div class="mt-1 font-mono text-base font-semibold text-gray-900">
+                  {{ maxmindLicenseKeyMasked }}
+                </div>
+              </div>
+              <button
+                class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
+                :disabled="deletingKey || !maxmindLicenseKeySet"
+                :title="$t('settings.deleteKey')"
+                :aria-label="$t('settings.deleteKey')"
+                type="button"
+                @click.stop="deleteMaxMindKey"
+              >
+                <LoadingSpinner v-if="deleteKeyState === 'saving'" size="md" />
+                <SvgIcon v-else name="trash-x" class="h-5 w-5 stroke-[2]" />
+              </button>
             </div>
-            <p class="mb-4 text-sm text-gray-600">
-              {{ $t('settings.downloadFromMaxMindDescription') }}
-            </p>
-
-            <!-- Saved key (more visible) -->
-            <div
-              v-if="maxmindLicenseKeyMasked"
-              class="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="text-xs font-medium text-gray-600">{{ $t('settings.savedKeyLabel') }}</div>
-                  <div class="mt-1 font-mono text-base font-semibold text-gray-900">
-                    {{ maxmindLicenseKeyMasked }}
-                  </div>
-                </div>
-                <button
-                  class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
-                  @click.stop="deleteMaxMindKey"
-                  :disabled="deletingKey || !maxmindLicenseKeySet"
-                  :title="$t('settings.deleteKey')"
-                  :aria-label="$t('settings.deleteKey')"
-                  type="button"
-                >
-                  <LoadingSpinner v-if="deleteKeyState === 'saving'" size="md" />
-                  <SvgIcon v-else name="trash-x" class="h-5 w-5 stroke-[2]" />
-                </button>
-              </div>
-              <div v-if="deleteKeyError" class="mt-2 text-xs text-red-600">
-                {{ deleteKeyError }}
-              </div>
-            </div>
-
-            <div class="space-y-3">
-              <FormControl :label="$t('settings.maxmindLicenseKey')">
-                <Input
-                  v-model="maxmindLicenseKeyForDownload"
-                  type="password"
-                  :placeholder="
-                    maxmindLicenseKeySet
-                      ? $t('settings.useSavedKeyOrEnterNew')
-                      : $t('settings.maxmindLicenseKeyPlaceholder')
-                  "
-                  class="w-full"
-                />
-                <div v-if="maxmindLicenseKeySet" class="mt-1 text-xs text-gray-500">
-                  {{ $t('settings.savedKeyWillBeUsedIfEmpty') }}
-                </div>
-                <div v-if="saveMaxMindError" class="mt-1 text-xs text-red-600">
-                  {{ saveMaxMindError }}
-                </div>
-              </FormControl>
-
-              <div class="flex">
-                <Button
-                  variant="ghost"
-                  @click="saveMaxMindMethod"
-                  :disabled="savingMaxMind || (!maxmindLicenseKeySet && !maxmindLicenseKeyForDownload)"
-                  class="w-full"
-                >
-                  <span v-if="saveMaxMindState === 'saving'">{{ $t('common.saving') }}...</span>
-                  <span v-else-if="saveMaxMindState === 'saved'">{{ $t('common.saved') }}</span>
-                  <span v-else-if="saveMaxMindState === 'error'">{{ $t('common.failed') }}</span>
-                  <span v-else>{{ $t('common.save') }}</span>
-                </Button>
-              </div>
+            <div v-if="deleteKeyError" class="mt-2 text-xs text-red-600">
+              {{ deleteKeyError }}
             </div>
           </div>
 
-          <!-- Option 2: Download from URL (Fallback) -->
-          <div class="rounded-lg border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-300">
-            <div class="mb-3 flex items-center gap-2">
-              <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                />
-              </svg>
-              <h5 class="font-semibold text-gray-900">{{ $t('settings.downloadFromUrl') }}</h5>
-            </div>
-            <p class="mb-4 text-sm text-gray-600">
-              {{ $t('settings.downloadUrlDescription') }}
-            </p>
-            <div class="space-y-3">
-              <FormControl :label="$t('settings.downloadUrl')">
-                <Input
-                  v-model="downloadUrl"
-                  type="url"
-                  :placeholder="$t('settings.downloadUrlPlaceholder')"
-                  class="w-full"
-                />
-                <div v-if="saveUrlError" class="mt-1 text-xs text-red-600">
-                  {{ saveUrlError }}
-                </div>
-              </FormControl>
-              <div class="flex gap-2">
-                <Button variant="ghost" @click="saveUrlMethod" :disabled="savingUrl || !downloadUrl" class="w-full">
-                  <span v-if="saveUrlState === 'saving'">{{ $t('common.saving') }}...</span>
-                  <span v-else-if="saveUrlState === 'saved'">{{ $t('common.saved') }}</span>
-                  <span v-else-if="saveUrlState === 'error'">{{ $t('common.failed') }}</span>
-                  <span v-else>{{ $t('common.save') }}</span>
-                </Button>
+          <div class="space-y-3">
+            <FormControl :label="$t('settings.maxmindLicenseKey')">
+              <Input
+                v-model="maxmindLicenseKeyForDownload"
+                type="password"
+                :placeholder="
+                  maxmindLicenseKeySet
+                    ? $t('settings.useSavedKeyOrEnterNew')
+                    : $t('settings.maxmindLicenseKeyPlaceholder')
+                "
+                class="w-full"
+              />
+              <div v-if="maxmindLicenseKeySet" class="mt-1 text-xs text-gray-500">
+                {{ $t("settings.savedKeyWillBeUsedIfEmpty") }}
               </div>
+              <div v-if="saveMaxMindError" class="mt-1 text-xs text-red-600">
+                {{ saveMaxMindError }}
+              </div>
+            </FormControl>
+
+            <div class="flex">
+              <Button
+                variant="ghost"
+                :disabled="savingMaxMind || (!maxmindLicenseKeySet && !maxmindLicenseKeyForDownload)"
+                class="w-full"
+                @click="saveMaxMindMethod"
+              >
+                <span v-if="saveMaxMindState === 'saving'">{{ $t("common.saving") }}...</span>
+                <span v-else-if="saveMaxMindState === 'saved'">{{ $t("common.saved") }}</span>
+                <span v-else-if="saveMaxMindState === 'error'">{{ $t("common.failed") }}</span>
+                <span v-else>{{ $t("common.save") }}</span>
+              </Button>
             </div>
           </div>
         </div>
+
+        <!-- Option 2: Download from URL (Fallback) -->
+        <div class="rounded-lg border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-300">
+          <div class="mb-3 flex items-center gap-2">
+            <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+              />
+            </svg>
+            <h5 class="font-semibold text-gray-900">{{ $t("settings.downloadFromUrl") }}</h5>
+          </div>
+          <p class="mb-4 text-sm text-gray-600">
+            {{ $t("settings.downloadUrlDescription") }}
+          </p>
+          <div class="space-y-3">
+            <FormControl :label="$t('settings.downloadUrl')">
+              <Input
+                v-model="downloadUrl"
+                type="url"
+                :placeholder="$t('settings.downloadUrlPlaceholder')"
+                class="w-full"
+              />
+              <div v-if="saveUrlError" class="mt-1 text-xs text-red-600">
+                {{ saveUrlError }}
+              </div>
+            </FormControl>
+            <div class="flex gap-2">
+              <Button variant="ghost" :disabled="savingUrl || !downloadUrl" class="w-full" @click="saveUrlMethod">
+                <span v-if="saveUrlState === 'saving'">{{ $t("common.saving") }}...</span>
+                <span v-else-if="saveUrlState === 'saved'">{{ $t("common.saved") }}</span>
+                <span v-else-if="saveUrlState === 'error'">{{ $t("common.failed") }}</span>
+                <span v-else>{{ $t("common.save") }}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Manual Update Button -->
       <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="flex items-center justify-between">
           <div>
-            <h5 class="font-semibold text-gray-900">{{ $t('settings.manualUpdate') }}</h5>
+            <h5 class="font-semibold text-gray-900">{{ $t("settings.manualUpdate") }}</h5>
             <p class="mt-1 text-sm text-gray-600">
-              {{ $t('settings.manualUpdateDescription') }}
+              {{ $t("settings.manualUpdateDescription") }}
             </p>
             <p class="mt-1 text-sm text-gray-600">
-              <span class="font-medium text-gray-700">{{ $t('settings.lastUpdated') }}:</span>
+              <span class="font-medium text-gray-700">{{ $t("settings.lastUpdated") }}:</span>
               {{ lastUpdatedLabel }}
             </p>
             <p class="mt-1 text-sm text-gray-600">
-              <span class="font-medium text-gray-700">{{ $t('settings.downloadSource') }}:</span>
+              <span class="font-medium text-gray-700">{{ $t("settings.downloadSource") }}:</span>
               {{ lastUpdatedSourceLabel }}
             </p>
           </div>
-          <Button variant="primary" @click="manualUpdate" :disabled="manualUpdating || !hasSavedSettings" class="ml-4">
-            <span v-if="manualUpdateState === 'saving'">{{ $t('settings.downloading') }}...</span>
-            <span v-else-if="manualUpdateState === 'saved'">{{ $t('common.updated') }}</span>
-            <span v-else-if="manualUpdateState === 'error'">{{ $t('common.failed') }}</span>
-            <span v-else>{{ $t('settings.updateNow') }}</span>
+          <Button variant="primary" :disabled="manualUpdating || !hasSavedSettings" class="ml-4" @click="manualUpdate">
+            <span v-if="manualUpdateState === 'saving'">{{ $t("settings.downloading") }}...</span>
+            <span v-else-if="manualUpdateState === 'saved'">{{ $t("common.updated") }}</span>
+            <span v-else-if="manualUpdateState === 'error'">{{ $t("common.failed") }}</span>
+            <span v-else>{{ $t("settings.updateNow") }}</span>
           </Button>
         </div>
         <div v-if="manualUpdateError" class="mt-2 text-sm text-red-600">
@@ -214,16 +211,26 @@ async function loadSettings() {
 }
 
 const lastUpdatedLabel = computed(() => {
-  if (!lastUpdatedAt.value) return t("settings.notUpdatedYet");
+  if (!lastUpdatedAt.value) {
+    return t("settings.notUpdatedYet");
+  }
   const d = new Date(lastUpdatedAt.value);
-  if (Number.isNaN(d.getTime())) return lastUpdatedAt.value;
+  if (Number.isNaN(d.getTime())) {
+    return lastUpdatedAt.value;
+  }
   return d.toLocaleString();
 });
 
 const lastUpdatedSourceLabel = computed(() => {
-  if (!lastUpdatedSource.value) return t("settings.unknownSource");
-  if (lastUpdatedSource.value === "maxmind") return t("settings.sourceMaxMind");
-  if (lastUpdatedSource.value === "url") return t("settings.sourceUrl");
+  if (!lastUpdatedSource.value) {
+    return t("settings.unknownSource");
+  }
+  if (lastUpdatedSource.value === "maxmind") {
+    return t("settings.sourceMaxMind");
+  }
+  if (lastUpdatedSource.value === "url") {
+    return t("settings.sourceUrl");
+  }
   return t("settings.unknownSource");
 });
 
@@ -232,8 +239,12 @@ const deletingKey = computed(() => deleteKeyState.value === "saving");
 
 async function deleteMaxMindKey() {
   deleteKeyError.value = "";
-  if (!maxmindLicenseKeySet.value) return;
-  if (deletingKey.value) return;
+  if (!maxmindLicenseKeySet.value) {
+    return;
+  }
+  if (deletingKey.value) {
+    return;
+  }
 
   deleteKeyState.value = "saving";
   try {
@@ -383,7 +394,9 @@ async function saveMaxMindMethod() {
 
 async function manualUpdate() {
   manualUpdateError.value = "";
-  if (manualUpdating.value) return;
+  if (manualUpdating.value) {
+    return;
+  }
   manualUpdateState.value = "saving";
 
   if (maxmindLicenseKeySet.value) {

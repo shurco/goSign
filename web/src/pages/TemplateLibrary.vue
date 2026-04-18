@@ -3,51 +3,51 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">{{ $t('templates.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-600">{{ $t('templates.description') }}</p>
+        <h1 class="text-3xl font-bold">{{ $t("templates.title") }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t("templates.description") }}</p>
       </div>
       <div class="flex items-center gap-3">
         <Button variant="ghost" @click="showCreateFolderModal = true">
           <SvgIcon name="folder" class="mr-2 h-5 w-5" />
-          {{ $t('templates.newFolder') }}
+          {{ $t("templates.newFolder") }}
         </Button>
         <div class="relative">
           <Button variant="primary" @click="showCreateTemplateModal = true">
             <SvgIcon name="plus" class="mr-2 h-5 w-5" />
-            {{ $t('templates.newTemplate') }}
-        </Button>
+            {{ $t("templates.newTemplate") }}
+          </Button>
+        </div>
       </div>
-    </div>
     </div>
 
     <!-- Search and Filters -->
     <div class="mb-4 flex flex-col gap-4 lg:flex-row">
-        <!-- Search Input -->
-        <div class="flex-1">
+      <!-- Search Input -->
+      <div class="flex-1">
         <Input v-model="searchQuery" :placeholder="$t('templates.searchTemplates')" class="w-full">
-            <template #prefix>
-              <SvgIcon name="search" class="h-4 w-4 text-gray-400" />
-            </template>
-          </Input>
-        </div>
-
-        <!-- Filters -->
-        <div class="flex gap-3">
-        <Select v-model="selectedCategory" :placeholder="$t('templates.allCategories')" class="w-40">
-          <option value="">{{ $t('templates.allCategories') }}</option>
-          <option value="business">{{ $t('templates.business') }}</option>
-          <option value="legal">{{ $t('templates.legal') }}</option>
-          <option value="personal">{{ $t('templates.personal') }}</option>
-          <option value="education">{{ $t('templates.education') }}</option>
-          </Select>
-
-          <Select v-model="sortBy" class="w-40">
-          <option value="name">{{ $t('templates.sortByName') }}</option>
-          <option value="created_at">{{ $t('templates.sortByDate') }}</option>
-          <option value="usage">{{ $t('templates.mostUsed') }}</option>
-          </Select>
-        </div>
+          <template #prefix>
+            <SvgIcon name="search" class="h-4 w-4 text-gray-400" />
+          </template>
+        </Input>
       </div>
+
+      <!-- Filters -->
+      <div class="flex gap-3">
+        <Select v-model="selectedCategory" :placeholder="$t('templates.allCategories')" class="w-40">
+          <option value="">{{ $t("templates.allCategories") }}</option>
+          <option value="business">{{ $t("templates.business") }}</option>
+          <option value="legal">{{ $t("templates.legal") }}</option>
+          <option value="personal">{{ $t("templates.personal") }}</option>
+          <option value="education">{{ $t("templates.education") }}</option>
+        </Select>
+
+        <Select v-model="sortBy" class="w-40">
+          <option value="name">{{ $t("templates.sortByName") }}</option>
+          <option value="created_at">{{ $t("templates.sortByDate") }}</option>
+          <option value="usage">{{ $t("templates.mostUsed") }}</option>
+        </Select>
+      </div>
+    </div>
 
     <!-- Templates and Folders Table -->
     <ResourceTable
@@ -65,28 +65,36 @@
           <SvgIcon
             v-if="(item as LibraryItem).type === 'folder'"
             name="folder"
-            class="h-4 w-4 text-blue-500 flex-shrink-0"
+            class="h-4 w-4 flex-shrink-0 text-blue-500"
           />
           <SvgIcon
             v-else-if="(item as LibraryItem).type === 'template'"
             name="document"
-            class="h-4 w-4 text-gray-400 flex-shrink-0"
+            class="h-4 w-4 flex-shrink-0 text-gray-400"
           />
           <button
             v-if="(item as LibraryItem).type === 'parent'"
             class="cursor-pointer text-left font-medium text-gray-700 hover:text-blue-600"
             @click="goBackToParent"
           >
-            /..{{ (item as LibraryItem).folderName ? ` (${(item as LibraryItem).folderName})` : '' }}
+            /..{{ (item as LibraryItem).folderName ? ` (${(item as LibraryItem).folderName})` : "" }}
           </button>
           <button
             v-else
             class="cursor-pointer text-left font-medium text-gray-900 hover:text-blue-600"
-            @click="(item as LibraryItem).type === 'folder' ? viewFolder((item as LibraryItem).data as TemplateFolder) : openTemplateView((item as LibraryItem).data as Template)"
+            @click="
+              (item as LibraryItem).type === 'folder'
+                ? viewFolder((item as LibraryItem).data as TemplateFolder)
+                : openTemplateView((item as LibraryItem).data as Template)
+            "
           >
-            {{ (item as LibraryItem).type === 'folder' ? ((item as LibraryItem).data as TemplateFolder).name : ((item as LibraryItem).data as Template).name }}
+            {{
+              (item as LibraryItem).type === "folder"
+                ? ((item as LibraryItem).data as TemplateFolder).name
+                : ((item as LibraryItem).data as Template).name
+            }}
           </button>
-      </div>
+        </div>
       </template>
 
       <template #cell-category="{ item }">
@@ -120,33 +128,33 @@
       <template #actions="{ item }">
         <div class="flex items-center justify-end gap-2">
           <!-- No actions for parent navigation -->
-          <template v-if="(item as LibraryItem).type === 'parent'">
-          </template>
+          <template v-if="(item as LibraryItem).type === 'parent'"> </template>
           <!-- Folder actions -->
           <template v-else-if="(item as LibraryItem).type === 'folder'">
-                      <button
+            <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-              @click.stop="renameFolder((item as LibraryItem).data as TemplateFolder)"
               :title="$t('templates.renameFolder')"
-                      >
+              @click.stop="renameFolder((item as LibraryItem).data as TemplateFolder)"
+            >
               <SvgIcon name="settings" class="h-5 w-5 stroke-[2]" />
-                      </button>
-                      <button
+            </button>
+            <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
-              @click.stop="deleteFolder((item as LibraryItem).data as TemplateFolder)"
               :title="$t('templates.deleteFolder')"
-                      >
+              @click.stop="deleteFolder((item as LibraryItem).data as TemplateFolder)"
+            >
               <SvgIcon name="trash-x" class="h-5 w-5 stroke-[2]" />
-                      </button>
-        </template>
+            </button>
+          </template>
           <!-- Template actions -->
-        <template v-else>
+          <template v-else>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-yellow-600"
-              @click.stop="toggleFavorite((item as LibraryItem).data as Template)"
               :title="((item as LibraryItem).data as Template).is_favorite ? $t('templates.removeFavorite') : $t('templates.addFavorite')"
+              "
+              @click.stop="toggleFavorite((item as LibraryItem).data as Template)"
             >
-                <SvgIcon
+              <SvgIcon
                 :name="((item as LibraryItem).data as Template).is_favorite ? 'star-solid' : 'star'"
                 class="h-5 w-5 stroke-[2]"
                 :class="((item as LibraryItem).data as Template).is_favorite ? 'text-yellow-500' : ''"
@@ -154,27 +162,27 @@
             </button>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-              @click.stop="showMoveModal((item as LibraryItem).data as Template)"
               :title="$t('templates.moveToFolder')"
+              @click.stop="showMoveModal((item as LibraryItem).data as Template)"
             >
               <SvgIcon name="folder" class="h-5 w-5 stroke-[2]" />
             </button>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-blue-600"
-              @click.stop="openTemplateEditor((item as LibraryItem).data as Template)"
               title="Open editor"
+              @click.stop="openTemplateEditor((item as LibraryItem).data as Template)"
             >
               <SvgIcon name="pencil" class="h-5 w-5 stroke-[2]" />
             </button>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-              @click.stop="editTemplate((item as LibraryItem).data as Template)"
               :title="$t('templates.editTemplate')"
+              @click.stop="editTemplate((item as LibraryItem).data as Template)"
             >
               <SvgIcon name="settings" class="h-5 w-5 stroke-[2]" />
             </button>
-        </template>
-      </div>
+          </template>
+        </div>
       </template>
     </ResourceTable>
 
@@ -188,16 +196,16 @@
       <template #default="{ formData }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.folderName') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.folderName") }}</label>
             <Input
               :model-value="(formData.name as string) || ''"
+              :placeholder="$t('templates.enterFolderName')"
+              class="w-full"
               @update:model-value="
                 (val: string | number) => {
                   formData.name = String(val);
                 }
               "
-              :placeholder="$t('templates.enterFolderName')"
-              class="w-full"
             />
           </div>
         </div>
@@ -215,16 +223,16 @@
       <template #default="{ formData }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.folderName') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.folderName") }}</label>
             <Input
               :model-value="(formData.name as string) || ''"
+              :placeholder="$t('templates.enterFolderName')"
+              class="w-full"
               @update:model-value="
                 (val: string | number) => {
                   formData.name = String(val);
                 }
               "
-              :placeholder="$t('templates.enterFolderName')"
-              class="w-full"
             />
           </div>
         </div>
@@ -243,32 +251,27 @@
       <template #default="{ formData }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.templateName') }}</label>
-            <Input
-              v-model="formData.name"
-              :placeholder="$t('templates.enterTemplateName')"
-              class="w-full"
-            />
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.templateName") }}</label>
+            <Input v-model="formData.name" :placeholder="$t('templates.enterTemplateName')" class="w-full" />
           </div>
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.category') }}</label>
-            <Select
-              v-model="formData.category"
-              class="w-full"
-            >
-              <option value="">{{ $t('templates.allCategories') }}</option>
-              <option value="business">{{ $t('templates.business') }}</option>
-              <option value="legal">{{ $t('templates.legal') }}</option>
-              <option value="personal">{{ $t('templates.personal') }}</option>
-              <option value="education">{{ $t('templates.education') }}</option>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.category") }}</label>
+            <Select v-model="formData.category" class="w-full">
+              <option value="">{{ $t("templates.allCategories") }}</option>
+              <option value="business">{{ $t("templates.business") }}</option>
+              <option value="legal">{{ $t("templates.legal") }}</option>
+              <option value="personal">{{ $t("templates.personal") }}</option>
+              <option value="education">{{ $t("templates.education") }}</option>
             </Select>
           </div>
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.uploadFromFile') }} ({{ $t('templates.optional') }})</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700"
+              >{{ $t("templates.uploadFromFile") }} ({{ $t("templates.optional") }})</label
+            >
             <label
               for="templateFileInput"
               class="relative block h-32 w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 hover:bg-gray-50"
-              :class="{ 'bg-gray-50 border-blue-400': selectedFile }"
+              :class="{ 'border-blue-400 bg-gray-50': selectedFile }"
               @dragover.prevent
               @drop.prevent="handleDrop"
             >
@@ -276,8 +279,8 @@
                 <div class="flex flex-col items-center">
                   <span v-if="!selectedFile" class="flex flex-col items-center">
                     <SvgIcon name="cloud-upload" class="h-8 w-8 text-gray-400" />
-                    <div class="mt-2 text-sm font-medium text-gray-700">{{ $t('templates.clickToUpload') }}</div>
-                    <div class="text-xs text-gray-500">{{ $t('templates.dragAndDrop') }}</div>
+                    <div class="mt-2 text-sm font-medium text-gray-700">{{ $t("templates.clickToUpload") }}</div>
+                    <div class="text-xs text-gray-500">{{ $t("templates.dragAndDrop") }}</div>
                   </span>
                   <span v-else class="flex flex-col items-center">
                     <SvgIcon name="document" class="h-8 w-8 text-blue-500" />
@@ -287,7 +290,7 @@
                       class="mt-1 text-xs text-red-600 hover:text-red-800"
                       @click.stop="removeSelectedFile"
                     >
-                      {{ $t('templates.removeFile') }}
+                      {{ $t("templates.removeFile") }}
                     </button>
                   </span>
                 </div>
@@ -301,7 +304,7 @@
                 @change="handleFileSelect"
               />
             </label>
-            <p class="mt-1 text-xs text-gray-500">{{ $t('templates.uploadFromFileHint') }}</p>
+            <p class="mt-1 text-xs text-gray-500">{{ $t("templates.uploadFromFileHint") }}</p>
           </div>
         </div>
       </template>
@@ -318,34 +321,34 @@
       <template #default="{ formData }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.templateName') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.templateName") }}</label>
             <Input
               :model-value="(formData.name as string) || ''"
+              :placeholder="$t('templates.enterTemplateName')"
+              class="w-full"
               @update:model-value="
                 (val: string | number) => {
                   formData.name = String(val);
                 }
               "
-              :placeholder="$t('templates.enterTemplateName')"
-              class="w-full"
             />
           </div>
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.category') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.category") }}</label>
             <Select
               :model-value="(formData.category as string) || ''"
+              class="w-full"
               @update:model-value="
                 (val: string | number) => {
                   formData.category = String(val);
                 }
               "
-              class="w-full"
             >
-              <option value="">{{ $t('templates.allCategories') }}</option>
-              <option value="business">{{ $t('templates.business') }}</option>
-              <option value="legal">{{ $t('templates.legal') }}</option>
-              <option value="personal">{{ $t('templates.personal') }}</option>
-              <option value="education">{{ $t('templates.education') }}</option>
+              <option value="">{{ $t("templates.allCategories") }}</option>
+              <option value="business">{{ $t("templates.business") }}</option>
+              <option value="legal">{{ $t("templates.legal") }}</option>
+              <option value="personal">{{ $t("templates.personal") }}</option>
+              <option value="education">{{ $t("templates.education") }}</option>
             </Select>
           </div>
         </div>
@@ -353,21 +356,26 @@
     </FormModal>
 
     <!-- Move Template Modal -->
-    <FormModal v-model="showMoveTemplateModal" :title="$t('templates.moveTemplate')" :submit-text="$t('templates.moveTemplateButton')" @submit="handleMoveTemplate">
+    <FormModal
+      v-model="showMoveTemplateModal"
+      :title="$t('templates.moveTemplate')"
+      :submit-text="$t('templates.moveTemplateButton')"
+      @submit="handleMoveTemplate"
+    >
       <template #default="{ formData }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('templates.selectFolder') }}</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("templates.selectFolder") }}</label>
             <Select
               :model-value="(formData.folder_id as string | number) || ''"
+              class="w-full"
               @update:model-value="
                 (val: string | number) => {
                   formData.folder_id = String(val);
                 }
               "
-              class="w-full"
             >
-              <option value="">{{ $t('templates.rootFolder') }}</option>
+              <option value="">{{ $t("templates.rootFolder") }}</option>
               <option v-for="folder in folders" :key="folder.id" :value="folder.id">
                 {{ folder.name }}
               </option>
@@ -386,15 +394,10 @@ import { useI18n } from "vue-i18n";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import Select from "@/components/ui/Select.vue";
-import Checkbox from "@/components/ui/Checkbox.vue";
-import Badge from "@/components/ui/Badge.vue";
-import Pagination from "@/components/ui/Pagination.vue";
-import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
-import FileInput from "@/components/ui/FileInput.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
 import FormModal from "@/components/common/FormModal.vue";
 import ResourceTable from "@/components/common/ResourceTable.vue";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/services/api";
 import type { Template, TemplateFolder } from "@/models";
 import { fileToBase64Payload } from "@/utils/file";
 
@@ -425,7 +428,6 @@ const createTemplateModalRef = ref<any>(null);
 const templateFileInput = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
 
-
 // Filters and search
 const searchQuery = ref("");
 const selectedCategory = ref("");
@@ -443,19 +445,18 @@ interface LibraryItem {
 
 // Table columns
 const columns = computed(() => [
-  { key: "name", label: t('templates.templateName'), sortable: true },
-  { key: "category", label: t('templates.category'), sortable: true },
-  { key: "signers", label: t('templates.signers'), sortable: true },
+  { key: "name", label: t("templates.templateName"), sortable: true },
+  { key: "category", label: t("templates.category"), sortable: true },
+  { key: "signers", label: t("templates.signers"), sortable: true },
   {
     key: "created_at",
-    label: t('submissions.created'),
+    label: t("submissions.created"),
     sortable: true,
-    formatter: (value: unknown): string => value ? formatDate(value as string) : ""
+    formatter: (value: unknown): string => (value ? formatDate(value as string) : "")
   }
 ]);
 
 // Mock data removed - always use real API data
-
 
 // Unified list of folders and templates
 const libraryItems = computed((): LibraryItem[] => {
@@ -504,9 +505,7 @@ const libraryItems = computed((): LibraryItem[] => {
   // Search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(
-      (template) => template.name.toLowerCase().includes(query)
-    );
+    filtered = filtered.filter((template) => template.name.toLowerCase().includes(query));
   }
 
   // Category filter
@@ -522,12 +521,12 @@ const libraryItems = computed((): LibraryItem[] => {
   // Sort - parent navigation always first, then folders, then templates
   items.sort((a, b) => {
     // Parent navigation always comes first
-    if (a.type === "parent") return -1;
-    if (b.type === "parent") return 1;
-    
+    if (a.type === "parent") {return -1;}
+    if (b.type === "parent") {return 1;}
+
     // Folders always come before templates
-    if (a.type === "folder" && b.type === "template") return -1;
-    if (a.type === "template" && b.type === "folder") return 1;
+    if (a.type === "folder" && b.type === "template") {return -1;}
+    if (a.type === "template" && b.type === "folder") {return 1;}
 
     // Both are folders - sort by name
     if (a.type === "folder" && b.type === "folder") {
@@ -567,7 +566,6 @@ watch(selectedFolderId, (newFolderId) => {
     router.push("/templates");
   }
 });
-
 
 // Methods
 let loadTemplatesPromise: Promise<void> | null = null;
@@ -689,7 +687,7 @@ const editTemplate = (template: Template) => {
 };
 
 const handleEditTemplate = async (formData: Record<string, unknown>) => {
-  if (!templateToEdit.value) return;
+  if (!templateToEdit.value) {return;}
 
   const name = formData.name as string;
   if (!name || name.trim() === "") {
@@ -701,11 +699,11 @@ const handleEditTemplate = async (formData: Record<string, unknown>) => {
     const updateData: any = {
       name: name.trim()
     };
-    
+
     // Only include category if it's not empty
     if (category && category.trim() !== "") {
       updateData.category = category.trim();
-  } else {
+    } else {
       updateData.category = null;
     }
 
@@ -715,11 +713,11 @@ const handleEditTemplate = async (formData: Record<string, unknown>) => {
       templateToEdit.value = null;
       await loadTemplates();
     } else {
-      alert(t('templates.updateError') || 'Failed to update template');
+      alert(t("templates.updateError") || "Failed to update template");
     }
   } catch (error) {
     console.error("Failed to update template:", error);
-    alert(t('templates.updateError') || 'Failed to update template');
+    alert(t("templates.updateError") || "Failed to update template");
   }
 };
 
@@ -727,7 +725,7 @@ const createNewTemplate = async () => {
   try {
     // Create a new empty template
     const response = await apiPost("/api/v1/templates", {
-      name: t('templates.newTemplate'),
+      name: t("templates.newTemplate"),
       description: "",
       schema: [],
       fields: [],
@@ -738,28 +736,30 @@ const createNewTemplate = async () => {
       // API returns: { success: true, message: "template", data: Template }
       // or: { data: Template } (if wrapped)
       let newTemplate = response.data;
-      
+
       // Handle case where data might be wrapped
-      if (newTemplate && typeof newTemplate === 'object' && 'template' in newTemplate) {
+      if (newTemplate && typeof newTemplate === "object" && "template" in newTemplate) {
         newTemplate = newTemplate.template;
       }
-      
-      const templateId = newTemplate?.id || (newTemplate && typeof newTemplate === 'object' && 'id' in newTemplate ? newTemplate.id : null);
-      
+
+      const templateId =
+        newTemplate?.id ||
+        (newTemplate && typeof newTemplate === "object" && "id" in newTemplate ? newTemplate.id : null);
+
       if (templateId) {
         // Navigate to edit page for the new template
         router.push(`/templates/${templateId}/edit`);
-  } else {
+      } else {
         console.error("Failed to get template ID from response:", response);
-        alert(t('templates.createTemplateError'));
+        alert(t("templates.createTemplateError"));
       }
     } else {
       console.error("Failed to create template: unexpected response", response);
-      alert(t('templates.createTemplateError'));
+      alert(t("templates.createTemplateError"));
     }
   } catch (error: any) {
     console.error("Failed to create template:", error);
-    const errorMessage = error?.message || t('templates.createTemplateError');
+    const errorMessage = error?.message || t("templates.createTemplateError");
     alert(errorMessage);
   }
 };
@@ -769,12 +769,12 @@ const handleFileSelect = (event: Event) => {
   if (input && input.files && input.files.length > 0) {
     const file = input.files[0];
     // Validate file type
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
       selectedFile.value = file;
     } else {
-      alert(t('templates.invalidFileType'));
+      alert(t("templates.invalidFileType"));
       if (input) {
-        input.value = '';
+        input.value = "";
       }
     }
   } else {
@@ -787,7 +787,7 @@ const handleDrop = (event: DragEvent) => {
   if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
     const file = event.dataTransfer.files[0];
     // Validate file type
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
       selectedFile.value = file;
       // Also update the input element
       if (templateFileInput.value) {
@@ -796,7 +796,7 @@ const handleDrop = (event: DragEvent) => {
         templateFileInput.value.files = dataTransfer.files;
       }
     } else {
-      alert(t('templates.invalidFileType'));
+      alert(t("templates.invalidFileType"));
     }
   }
 };
@@ -804,7 +804,7 @@ const handleDrop = (event: DragEvent) => {
 const removeSelectedFile = () => {
   selectedFile.value = null;
   if (templateFileInput.value) {
-    templateFileInput.value.value = '';
+    templateFileInput.value.value = "";
   }
 };
 
@@ -814,76 +814,77 @@ const handleCancelCreateTemplate = () => {
 };
 
 const handleCreateTemplate = async (formData: any): Promise<void> => {
-  const templateName = (formData.name as string)?.trim() || t('templates.newTemplate');
-  
+  const templateName = (formData.name as string)?.trim() || t("templates.newTemplate");
+
   try {
     if (selectedFile.value) {
       // Create template from file
       const file = selectedFile.value;
-      
+
       // Convert file to base64 (payload only)
       const base64String = await fileToBase64Payload(file);
-      
+
       // Determine file type
-      let fileType = 'pdf';
-      if (file.name.endsWith('.pdf')) {
-        fileType = 'pdf';
-      } else if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
-        fileType = 'html';
-      } else if (file.name.endsWith('.docx')) {
-        fileType = 'docx';
+      let fileType = "pdf";
+      if (file.name.endsWith(".pdf")) {
+        fileType = "pdf";
+      } else if (file.name.endsWith(".html") || file.name.endsWith(".htm")) {
+        fileType = "html";
+      } else if (file.name.endsWith(".docx")) {
+        fileType = "docx";
       }
-      
-      
+
       const response = await apiPost("/api/v1/templates/from-file", {
         name: templateName,
         type: fileType,
         file_base64: base64String,
         description: ""
       });
-      
+
       if (response && response.data) {
         let newTemplate = response.data;
-        if (newTemplate && typeof newTemplate === 'object' && 'template' in newTemplate) {
+        if (newTemplate && typeof newTemplate === "object" && "template" in newTemplate) {
           newTemplate = newTemplate.template;
         }
-        
-        const templateId = newTemplate?.id || (newTemplate && typeof newTemplate === 'object' && 'id' in newTemplate ? newTemplate.id : null);
-        
+
+        const templateId =
+          newTemplate?.id ||
+          (newTemplate && typeof newTemplate === "object" && "id" in newTemplate ? newTemplate.id : null);
+
         if (templateId) {
           // Clean up
           removeSelectedFile();
-          
+
           // Reset modal submitting state before closing
           if (createTemplateModalRef.value) {
             createTemplateModalRef.value.resetSubmitting();
           }
-          
+
           // Close modal
           showCreateTemplateModal.value = false;
-          
+
           // Reload templates
           await loadTemplates();
-          
+
           // Navigate to edit page for the new template
           router.push(`/templates/${templateId}/edit`);
         } else {
           console.error("Failed to get template ID from response:", response);
-          const errorMsg = t('templates.createTemplateError');
+          const errorMsg = t("templates.createTemplateError");
           alert(errorMsg);
           if (createTemplateModalRef.value) {
             createTemplateModalRef.value.resetSubmitting();
           }
-          throw new Error('Template ID not found in response');
+          throw new Error("Template ID not found in response");
         }
       } else {
         console.error("Failed to create template: unexpected response", response);
-        const errorMsg = t('templates.createTemplateError');
+        const errorMsg = t("templates.createTemplateError");
         alert(errorMsg);
         if (createTemplateModalRef.value) {
           createTemplateModalRef.value.resetSubmitting();
         }
-        throw new Error('Unexpected response format');
+        throw new Error("Unexpected response format");
       }
     } else {
       // Create empty template
@@ -893,51 +894,52 @@ const handleCreateTemplate = async (formData: any): Promise<void> => {
         category: category && category.trim() !== "" ? category.trim() : null
       });
 
-
       if (response && response.data) {
         let newTemplate = response.data;
-        if (newTemplate && typeof newTemplate === 'object' && 'template' in newTemplate) {
+        if (newTemplate && typeof newTemplate === "object" && "template" in newTemplate) {
           newTemplate = newTemplate.template;
         }
-        
-        const templateId = newTemplate?.id || (newTemplate && typeof newTemplate === 'object' && 'id' in newTemplate ? newTemplate.id : null);
-        
+
+        const templateId =
+          newTemplate?.id ||
+          (newTemplate && typeof newTemplate === "object" && "id" in newTemplate ? newTemplate.id : null);
+
         if (templateId) {
           // Reset modal submitting state before closing
           if (createTemplateModalRef.value) {
             createTemplateModalRef.value.resetSubmitting();
           }
-          
+
           // Close modal
           showCreateTemplateModal.value = false;
-          
+
           // Reload templates
           await loadTemplates();
-          
+
           // Navigate to edit page for the new template
           router.push(`/templates/${templateId}/edit`);
         } else {
           console.error("Failed to get template ID from response:", response);
-          const errorMsg = t('templates.createTemplateError');
+          const errorMsg = t("templates.createTemplateError");
           alert(errorMsg);
           if (createTemplateModalRef.value) {
             createTemplateModalRef.value.resetSubmitting();
           }
-          throw new Error('Template ID not found in response');
+          throw new Error("Template ID not found in response");
         }
       } else {
         console.error("Failed to create template: unexpected response", response);
-        const errorMsg = t('templates.createTemplateError');
+        const errorMsg = t("templates.createTemplateError");
         alert(errorMsg);
         if (createTemplateModalRef.value) {
           createTemplateModalRef.value.resetSubmitting();
         }
-        throw new Error('Unexpected response format');
+        throw new Error("Unexpected response format");
       }
     }
   } catch (error: any) {
     console.error("Failed to create template:", error);
-    const errorMessage = error?.message || t('templates.createTemplateError');
+    const errorMessage = error?.message || t("templates.createTemplateError");
     alert(errorMessage);
     // Reset submitting state on error
     if (createTemplateModalRef.value) {
@@ -946,7 +948,6 @@ const handleCreateTemplate = async (formData: any): Promise<void> => {
     // Don't re-throw - let user retry
   }
 };
-
 
 const viewFolder = (folder: TemplateFolder) => {
   router.push(`/templates/${folder.id}/folder`);
@@ -1012,15 +1013,15 @@ const formatDate = (date: string | Date) => {
 };
 
 const translateCategory = (category: string): string => {
-  if (!category) return '';
+  if (!category) {return '';}
   // Map category values to translation keys
   const categoryMap: Record<string, string> = {
-    'business': 'templates.business',
-    'legal': 'templates.legal',
-    'personal': 'templates.personal',
-    'education': 'templates.education'
+    business: "templates.business",
+    legal: "templates.legal",
+    personal: "templates.personal",
+    education: "templates.education"
   };
-  
+
   const translationKey = categoryMap[category.toLowerCase()];
   if (translationKey) {
     return t(translationKey);
@@ -1038,7 +1039,7 @@ const openFolderMenu = (folder: TemplateFolder, event: MouseEvent) => {
 const handleCreateFolder = async (formData: Record<string, unknown>) => {
   const name = (formData.name as string)?.trim();
   if (!name || name === "") {
-    alert(t('templates.folderNameRequired'));
+    alert(t("templates.folderNameRequired"));
     return;
   }
 
@@ -1051,11 +1052,11 @@ const handleCreateFolder = async (formData: Record<string, unknown>) => {
       await loadFolders();
     } else {
       console.error("Failed to create folder: unexpected response", response);
-      alert(t('templates.createFolderUnexpectedError'));
+      alert(t("templates.createFolderUnexpectedError"));
     }
   } catch (error: any) {
     console.error("Failed to create folder:", error);
-    const errorMessage = error?.message || t('templates.createFolderError');
+    const errorMessage = error?.message || t("templates.createFolderError");
     alert(errorMessage);
   }
 };
@@ -1067,7 +1068,7 @@ const renameFolder = (folder: TemplateFolder) => {
 };
 
 const handleRenameFolder = async (formData: Record<string, unknown>) => {
-  if (!folderToRename.value) return;
+  if (!folderToRename.value) {return;}
 
   const name = formData.name as string;
   if (!name || name.trim() === "") {
@@ -1091,7 +1092,7 @@ const handleRenameFolder = async (formData: Record<string, unknown>) => {
 const deleteFolder = async (folder: TemplateFolder) => {
   folderMenuOpen.value = null;
 
-  if (!confirm(t('templates.deleteFolderConfirm', { name: folder.name }))) {
+  if (!confirm(t("templates.deleteFolderConfirm", { name: folder.name }))) {
     return;
   }
 
@@ -1115,7 +1116,7 @@ const showMoveModal = (template: Template) => {
 };
 
 const handleMoveTemplate = async (formData: Record<string, unknown>) => {
-  if (!templateToMove.value) return;
+  if (!templateToMove.value) {return;}
 
   // Get folder_id - null, empty string, or actual folder ID
   let folderId = formData.folder_id as string | null | undefined;
@@ -1150,11 +1151,11 @@ const handleMoveTemplate = async (formData: Record<string, unknown>) => {
       currentPage.value = 1;
     } else {
       console.error("Failed to move template: unexpected response", response);
-      alert(t('templates.moveTemplateUnexpectedError'));
+      alert(t("templates.moveTemplateUnexpectedError"));
     }
   } catch (error: any) {
     console.error("Failed to move template:", error);
-    const errorMessage = error?.message || t('templates.moveTemplateError');
+    const errorMessage = error?.message || t("templates.moveTemplateError");
     alert(errorMessage);
   }
 };
@@ -1173,9 +1174,9 @@ watch(showEditTemplateModal, async (isOpen) => {
   if (isOpen && templateToEdit.value && editTemplateModalRef.value) {
     await nextTick();
     if (editTemplateModalRef.value.setFormData) {
-      editTemplateModalRef.value.setFormData({ 
+      editTemplateModalRef.value.setFormData({
         name: templateToEdit.value.name,
-        category: templateToEdit.value.category || ''
+        category: templateToEdit.value.category || ""
       });
     }
   }

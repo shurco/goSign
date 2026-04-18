@@ -2,6 +2,7 @@ package cert
 
 import (
 	"crypto/x509/pkix"
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -143,9 +144,13 @@ func TestCertInfoRSA(t *testing.T) {
 
 func TestCertInEmptyFile(t *testing.T) {
 	_, err := ParseCertificate([]byte(""))
-	if err != nil {
-		if !strings.Contains(err.Error(), "can't decode CA cert file") {
-			t.Fatal("error must be contain can't decode CA cert file")
-		}
+	if err == nil {
+		t.Fatal("expected error for empty PEM input, got nil")
+	}
+	if !errors.Is(err, ErrDecodeCACert) {
+		t.Fatalf("expected error %q, got %q", ErrDecodeCACert, err)
+	}
+	if !strings.Contains(err.Error(), "can't decode CA cert file") {
+		t.Fatalf("error message must contain \"can't decode CA cert file\", got %q", err)
 	}
 }

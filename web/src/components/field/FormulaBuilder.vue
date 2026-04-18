@@ -1,19 +1,22 @@
 <template>
   <div class="formula-builder space-y-5">
     <p class="text-sm text-gray-600">
-      {{ $t('fields.formula.description') || 'Use field IDs and operators to compute a value. Click fields and functions below to insert.' }}
+      {{
+        $t("fields.formula.description") ||
+        "Use field IDs and operators to compute a value. Click fields and functions below to insert."
+      }}
     </p>
 
     <!-- Formula editor -->
     <div class="formula-editor">
       <label class="mb-1.5 block text-sm font-medium text-gray-700">
-        {{ $t('fields.formula.expression') || 'Formula' }}
+        {{ $t("fields.formula.expression") || "Formula" }}
       </label>
       <textarea
         :value="displayFormula"
         :placeholder="$t('fields.formula.placeholder')"
         :class="[
-          'formula-input w-full rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed transition-colors focus:outline-none focus:ring-2',
+          'formula-input w-full rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed transition-colors focus:ring-2 focus:outline-none',
           validationError
             ? 'border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-red-200'
             : 'border-gray-300 bg-white focus:border-indigo-400 focus:ring-indigo-200'
@@ -26,19 +29,18 @@
         <span aria-hidden="true">⊗</span>
         <span>{{ validationError }}</span>
       </div>
-      <div
-        v-else-if="previewResult !== null"
-        class="mt-2 flex items-center gap-2 text-sm text-emerald-600"
-      >
+      <div v-else-if="previewResult !== null" class="mt-2 flex items-center gap-2 text-sm text-emerald-600">
         <span aria-hidden="true">✓</span>
-        <span>{{ $t('fields.formula.preview') }}: <strong>{{ previewResult }}</strong></span>
+        <span
+          >{{ $t("fields.formula.preview") }}: <strong>{{ previewResult }}</strong></span
+        >
       </div>
     </div>
 
     <!-- Insert field -->
     <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {{ $t('fields.formula.insertField') }}
+      <h4 class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+        {{ $t("fields.formula.insertField") }}
       </h4>
       <div class="flex flex-wrap gap-2">
         <button
@@ -52,14 +54,14 @@
         </button>
       </div>
       <p v-if="!availableFields.length" class="text-sm text-gray-500">
-        {{ $t('fields.formula.noFields') || 'No number/text fields available.' }}
+        {{ $t("fields.formula.noFields") || "No number/text fields available." }}
       </p>
     </section>
 
     <!-- Functions -->
     <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {{ $t('fields.formula.functions') }}
+      <h4 class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+        {{ $t("fields.formula.functions") }}
       </h4>
       <div class="flex flex-wrap gap-2">
         <button
@@ -77,8 +79,8 @@
 
     <!-- Examples -->
     <section class="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {{ $t('fields.formula.examples') }}
+      <h4 class="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+        {{ $t("fields.formula.examples") }}
       </h4>
       <div class="space-y-1.5">
         <button
@@ -99,156 +101,158 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useFormulas } from '@/composables/useFormulas'
-import type { Field } from '@/models/template'
-import { apiPost } from '@/services/api'
+import { computed, ref, watch } from "vue";
+import { useFormulas } from "@/composables/useFormulas";
+import type { Field } from "@/models/template";
+import { apiPost } from "@/services/api";
 
 interface FieldWithDisplayName extends Field {
-  displayName?: string
+  displayName?: string;
 }
 
 interface Props {
-  field: Field
-  availableFields: FieldWithDisplayName[]
+  field: Field;
+  availableFields: FieldWithDisplayName[];
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
-  'update:formula': [formula: string]
-}>()
+  "update:formula": [formula: string];
+}>();
 
-const formula = ref(props.field.preferences?.formula ?? (props.field as any).formula ?? '')
-const validationError = ref<string | null>(null)
+const formula = ref(props.field.preferences?.formula ?? (props.field as any).formula ?? "");
+const validationError = ref<string | null>(null);
 
 // Convert formula (field IDs) to display string ([[field name]])
 function formulaToDisplay(formulaStr: string): string {
-  let out = formulaStr
-  const byId = props.availableFields
-  const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const sorted = [...byId].sort((a, b) => b.id.length - a.id.length)
+  let out = formulaStr;
+  const byId = props.availableFields;
+  const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sorted = [...byId].sort((a, b) => b.id.length - a.id.length);
   for (const f of sorted) {
-    const name = f.displayName ?? f.name ?? f.id
-    const re = new RegExp(escapeRe(f.id), 'g')
-    out = out.replace(re, `[[${name}]]`)
+    const name = f.displayName ?? f.name ?? f.id;
+    const re = new RegExp(escapeRe(f.id), "g");
+    out = out.replace(re, `[[${name}]]`);
   }
-  return out
+  return out;
 }
 
 // Parse display string ([[field name]]) back to formula (field IDs)
 function displayToFormula(displayStr: string): string {
-  const re = /\[\[([^\]]*?)\]\]/g
+  const re = /\[\[([^\]]*?)\]\]/g;
   return displayStr.replace(re, (_, name) => {
-    const f = props.availableFields.find(
-      (x) => (x.displayName ?? x.name ?? x.id) === name
-    )
-    return f ? f.id : `[[${name}]]`
-  })
+    const f = props.availableFields.find((x) => (x.displayName ?? x.name ?? x.id) === name);
+    return f ? f.id : `[[${name}]]`;
+  });
 }
 
-const displayFormula = computed(() => formulaToDisplay(formula.value))
+const displayFormula = computed(() => formulaToDisplay(formula.value));
 
 function onFormulaDisplayInput(e: Event) {
-  const target = e.target as HTMLTextAreaElement
-  formula.value = displayToFormula(target.value)
+  const target = e.target as HTMLTextAreaElement;
+  formula.value = displayToFormula(target.value);
 }
 
 const availableFunctions = [
-  { name: 'SUM', syntax: 'SUM(field_1, field_2)', description: 'Sum of multiple fields' },
-  { name: 'IF', syntax: 'IF(field_1 > 100, field_2, 0)', description: 'Conditional value' },
-  { name: 'MAX', syntax: 'MAX(field_1, field_2)', description: 'Maximum value' },
-  { name: 'MIN', syntax: 'MIN(field_1, field_2)', description: 'Minimum value' },
-  { name: 'ROUND', syntax: 'ROUND(field_1, 2)', description: 'Round to decimals' }
-]
+  { name: "SUM", syntax: "SUM(field_1, field_2)", description: "Sum of multiple fields" },
+  { name: "IF", syntax: "IF(field_1 > 100, field_2, 0)", description: "Conditional value" },
+  { name: "MAX", syntax: "MAX(field_1, field_2)", description: "Maximum value" },
+  { name: "MIN", syntax: "MIN(field_1, field_2)", description: "Minimum value" },
+  { name: "ROUND", syntax: "ROUND(field_1, 2)", description: "Round to decimals" }
+];
 
 const examples = [
-  { label: 'Sum two fields', formula: 'field_1 + field_2' },
-  { label: 'Calculate tax (20%)', formula: 'field_1 * 1.2' },
-  { label: 'Conditional discount', formula: 'IF(field_1 > 1000, field_1 * 0.9, field_1)' },
-  { label: 'Sum with tax', formula: 'SUM(field_1, field_2) * 1.2' }
-]
+  { label: "Sum two fields", formula: "field_1 + field_2" },
+  { label: "Calculate tax (20%)", formula: "field_1 * 1.2" },
+  { label: "Conditional discount", formula: "IF(field_1 > 1000, field_1 * 0.9, field_1)" },
+  { label: "Sum with tax", formula: "SUM(field_1, field_2) * 1.2" }
+];
 
 // Sample data for preview
 const sampleFormData = computed(() => {
-  const data: Record<string, any> = {}
+  const data: Record<string, any> = {};
   for (const field of props.availableFields) {
-    data[field.id] = 10 // Sample value
+    data[field.id] = 10; // Sample value
   }
-  return data
-})
+  return data;
+});
 
 const { evaluateFormula } = useFormulas(
   computed(() => props.availableFields),
   computed(() => sampleFormData.value)
-)
+);
 
 const previewResult = computed(() => {
   if (!formula.value || validationError.value) {
-    return null
+    return null;
   }
-  const result = evaluateFormula(formula.value)
-  return result !== null ? result.toFixed(2) : null
-})
+  const result = evaluateFormula(formula.value);
+  return result !== null ? result.toFixed(2) : null;
+});
 
 function insertField(fieldId: string) {
-  formula.value += fieldId
-  validateFormula()
+  formula.value += fieldId;
+  validateFormula();
 }
 
 function applyExample(exampleFormula: string) {
-  formula.value = exampleFormula
-  validateFormula()
+  formula.value = exampleFormula;
+  validateFormula();
 }
 
 function exampleDisplayFormula(exampleFormula: string): string {
-  return formulaToDisplay(exampleFormula)
+  return formulaToDisplay(exampleFormula);
 }
 
 function insertFunction(syntax: string) {
-  formula.value += syntax
-  validateFormula()
+  formula.value += syntax;
+  validateFormula();
 }
 
 async function validateFormula() {
   if (!formula.value.trim()) {
-    validationError.value = null
-    emit('update:formula', '')
-    return
+    validationError.value = null;
+    emit("update:formula", "");
+    return;
   }
-  
+
   try {
-    const response = await apiPost('/api/v1/templates/formulas/validate', {
+    const response = await apiPost("/api/v1/templates/formulas/validate", {
       formula: formula.value,
       fields: props.availableFields
-    })
-    
+    });
+
     // API returns { data: ..., message: ... }
-    if (response && !response.message?.includes('error')) {
-      validationError.value = null
-      emit('update:formula', formula.value)
+    if (response && !response.message?.includes("error")) {
+      validationError.value = null;
+      emit("update:formula", formula.value);
     } else {
-      validationError.value = response.message || 'Invalid formula'
+      validationError.value = response.message || "Invalid formula";
     }
   } catch (error: any) {
-    validationError.value = error.message || 'Invalid formula'
+    validationError.value = error.message || "Invalid formula";
   }
 }
 
 // Watch formula changes
-watch(formula, () => {
-  validateFormula()
-}, { immediate: true })
+watch(
+  formula,
+  () => {
+    validateFormula();
+  },
+  { immediate: true }
+);
 
 // Expose method to get current formula
 defineExpose({
   getFormula: () => formula.value,
   formula
-})
+});
 </script>
 
 <style scoped>
 .formula-input {
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 </style>

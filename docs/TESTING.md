@@ -155,7 +155,8 @@ func TestPasswordHashing(t *testing.T) {
         plainPassword := "SecureP@ssw0rd123"
 
         // When: hashing the password
-        hashedPassword := password.GeneratePassword(plainPassword)
+        hashedPassword, err := password.GeneratePassword(plainPassword)
+        require.NoError(t, err)
 
         // Then: should verify correctly
         assert.True(t, password.ComparePasswords(hashedPassword, plainPassword))

@@ -1,801 +1,801 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { ref, type Ref } from 'vue'
-import { useConditions } from '../useConditions'
-import type { Field, FieldCondition, FieldConditionGroup, ConditionOperator } from '@/models/template'
+import { beforeEach, describe, expect, it } from "vitest";
+import { ref, type Ref } from "vue";
+import { useConditions } from "../useConditions";
+import type { ConditionOperator, Field, FieldCondition, FieldConditionGroup } from "@/models/template";
 
-describe('useConditions - Condition Evaluation Logic', () => {
-  let fields: Ref<Field[]>
-  let formData: Ref<Record<string, any>>
+describe("useConditions - Condition Evaluation Logic", () => {
+  let fields: Ref<Field[]>;
+  let formData: Ref<Record<string, any>>;
 
   beforeEach(() => {
     fields = ref<Field[]>([
       {
-        id: 'field_1',
-        type: 'text',
-        name: 'Field 1',
-        submitter_id: '',
-        required: false,
+        id: "field_1",
+        type: "text",
+        name: "Field 1",
+        submitter_id: "",
+        required: false
       },
       {
-        id: 'field_2',
-        type: 'number',
-        name: 'Field 2',
-        submitter_id: '',
-        required: false,
+        id: "field_2",
+        type: "number",
+        name: "Field 2",
+        submitter_id: "",
+        required: false
       },
       {
-        id: 'field_3',
-        type: 'text',
-        name: 'Field 3',
-        submitter_id: '',
-        required: false,
-      },
-    ])
+        id: "field_3",
+        type: "text",
+        name: "Field 3",
+        submitter_id: "",
+        required: false
+      }
+    ]);
 
     formData = ref<Record<string, any>>({
-      field_1: '',
+      field_1: "",
       field_2: 0,
-      field_3: '',
-    })
-  })
+      field_3: ""
+    });
+  });
 
-  describe('Equals Operator', () => {
-    it('should return true when field value equals condition value', () => {
-      formData.value.field_1 = 'test'
-      
+  describe("Equals Operator", () => {
+    it("should return true when field value equals condition value", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'equals',
-        value: 'test',
-      }
+        field_id: "field_1",
+        operator: "equals",
+        value: "test"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value does not equal condition value', () => {
-      formData.value.field_1 = 'test'
-      
+    it("should return false when field value does not equal condition value", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'equals',
-        value: 'different',
-      }
+        field_id: "field_1",
+        operator: "equals",
+        value: "different"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should handle numeric equality', () => {
-      formData.value.field_2 = 42
-      
+    it("should handle numeric equality", () => {
+      formData.value.field_2 = 42;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'equals',
-        value: 42,
-      }
+        field_id: "field_2",
+        operator: "equals",
+        value: 42
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
+  });
 
-  describe('Not Equals Operator', () => {
-    it('should return true when field value does not equal condition value', () => {
-      formData.value.field_1 = 'test'
-      
+  describe("Not Equals Operator", () => {
+    it("should return true when field value does not equal condition value", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'not_equals',
-        value: 'different',
-      }
+        field_id: "field_1",
+        operator: "not_equals",
+        value: "different"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value equals condition value', () => {
-      formData.value.field_1 = 'test'
-      
+    it("should return false when field value equals condition value", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'not_equals',
-        value: 'test',
-      }
+        field_id: "field_1",
+        operator: "not_equals",
+        value: "test"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('Contains Operator', () => {
-    it('should return true when field value contains condition value', () => {
-      formData.value.field_1 = 'hello world'
-      
+  describe("Contains Operator", () => {
+    it("should return true when field value contains condition value", () => {
+      formData.value.field_1 = "hello world";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'contains',
-        value: 'world',
-      }
+        field_id: "field_1",
+        operator: "contains",
+        value: "world"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value does not contain condition value', () => {
-      formData.value.field_1 = 'hello world'
-      
+    it("should return false when field value does not contain condition value", () => {
+      formData.value.field_1 = "hello world";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'contains',
-        value: 'xyz',
-      }
+        field_id: "field_1",
+        operator: "contains",
+        value: "xyz"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should handle case-sensitive matching', () => {
-      formData.value.field_1 = 'Hello World'
-      
+    it("should handle case-sensitive matching", () => {
+      formData.value.field_1 = "Hello World";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'contains',
-        value: 'hello',
-      }
+        field_id: "field_1",
+        operator: "contains",
+        value: "hello"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should convert non-string values to strings', () => {
-      formData.value.field_2 = 12345
-      
+    it("should convert non-string values to strings", () => {
+      formData.value.field_2 = 12345;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'contains',
-        value: '234',
-      }
+        field_id: "field_2",
+        operator: "contains",
+        value: "234"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
+  });
 
-  describe('Not Contains Operator', () => {
-    it('should return true when field value does not contain condition value', () => {
-      formData.value.field_1 = 'hello world'
-      
+  describe("Not Contains Operator", () => {
+    it("should return true when field value does not contain condition value", () => {
+      formData.value.field_1 = "hello world";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'not_contains',
-        value: 'xyz',
-      }
+        field_id: "field_1",
+        operator: "not_contains",
+        value: "xyz"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value contains condition value', () => {
-      formData.value.field_1 = 'hello world'
-      
+    it("should return false when field value contains condition value", () => {
+      formData.value.field_1 = "hello world";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'not_contains',
-        value: 'world',
-      }
+        field_id: "field_1",
+        operator: "not_contains",
+        value: "world"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('Greater Than Operator', () => {
-    it('should return true when field value is greater than condition value', () => {
-      formData.value.field_2 = 10
-      
+  describe("Greater Than Operator", () => {
+    it("should return true when field value is greater than condition value", () => {
+      formData.value.field_2 = 10;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'greater_than',
-        value: 5,
-      }
+        field_id: "field_2",
+        operator: "greater_than",
+        value: 5
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value is not greater than condition value', () => {
-      formData.value.field_2 = 5
-      
+    it("should return false when field value is not greater than condition value", () => {
+      formData.value.field_2 = 5;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'greater_than',
-        value: 10,
-      }
+        field_id: "field_2",
+        operator: "greater_than",
+        value: 10
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should handle string numbers', () => {
-      formData.value.field_1 = '10'
-      
+    it("should handle string numbers", () => {
+      formData.value.field_1 = "10";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'greater_than',
-        value: '5',
-      }
+        field_id: "field_1",
+        operator: "greater_than",
+        value: "5"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when values are equal', () => {
-      formData.value.field_2 = 5
-      
+    it("should return false when values are equal", () => {
+      formData.value.field_2 = 5;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'greater_than',
-        value: 5,
-      }
+        field_id: "field_2",
+        operator: "greater_than",
+        value: 5
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('Less Than Operator', () => {
-    it('should return true when field value is less than condition value', () => {
-      formData.value.field_2 = 5
-      
+  describe("Less Than Operator", () => {
+    it("should return true when field value is less than condition value", () => {
+      formData.value.field_2 = 5;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'less_than',
-        value: 10,
-      }
+        field_id: "field_2",
+        operator: "less_than",
+        value: 10
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value is not less than condition value', () => {
-      formData.value.field_2 = 10
-      
+    it("should return false when field value is not less than condition value", () => {
+      formData.value.field_2 = 10;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'less_than',
-        value: 5,
-      }
+        field_id: "field_2",
+        operator: "less_than",
+        value: 5
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should return false when values are equal', () => {
-      formData.value.field_2 = 5
-      
+    it("should return false when values are equal", () => {
+      formData.value.field_2 = 5;
+
       const condition: FieldCondition = {
-        field_id: 'field_2',
-        operator: 'less_than',
-        value: 5,
-      }
+        field_id: "field_2",
+        operator: "less_than",
+        value: 5
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('Is Empty Operator', () => {
-    it('should return true when field value is empty string', () => {
-      formData.value.field_1 = ''
-      
+  describe("Is Empty Operator", () => {
+    it("should return true when field value is empty string", () => {
+      formData.value.field_1 = "";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return true when field value is null', () => {
-      formData.value.field_1 = null
-      
+    it("should return true when field value is null", () => {
+      formData.value.field_1 = null;
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return true when field value is undefined', () => {
-      formData.value.field_1 = undefined
-      
+    it("should return true when field value is undefined", () => {
+      formData.value.field_1 = undefined;
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return true when field value is empty array', () => {
-      formData.value.field_1 = []
-      
+    it("should return true when field value is empty array", () => {
+      formData.value.field_1 = [];
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value is not empty', () => {
-      formData.value.field_1 = 'test'
-      
+    it("should return false when field value is not empty", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should return false when field value is non-empty array', () => {
-      formData.value.field_1 = ['item1', 'item2']
-      
+    it("should return false when field value is non-empty array", () => {
+      formData.value.field_1 = ["item1", "item2"];
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('Is Not Empty Operator', () => {
-    it('should return true when field value is not empty', () => {
-      formData.value.field_1 = 'test'
-      
+  describe("Is Not Empty Operator", () => {
+    it("should return true when field value is not empty", () => {
+      formData.value.field_1 = "test";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_not_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_not_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return true when field value is non-empty array', () => {
-      formData.value.field_1 = ['item1']
-      
+    it("should return true when field value is non-empty array", () => {
+      formData.value.field_1 = ["item1"];
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_not_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_not_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should return false when field value is empty string', () => {
-      formData.value.field_1 = ''
-      
+    it("should return false when field value is empty string", () => {
+      formData.value.field_1 = "";
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_not_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_not_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
 
-    it('should return false when field value is empty array', () => {
-      formData.value.field_1 = []
-      
+    it("should return false when field value is empty array", () => {
+      formData.value.field_1 = [];
+
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_not_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_not_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
 
-  describe('AND Logic in Condition Groups', () => {
-    it('should return true when all conditions in AND group are met', () => {
-      formData.value.field_1 = 'test'
-      formData.value.field_2 = 10
+  describe("AND Logic in Condition Groups", () => {
+    it("should return true when all conditions in AND group are met", () => {
+      formData.value.field_1 = "test";
+      formData.value.field_2 = 10;
 
       const group: FieldConditionGroup = {
-        logic: 'AND',
+        logic: "AND",
         conditions: [
           {
-            field_id: 'field_1',
-            operator: 'equals',
-            value: 'test',
+            field_id: "field_1",
+            operator: "equals",
+            value: "test"
           },
           {
-            field_id: 'field_2',
-            operator: 'greater_than',
-            value: 5,
-          },
+            field_id: "field_2",
+            operator: "greater_than",
+            value: 5
+          }
         ],
-        action: 'show',
-      }
+        action: "show"
+      };
 
-      const { evaluateGroup } = useConditions(fields, formData)
-      expect(evaluateGroup(group)).toBe(true)
-    })
+      const { evaluateGroup } = useConditions(fields, formData);
+      expect(evaluateGroup(group)).toBe(true);
+    });
 
-    it('should return false when any condition in AND group is not met', () => {
-      formData.value.field_1 = 'test'
-      formData.value.field_2 = 3
+    it("should return false when any condition in AND group is not met", () => {
+      formData.value.field_1 = "test";
+      formData.value.field_2 = 3;
 
       const group: FieldConditionGroup = {
-        logic: 'AND',
+        logic: "AND",
         conditions: [
           {
-            field_id: 'field_1',
-            operator: 'equals',
-            value: 'test',
+            field_id: "field_1",
+            operator: "equals",
+            value: "test"
           },
           {
-            field_id: 'field_2',
-            operator: 'greater_than',
-            value: 5,
-          },
+            field_id: "field_2",
+            operator: "greater_than",
+            value: 5
+          }
         ],
-        action: 'show',
-      }
+        action: "show"
+      };
 
-      const { evaluateGroup } = useConditions(fields, formData)
-      expect(evaluateGroup(group)).toBe(false)
-    })
-  })
+      const { evaluateGroup } = useConditions(fields, formData);
+      expect(evaluateGroup(group)).toBe(false);
+    });
+  });
 
-  describe('OR Logic in Condition Groups', () => {
-    it('should return true when any condition in OR group is met', () => {
-      formData.value.field_1 = 'test'
-      formData.value.field_2 = 3
+  describe("OR Logic in Condition Groups", () => {
+    it("should return true when any condition in OR group is met", () => {
+      formData.value.field_1 = "test";
+      formData.value.field_2 = 3;
 
       const group: FieldConditionGroup = {
-        logic: 'OR',
+        logic: "OR",
         conditions: [
           {
-            field_id: 'field_1',
-            operator: 'equals',
-            value: 'test',
+            field_id: "field_1",
+            operator: "equals",
+            value: "test"
           },
           {
-            field_id: 'field_2',
-            operator: 'greater_than',
-            value: 5,
-          },
+            field_id: "field_2",
+            operator: "greater_than",
+            value: 5
+          }
         ],
-        action: 'show',
-      }
+        action: "show"
+      };
 
-      const { evaluateGroup } = useConditions(fields, formData)
-      expect(evaluateGroup(group)).toBe(true)
-    })
+      const { evaluateGroup } = useConditions(fields, formData);
+      expect(evaluateGroup(group)).toBe(true);
+    });
 
-    it('should return false when no conditions in OR group are met', () => {
-      formData.value.field_1 = 'different'
-      formData.value.field_2 = 3
+    it("should return false when no conditions in OR group are met", () => {
+      formData.value.field_1 = "different";
+      formData.value.field_2 = 3;
 
       const group: FieldConditionGroup = {
-        logic: 'OR',
+        logic: "OR",
         conditions: [
           {
-            field_id: 'field_1',
-            operator: 'equals',
-            value: 'test',
+            field_id: "field_1",
+            operator: "equals",
+            value: "test"
           },
           {
-            field_id: 'field_2',
-            operator: 'greater_than',
-            value: 5,
-          },
+            field_id: "field_2",
+            operator: "greater_than",
+            value: 5
+          }
         ],
-        action: 'show',
-      }
+        action: "show"
+      };
 
-      const { evaluateGroup } = useConditions(fields, formData)
-      expect(evaluateGroup(group)).toBe(false)
-    })
-  })
+      const { evaluateGroup } = useConditions(fields, formData);
+      expect(evaluateGroup(group)).toBe(false);
+    });
+  });
 
-  describe('Field State Calculation - Show Action', () => {
-    it('should show field when condition is met with show action', () => {
-      formData.value.field_1 = 'test'
-
-      fields.value[2].condition_groups = [
-        {
-          logic: 'AND',
-          conditions: [
-            {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
-          ],
-          action: 'show',
-        },
-      ]
-
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.visible).toBe(true)
-    })
-
-    it('should hide field when condition is not met with show action', () => {
-      formData.value.field_1 = 'different'
+  describe("Field State Calculation - Show Action", () => {
+    it("should show field when condition is met with show action", () => {
+      formData.value.field_1 = "test";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'show',
-        },
-      ]
+          action: "show"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.visible).toBe(false)
-    })
-  })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.visible).toBe(true);
+    });
 
-  describe('Field State Calculation - Hide Action', () => {
-    it('should hide field when condition is met with hide action', () => {
-      formData.value.field_1 = 'test'
+    it("should hide field when condition is not met with show action", () => {
+      formData.value.field_1 = "different";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'hide',
-        },
-      ]
+          action: "show"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.visible).toBe(false)
-    })
-  })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.visible).toBe(false);
+    });
+  });
 
-  describe('Field State Calculation - Require Action', () => {
-    it('should make field required when condition is met with require action', () => {
-      formData.value.field_1 = 'test'
+  describe("Field State Calculation - Hide Action", () => {
+    it("should hide field when condition is met with hide action", () => {
+      formData.value.field_1 = "test";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'require',
-        },
-      ]
+          action: "hide"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.required).toBe(true)
-    })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.visible).toBe(false);
+    });
+  });
 
-    it('should not make field required when condition is not met', () => {
-      formData.value.field_1 = 'different'
-
-      fields.value[2].required = false
-      fields.value[2].condition_groups = [
-        {
-          logic: 'AND',
-          conditions: [
-            {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
-          ],
-          action: 'require',
-        },
-      ]
-
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.required).toBe(false)
-    })
-  })
-
-  describe('Field State Calculation - Disable Action', () => {
-    it('should disable field when condition is met with disable action', () => {
-      formData.value.field_1 = 'test'
+  describe("Field State Calculation - Require Action", () => {
+    it("should make field required when condition is met with require action", () => {
+      formData.value.field_1 = "test";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'disable',
-        },
-      ]
+          action: "require"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.disabled).toBe(true)
-    })
-  })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.required).toBe(true);
+    });
 
-  describe('Multiple Condition Groups', () => {
-    it('should apply multiple condition groups correctly', () => {
-      formData.value.field_1 = 'test'
-      formData.value.field_2 = 10
+    it("should not make field required when condition is not met", () => {
+      formData.value.field_1 = "different";
+
+      fields.value[2].required = false;
+      fields.value[2].condition_groups = [
+        {
+          logic: "AND",
+          conditions: [
+            {
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
+          ],
+          action: "require"
+        }
+      ];
+
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.required).toBe(false);
+    });
+  });
+
+  describe("Field State Calculation - Disable Action", () => {
+    it("should disable field when condition is met with disable action", () => {
+      formData.value.field_1 = "test";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'show',
-        },
-        {
-          logic: 'AND',
-          conditions: [
-            {
-              field_id: 'field_2',
-              operator: 'greater_than',
-              value: 5,
-            },
-          ],
-          action: 'require',
-        },
-      ]
+          action: "disable"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[2])
-      expect(state.visible).toBe(true)
-      expect(state.required).toBe(true)
-    })
-  })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.disabled).toBe(true);
+    });
+  });
 
-  describe('Field States Computed', () => {
-    it('should compute states for all fields', () => {
-      formData.value.field_1 = 'test'
+  describe("Multiple Condition Groups", () => {
+    it("should apply multiple condition groups correctly", () => {
+      formData.value.field_1 = "test";
+      formData.value.field_2 = 10;
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'show',
+          action: "show"
         },
-      ]
+        {
+          logic: "AND",
+          conditions: [
+            {
+              field_id: "field_2",
+              operator: "greater_than",
+              value: 5
+            }
+          ],
+          action: "require"
+        }
+      ];
 
-      const { fieldStates } = useConditions(fields, formData)
-      expect(fieldStates.value).toHaveProperty('field_1')
-      expect(fieldStates.value).toHaveProperty('field_2')
-      expect(fieldStates.value).toHaveProperty('field_3')
-      expect(fieldStates.value.field_3.visible).toBe(true)
-    })
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[2]);
+      expect(state.visible).toBe(true);
+      expect(state.required).toBe(true);
+    });
+  });
 
-    it('should update states reactively when formData changes', () => {
-      formData.value.field_1 = 'test'
+  describe("Field States Computed", () => {
+    it("should compute states for all fields", () => {
+      formData.value.field_1 = "test";
 
       fields.value[2].condition_groups = [
         {
-          logic: 'AND',
+          logic: "AND",
           conditions: [
             {
-              field_id: 'field_1',
-              operator: 'equals',
-              value: 'test',
-            },
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
           ],
-          action: 'show',
-        },
-      ]
+          action: "show"
+        }
+      ];
 
-      const { fieldStates } = useConditions(fields, formData)
-      expect(fieldStates.value.field_3.visible).toBe(true)
+      const { fieldStates } = useConditions(fields, formData);
+      expect(fieldStates.value).toHaveProperty("field_1");
+      expect(fieldStates.value).toHaveProperty("field_2");
+      expect(fieldStates.value).toHaveProperty("field_3");
+      expect(fieldStates.value.field_3.visible).toBe(true);
+    });
 
-      formData.value.field_1 = 'different'
-      expect(fieldStates.value.field_3.visible).toBe(false)
-    })
-  })
+    it("should update states reactively when formData changes", () => {
+      formData.value.field_1 = "test";
 
-  describe('Edge Cases', () => {
-    it('should handle field with no condition groups', () => {
-      fields.value[0].condition_groups = undefined
+      fields.value[2].condition_groups = [
+        {
+          logic: "AND",
+          conditions: [
+            {
+              field_id: "field_1",
+              operator: "equals",
+              value: "test"
+            }
+          ],
+          action: "show"
+        }
+      ];
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[0])
-      expect(state.visible).toBe(true)
-      expect(state.required).toBe(false)
-      expect(state.disabled).toBe(false)
-    })
+      const { fieldStates } = useConditions(fields, formData);
+      expect(fieldStates.value.field_3.visible).toBe(true);
 
-    it('should handle field with empty condition groups array', () => {
-      fields.value[0].condition_groups = []
+      formData.value.field_1 = "different";
+      expect(fieldStates.value.field_3.visible).toBe(false);
+    });
+  });
 
-      const { getFieldState } = useConditions(fields, formData)
-      const state = getFieldState(fields.value[0])
-      expect(state.visible).toBe(true)
-      expect(state.required).toBe(false)
-      expect(state.disabled).toBe(false)
-    })
+  describe("Edge Cases", () => {
+    it("should handle field with no condition groups", () => {
+      fields.value[0].condition_groups = undefined;
 
-    it('should handle missing field in formData', () => {
-      delete formData.value.field_1
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[0]);
+      expect(state.visible).toBe(true);
+      expect(state.required).toBe(false);
+      expect(state.disabled).toBe(false);
+    });
+
+    it("should handle field with empty condition groups array", () => {
+      fields.value[0].condition_groups = [];
+
+      const { getFieldState } = useConditions(fields, formData);
+      const state = getFieldState(fields.value[0]);
+      expect(state.visible).toBe(true);
+      expect(state.required).toBe(false);
+      expect(state.disabled).toBe(false);
+    });
+
+    it("should handle missing field in formData", () => {
+      delete formData.value.field_1;
 
       const condition: FieldCondition = {
-        field_id: 'field_1',
-        operator: 'is_empty',
-        value: null,
-      }
+        field_id: "field_1",
+        operator: "is_empty",
+        value: null
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(true)
-    })
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(true);
+    });
 
-    it('should handle unknown operator gracefully', () => {
-      formData.value.field_1 = 'test'
+    it("should handle unknown operator gracefully", () => {
+      formData.value.field_1 = "test";
 
       const condition = {
-        field_id: 'field_1',
-        operator: 'unknown_operator' as ConditionOperator,
-        value: 'test',
-      }
+        field_id: "field_1",
+        operator: "unknown_operator" as ConditionOperator,
+        value: "test"
+      };
 
-      const { evaluateCondition } = useConditions(fields, formData)
-      expect(evaluateCondition(condition)).toBe(false)
-    })
-  })
-})
+      const { evaluateCondition } = useConditions(fields, formData);
+      expect(evaluateCondition(condition)).toBe(false);
+    });
+  });
+});

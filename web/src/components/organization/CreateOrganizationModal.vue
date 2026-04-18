@@ -9,8 +9,8 @@
   >
     <template #default="{ formData }">
       <div class="space-y-4">
-        <p class="text-sm text-gray-500">{{ $t('organizations.createDescription') }}</p>
-        
+        <p class="text-sm text-gray-500">{{ $t("organizations.createDescription") }}</p>
+
         <FieldInput
           v-model="formData.name as string"
           type="text"
@@ -29,14 +29,14 @@
         </FormControl>
       </div>
     </template>
-    
+
     <template #footer="{ submit, cancel, isSubmitting }">
       <div class="flex justify-end gap-3">
         <Button variant="ghost" :disabled="isSubmitting" @click="cancel">
-          {{ $t('common.cancel') }}
+          {{ $t("common.cancel") }}
         </Button>
         <Button variant="primary" :loading="isSubmitting" :disabled="isSubmitting" @click="submit">
-          {{ $t('organizations.createOrganization') }}
+          {{ $t("organizations.createOrganization") }}
         </Button>
       </div>
     </template>
@@ -116,7 +116,7 @@ const createOrganization = async (formData: Record<string, unknown>) => {
       emit("close");
     } else {
       console.error("Invalid response structure:", response);
-      alert(t('organizations.createError'));
+      alert(t("organizations.createError"));
       // Don't close modal if response is invalid
     }
   } catch (error: any) {
@@ -125,7 +125,7 @@ const createOrganization = async (formData: Record<string, unknown>) => {
 
     if (!isRedirecting) {
       console.error("Failed to create organization:", error);
-      alert(error.message || t('organizations.createError'));
+      alert(error.message || t("organizations.createError"));
     }
     // If redirecting, close modal silently
     if (isRedirecting) {
@@ -134,5 +134,4 @@ const createOrganization = async (formData: Record<string, unknown>) => {
     }
   }
 };
-
 </script>

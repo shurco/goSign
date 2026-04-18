@@ -33,7 +33,11 @@ func SignUp(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "User with this email already exists", nil)
 	}
 
-	hashedPassword := password.GeneratePassword(request.Password)
+	hashedPassword, err := password.GeneratePassword(request.Password)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to hash password")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
+	}
 
 	user, err := queries.DB.CreateUser(ctx, request.Email, hashedPassword, request.FirstName, request.LastName)
 	if err != nil {
@@ -256,10 +260,12 @@ func ResetPassword(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid or expired token", nil)
 	}
 
-	// Hash new password
-	hashedPassword := password.GeneratePassword(request.NewPassword)
+	hashedPassword, err := password.GeneratePassword(request.NewPassword)
+	if err != nil {
+		logging.Log.Err(err).Msg("Failed to hash password")
+		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
+	}
 
-	// Update password
 	if err := queries.DB.UpdatePassword(ctx, userID, hashedPassword); err != nil {
 		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)

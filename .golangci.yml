@@ -1,0 +1,69 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - misspell
+    - unconvert
+    - unparam
+    - revive
+    - bodyclose
+    - nilerr
+    - nolintlint
+    - copyloopvar
+
+  settings:
+    revive:
+      rules:
+        - name: var-naming
+        - name: exported
+          disabled: true
+        - name: indent-error-flow
+        - name: range-val-in-closure
+        - name: time-naming
+        - name: unexported-return
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - singleCaseSwitch
+    staticcheck:
+      checks:
+        - all
+        - '-ST1003' # underscores in names (ok for test fixtures)
+        - '-ST1005' # upper-case error messages (legacy spots)
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - unparam
+          - gocritic
+          - errcheck
+      - path: pkg/pdf/
+        linters:
+          - gocritic
+          - revive
+          - unparam
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/shurco/gosign

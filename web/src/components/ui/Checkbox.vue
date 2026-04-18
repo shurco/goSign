@@ -1,11 +1,5 @@
 <template>
-  <input
-    type="checkbox"
-    :class="checkboxClasses"
-    :checked="isChecked"
-    v-bind="restAttrs"
-    @change="onChange"
-  />
+  <input type="checkbox" :class="checkboxClasses" :checked="isChecked" v-bind="restAttrs" @change="onChange" />
 </template>
 
 <script setup lang="ts">
@@ -45,9 +39,13 @@ function onChange(e: Event): void {
     const arr = Array.isArray(props.modelValue) ? [...props.modelValue] : [];
     const i = arr.indexOf(props.value);
     if (target.checked) {
-      if (i === -1) arr.push(props.value);
+      if (i === -1) {
+        arr.push(props.value);
+      }
     } else {
-      if (i !== -1) arr.splice(i, 1);
+      if (i !== -1) {
+        arr.splice(i, 1);
+      }
     }
     emit("update:modelValue", arr);
   } else {

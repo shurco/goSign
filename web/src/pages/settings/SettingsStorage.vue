@@ -2,10 +2,10 @@
   <div class="space-y-4">
     <FormControl :label="$t('settings.storageProvider')">
       <Select v-model="storageSettings.provider">
-        <option value="local">{{ $t('settings.localFilesystem') }}</option>
-        <option value="s3">{{ $t('settings.amazonS3') }}</option>
-        <option value="gcs">{{ $t('settings.googleCloudStorage') }}</option>
-        <option value="azure">{{ $t('settings.azureBlobStorage') }}</option>
+        <option value="local">{{ $t("settings.localFilesystem") }}</option>
+        <option value="s3">{{ $t("settings.amazonS3") }}</option>
+        <option value="gcs">{{ $t("settings.googleCloudStorage") }}</option>
+        <option value="azure">{{ $t("settings.azureBlobStorage") }}</option>
       </Select>
     </FormControl>
 
@@ -30,7 +30,7 @@
     </template>
 
     <div class="flex justify-end pt-4">
-      <Button variant="primary" @click="saveStorage">{{ $t('common.save') }}</Button>
+      <Button variant="primary" @click="saveStorage">{{ $t("common.save") }}</Button>
     </div>
   </div>
 </template>
@@ -90,13 +90,13 @@ async function saveStorage(): Promise<void> {
     });
 
     if (response.ok) {
-      alert(t('settings.storageSaved'));
+      alert(t("settings.storageSaved"));
     } else {
-      alert(t('settings.storageSaveError'));
+      alert(t("settings.storageSaveError"));
     }
   } catch (error) {
     console.error("Failed to save storage settings:", error);
-    alert(t('settings.storageSaveError'));
+    alert(t("settings.storageSaveError"));
   }
 }
 </script>

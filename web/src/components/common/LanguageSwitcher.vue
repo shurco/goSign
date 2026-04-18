@@ -7,41 +7,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { SUPPORTED_LOCALES } from '@/i18n'
-import { apiPut } from '@/services/api'
-import Select from '@/components/ui/Select.vue'
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
+import { SUPPORTED_LOCALES } from "@/i18n";
+import { apiPut } from "@/services/api";
+import Select from "@/components/ui/Select.vue";
 
-const { locale } = useI18n()
-const locales = SUPPORTED_LOCALES
+const { locale } = useI18n();
+const locales = SUPPORTED_LOCALES;
 
 const currentLocale = computed({
   get: () => locale.value as string,
   set: (value: string) => {
     if (value && value !== locale.value) {
-      changeLocale(value)
+      changeLocale(value);
     }
   }
-})
+});
 
 async function changeLocale(newLocale: string) {
   if (!newLocale || newLocale === locale.value) {
-    return
+    return;
   }
-  
+
   // Update locale immediately for instant UI change
-  locale.value = newLocale
-  localStorage.setItem('locale', newLocale)
-  document.documentElement.setAttribute('lang', newLocale)
-  
+  locale.value = newLocale;
+  localStorage.setItem("locale", newLocale);
+  document.documentElement.setAttribute("lang", newLocale);
+
   // Update user preference on backend (non-blocking)
   try {
-    await apiPut('/api/v1/i18n/user/locale', { locale: newLocale })
+    await apiPut("/api/v1/i18n/user/locale", { locale: newLocale });
   } catch (error) {
     // Silently fail - locale is already updated in frontend
     // User can still use the app even if backend update fails
-    console.warn('Failed to update user locale on server:', error)
+    console.warn("Failed to update user locale on server:", error);
   }
 }
 </script>

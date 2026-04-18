@@ -3,13 +3,15 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">{{ organization?.name || $t('organizations.title') }} - {{ $t('organizationMembers.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-600">{{ $t('organizationMembers.description') }}</p>
+        <h1 class="text-3xl font-bold">
+          {{ organization?.name || $t("organizations.title") }} - {{ $t("organizationMembers.title") }}
+        </h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t("organizationMembers.description") }}</p>
       </div>
       <div class="flex items-center gap-3">
         <Button variant="primary" @click="showInviteModal = true">
           <SvgIcon name="user-plus" class="mr-2 h-5 w-5" />
-          {{ $t('organizationMembers.inviteMember') }}
+          {{ $t("organizationMembers.inviteMember") }}
         </Button>
       </div>
     </div>
@@ -34,9 +36,16 @@
           </div>
           <div class="flex flex-col">
             <span class="font-medium text-gray-900">
-              {{ (item as OrganizationMember).email || (item as OrganizationMember).user_name || (item as OrganizationMember).user_id }}
+              {{
+                (item as OrganizationMember).email ||
+                (item as OrganizationMember).user_name ||
+                (item as OrganizationMember).user_id
+              }}
             </span>
-            <span v-if="(item as OrganizationMember).first_name || (item as OrganizationMember).last_name" class="text-xs text-gray-500">
+            <span
+              v-if="(item as OrganizationMember).first_name || (item as OrganizationMember).last_name"
+              class="text-xs text-gray-500"
+            >
               {{ (item as OrganizationMember).first_name }} {{ (item as OrganizationMember).last_name }}
             </span>
           </div>
@@ -44,9 +53,7 @@
       </template>
 
       <template #cell-role="{ item }">
-        <Badge
-          :variant="getRoleBadgeVariant((item as OrganizationMember).role)"
-        >
+        <Badge :variant="getRoleBadgeVariant((item as OrganizationMember).role)">
           {{ getRoleLabel((item as OrganizationMember).role) }}
         </Badge>
       </template>
@@ -63,9 +70,9 @@
               :model-value="(item as OrganizationMember).role"
               @update:model-value="(val: string | number) => changeMemberRole(item as OrganizationMember, String(val))"
             >
-              <option value="viewer">{{ $t('organizationMembers.viewer') }}</option>
-              <option value="member">{{ $t('organizationMembers.member') }}</option>
-              <option v-if="currentUserRole === 'owner'" value="admin">{{ $t('organizationMembers.admin') }}</option>
+              <option value="viewer">{{ $t("organizationMembers.viewer") }}</option>
+              <option value="member">{{ $t("organizationMembers.member") }}</option>
+              <option v-if="currentUserRole === 'owner'" value="admin">{{ $t("organizationMembers.admin") }}</option>
             </Select>
           </div>
 
@@ -84,7 +91,7 @@
 
     <!-- Invitations Section -->
     <div class="mt-8">
-      <h2 class="mb-4 text-lg font-semibold text-gray-900">{{ $t('organizationMembers.pendingInvitations') }}</h2>
+      <h2 class="mb-4 text-lg font-semibold text-gray-900">{{ $t("organizationMembers.pendingInvitations") }}</h2>
       <ResourceTable
         :data="invitations"
         :columns="invitationColumns"
@@ -111,7 +118,7 @@
         </template>
 
         <template #cell-expires_at="{ value }">
-          <span class="text-sm text-gray-500">{{ $t('organizationMembers.expires') }} {{ formatDate(value) }}</span>
+          <span class="text-sm text-gray-500">{{ $t("organizationMembers.expires") }} {{ formatDate(value) }}</span>
         </template>
 
         <template #actions="{ item }">
@@ -141,7 +148,7 @@
       <template #default="{ formData, errors }">
         <div class="space-y-4">
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('organizationMembers.email') }} *</label>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("organizationMembers.email") }} *</label>
             <Input
               v-model="formData.email"
               type="email"
@@ -153,14 +160,17 @@
           </div>
 
           <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t('organizationMembers.role') }} *</label>
-            <Select
-              v-model="formData.role"
-              :error="!!errors.role"
-            >
-              <option value="viewer">{{ $t('organizationMembers.viewer') }} - {{ $t('organizationMembers.viewerDescription') }}</option>
-              <option value="member">{{ $t('organizationMembers.member') }} - {{ $t('organizationMembers.memberDescription') }}</option>
-              <option v-if="currentUserRole === 'owner'" value="admin">{{ $t('organizationMembers.admin') }} - {{ $t('organizationMembers.adminDescription') }}</option>
+            <label class="mb-1 block text-sm font-medium text-gray-700">{{ $t("organizationMembers.role") }} *</label>
+            <Select v-model="formData.role" :error="!!errors.role">
+              <option value="viewer">
+                {{ $t("organizationMembers.viewer") }} - {{ $t("organizationMembers.viewerDescription") }}
+              </option>
+              <option value="member">
+                {{ $t("organizationMembers.member") }} - {{ $t("organizationMembers.memberDescription") }}
+              </option>
+              <option v-if="currentUserRole === 'owner'" value="admin">
+                {{ $t("organizationMembers.admin") }} - {{ $t("organizationMembers.adminDescription") }}
+              </option>
             </Select>
             <span v-if="errors.role" class="mt-1 text-sm text-red-600">{{ errors.role }}</span>
           </div>
@@ -197,24 +207,24 @@ const currentUserId = ref("");
 const orgId = computed(() => route.params.organization_id as string);
 
 const memberColumns = computed(() => [
-  { key: "user_id", label: t('organizationMembers.member'), sortable: true },
-  { key: "role", label: t('organizationMembers.role'), sortable: true },
+  { key: "user_id", label: t("organizationMembers.member"), sortable: true },
+  { key: "role", label: t("organizationMembers.role"), sortable: true },
   {
     key: "joined_at",
-    label: t('organizationMembers.joined'),
+    label: t("organizationMembers.joined"),
     sortable: true,
-    formatter: (value: unknown): string => value ? formatDate(value as string) : ""
+    formatter: (value: unknown): string => (value ? formatDate(value as string) : "")
   }
 ]);
 
 const invitationColumns = computed(() => [
-  { key: "email", label: t('organizationMembers.email'), sortable: true },
-  { key: "role", label: t('organizationMembers.role'), sortable: true },
+  { key: "email", label: t("organizationMembers.email"), sortable: true },
+  { key: "role", label: t("organizationMembers.role"), sortable: true },
   {
     key: "expires_at",
-    label: t('organizationMembers.expiresAt'),
+    label: t("organizationMembers.expiresAt"),
     sortable: true,
-    formatter: (value: unknown): string => value ? formatDate(value as string) : ""
+    formatter: (value: unknown): string => (value ? formatDate(value as string) : "")
   }
 ]);
 
@@ -222,7 +232,7 @@ const loadMembers = async () => {
   try {
     const response = await apiGet(`/api/v1/organizations/${orgId.value}/members`);
     members.value = response.data.members || [];
-    
+
     // Get current user's role and ID from members list
     // Find current user by matching with stored user data or token
     const storedOrg = localStorage.getItem("current_organization");
@@ -234,19 +244,19 @@ const loadMembers = async () => {
         console.error("Failed to parse current organization:", e);
       }
     }
-    
+
     // Get current user ID from API
     try {
       const userResponse = await apiGet("/api/v1/users/me");
-      
+
       if (userResponse?.data) {
         // user_id in members table is actually account_id
         // Use account_id from API response if available, otherwise fallback to user id
         const accountId = userResponse.data.account_id || userResponse.data.id;
-        
+
         // Find member with matching user_id (which is account_id in the database)
-        const currentMember = members.value.find(m => m.user_id === accountId);
-        
+        const currentMember = members.value.find((m) => m.user_id === accountId);
+
         if (currentMember) {
           currentUserId.value = currentMember.user_id;
           if (!currentUserRole.value) {
@@ -358,7 +368,7 @@ const changeMemberRole = async (member: OrganizationMember, newRole: string) => 
 };
 
 const removeMember = async (member: OrganizationMember) => {
-  if (!confirm(t('organizationMembers.removeMemberConfirm'))) {
+  if (!confirm(t("organizationMembers.removeMemberConfirm"))) {
     return;
   }
 
@@ -367,12 +377,12 @@ const removeMember = async (member: OrganizationMember) => {
     members.value = members.value.filter((m) => m.id !== member.id);
   } catch (error) {
     console.error("Failed to remove member:", error);
-    alert(t('organizationMembers.removeMemberError'));
+    alert(t("organizationMembers.removeMemberError"));
   }
 };
 
 const revokeInvitation = async (invitation: OrganizationInvitation) => {
-  if (!confirm(t('organizationMembers.revokeInvitationConfirm', { email: invitation.email }))) {
+  if (!confirm(t("organizationMembers.revokeInvitationConfirm", { email: invitation.email }))) {
     return;
   }
 
@@ -381,14 +391,14 @@ const revokeInvitation = async (invitation: OrganizationInvitation) => {
     invitations.value = invitations.value.filter((i) => i.id !== invitation.id);
   } catch (error) {
     console.error("Failed to revoke invitation:", error);
-    alert(t('organizationMembers.revokeInvitationError'));
+    alert(t("organizationMembers.revokeInvitationError"));
   }
 };
 
 const handleInviteMember = async (formData: Record<string, unknown>) => {
   if (!organization.value) {
     console.error("Organization is null");
-    alert(t('organizationMembers.inviteError'));
+    alert(t("organizationMembers.inviteError"));
     return;
   }
 
@@ -396,7 +406,7 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
   const role = String(formData.role || "member");
 
   if (!email) {
-    alert(t('organizationMembers.emailRequired'));
+    alert(t("organizationMembers.emailRequired"));
     return;
   }
 
@@ -406,17 +416,16 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
       role
     });
 
-
     // API returns { data: {...}, message: "..." } on success
     // If we get here without error, the invitation was created
     showInviteModal.value = false;
     await loadInvitations();
     // Show success message
-    alert(t('organizationMembers.invitationSent'));
+    alert(t("organizationMembers.invitationSent"));
   } catch (error: any) {
     console.error("Failed to invite member:", error);
-    let errorMessage = t('organizationMembers.inviteError');
-    
+    let errorMessage = t("organizationMembers.inviteError");
+
     // Handle ApiError from apiPost
     // ApiError has structure: { status: number, message: string }
     // API response structure: { success: boolean, message: string, data: any }
@@ -424,7 +433,7 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
       errorMessage = error.message;
     } else if (error instanceof Error) {
       errorMessage = error.message;
-    } else if (typeof error === 'string') {
+    } else if (typeof error === "string") {
       errorMessage = error;
     } else if (error?.response?.data?.message) {
       // Handle response data structure from webutil.Response
@@ -433,7 +442,7 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
       // Alternative response structure
       errorMessage = error.data.message;
     }
-    
+
     console.error("Error details:", {
       error,
       message: errorMessage,
@@ -441,7 +450,7 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
       response: error?.response,
       data: error?.data
     });
-    
+
     alert(errorMessage);
     // Don't close modal on error so user can retry
   }
@@ -457,13 +466,13 @@ const formatDate = (dateString: string | undefined) => {
 const getRoleLabel = (role: string) => {
   switch (role) {
     case "owner":
-      return t('organizationMembers.owner');
+      return t("organizationMembers.owner");
     case "admin":
-      return t('organizationMembers.admin');
+      return t("organizationMembers.admin");
     case "member":
-      return t('organizationMembers.member');
+      return t("organizationMembers.member");
     case "viewer":
-      return t('organizationMembers.viewer');
+      return t("organizationMembers.viewer");
     default:
       return role;
   }

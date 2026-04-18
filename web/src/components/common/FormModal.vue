@@ -125,18 +125,18 @@ async function handleSubmit(): Promise<void> {
   }
 
   isSubmitting.value = true;
-  
+
   try {
     // Try to call onSubmit prop first (if provided), then emit
     let result: void | Promise<void> | undefined;
-    
+
     if (props.onSubmit) {
       result = props.onSubmit(formData.value);
     } else {
       // Emit submit event - parent handler should handle async operations
       emit("submit", formData.value);
     }
-    
+
     // If we got a Promise, wait for it
     if (result instanceof Promise) {
       await result;

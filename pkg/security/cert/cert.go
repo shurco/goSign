@@ -16,7 +16,8 @@ import (
 	"time"
 )
 
-var ErrDecodeCACert = errors.New("Can't decode CA cert file")
+// ErrDecodeCACert is returned when the input is not a valid PEM-encoded certificate.
+var ErrDecodeCACert = errors.New("can't decode CA cert file")
 
 // Certificate hold certificate information
 type Certificate struct {

@@ -3,13 +3,13 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">{{ $t('submissions.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-600">{{ $t('submissions.description') }}</p>
+        <h1 class="text-3xl font-bold">{{ $t("submissions.title") }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t("submissions.description") }}</p>
       </div>
       <div class="flex items-center gap-3">
         <Button variant="primary" @click="openCreateModal">
           <SvgIcon name="plus" class="mr-2 h-5 w-5" />
-          {{ $t('submissions.newSubmission') }}
+          {{ $t("submissions.newSubmission") }}
         </Button>
       </div>
     </div>
@@ -25,11 +25,7 @@
       @page-change="handlePageChange"
     >
       <template #cell-template_name="{ value, item }">
-        <button
-          type="button"
-          class="link text-left"
-          @click="openCompletedDocument(item as Signing)"
-        >
+        <button type="button" class="link text-left" @click="openCompletedDocument(item as Signing)">
           {{ String(value || "") }}
         </button>
       </template>
@@ -43,7 +39,11 @@
       </template>
 
       <template #cell-progress="{ item }">
-        <button type="button" class="flex cursor-pointer items-center gap-2 text-left" @click="openStatusHistory(item as Signing)">
+        <button
+          type="button"
+          class="flex cursor-pointer items-center gap-2 text-left"
+          @click="openStatusHistory(item as Signing)"
+        >
           <progress
             class="progress progress-primary w-20"
             :value="(item as Signing).completed_count"
@@ -88,24 +88,27 @@
       size="lg"
       :submit-text="$t('common.save')"
       :cancel-text="$t('common.cancel')"
-      :onSubmit="handleSubmit"
+      :on-submit="handleSubmit"
     >
       <template #default="{ formData, errors }">
         <div class="space-y-6">
           <p class="text-sm text-[var(--color-base-content)]/70">
-            {{ $t('submissions.createDescription') }}
+            {{ $t("submissions.createDescription") }}
           </p>
 
-          <FormControl
-            :label="$t('submissions.template')"
-            :error="errors.template_id"
-          >
+          <FormControl :label="$t('submissions.template')" :error="errors.template_id">
             <Select
               :model-value="(formData as any).template_id"
               :error="!!errors.template_id"
-              @update:model-value="(v) => { const id = String(v ?? ''); (formData as any).template_id = id; onTemplateChange(id); }"
+              @update:model-value="
+                (v) => {
+                  const id = String(v ?? '');
+                  (formData as any).template_id = id;
+                  onTemplateChange(id);
+                }
+              "
             >
-              <option value="">{{ $t('submissions.selectTemplate') }}</option>
+              <option value="">{{ $t("submissions.selectTemplate") }}</option>
               <option v-for="template in templates" :key="template.id" :value="template.id">
                 {{ getTemplateDisplayName(template) }}
               </option>
@@ -124,13 +127,13 @@
 
             <FormControl
               :label="$t('submissions.signers')"
-              :hint="createSigningMode === 'sequential' && createSubmitters.length > 1 ? $t('submissions.signersOrderDragHint') : $t('submissions.signersHint')"
+              :hint="
+                createSigningMode === 'sequential' && createSubmitters.length > 1
+                  ? $t('submissions.signersOrderDragHint')
+                  : $t('submissions.signersHint')
+              "
             >
-              <div
-                class="space-y-4"
-                @dragover.prevent
-                @drop="onSignerDrop"
-              >
+              <div class="space-y-4" @dragover.prevent @drop="onSignerDrop">
                 <template v-for="(s, idx) in createSubmitters" :key="idx">
                   <div
                     v-if="insertBeforeIndex === idx && draggedSignerIndex !== null"
@@ -141,45 +144,46 @@
                     :data-signer-index="idx"
                     class="rounded-lg border border-[var(--color-base-300)] bg-[var(--color-base-100)]/50 p-4 transition-colors"
                     :class="{
-                      'border-[var(--color-primary)]/50': createSigningMode === 'sequential' && createSubmitters.length > 1,
+                      'border-[var(--color-primary)]/50':
+                        createSigningMode === 'sequential' && createSubmitters.length > 1,
                       'ring-2 ring-[var(--color-primary)]/40': draggedSignerIndex === idx
                     }"
                     @dragenter.prevent="onSignerDragOver($event, idx)"
                     @dragover.prevent="onSignerDragOver($event, idx)"
                     @drop.prevent="onSignerDrop"
                   >
-                  <div
-                    class="mb-3 flex items-center justify-between gap-2"
-                    :class="{ 'cursor-move': createSigningMode === 'sequential' && createSubmitters.length > 1 }"
-                    :draggable="createSigningMode === 'sequential' && createSubmitters.length > 1"
-                    @dragstart="onSignerDragStart($event, idx)"
-                    @dragend="onSignerDragEnd"
-                  >
-                    <span class="text-sm font-medium text-[var(--color-base-content)]">
-                      {{ idx + 1 }}. {{ $t('signing.signer') }} {{ idx + 1 }}
-                    </span>
-                    <SvgIcon
-                      v-if="createSigningMode === 'sequential' && createSubmitters.length > 1"
-                      name="drag"
-                      class="h-4 w-4 shrink-0 text-[var(--color-base-content)]/50 pointer-events-none"
-                      width="16"
-                      height="16"
-                    />
-                  </div>
-                  <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div v-for="field in signerFieldKeys" :key="field.key">
-                      <label class="mb-1 block text-xs font-medium text-[var(--color-base-content)]/80">
-                        {{ $t(field.labelKey) }}
-                      </label>
-                      <input
-                        v-model="s[field.key]"
-                        :type="field.type"
-                        class="w-full rounded-lg border border-[var(--color-base-300)] bg-[var(--color-base-100)] px-3 py-2 text-sm text-[var(--color-base-content)] transition-colors hover:border-[var(--color-base-content)]/20 focus:border-[var(--color-primary)] focus:outline-2 focus:outline-offset-0 focus:outline-[var(--color-primary)]"
-                        :placeholder="$t('common.optional')"
+                    <div
+                      class="mb-3 flex items-center justify-between gap-2"
+                      :class="{ 'cursor-move': createSigningMode === 'sequential' && createSubmitters.length > 1 }"
+                      :draggable="createSigningMode === 'sequential' && createSubmitters.length > 1"
+                      @dragstart="onSignerDragStart($event, idx)"
+                      @dragend="onSignerDragEnd"
+                    >
+                      <span class="text-sm font-medium text-[var(--color-base-content)]">
+                        {{ idx + 1 }}. {{ $t("signing.signer") }} {{ idx + 1 }}
+                      </span>
+                      <SvgIcon
+                        v-if="createSigningMode === 'sequential' && createSubmitters.length > 1"
+                        name="drag"
+                        class="pointer-events-none h-4 w-4 shrink-0 text-[var(--color-base-content)]/50"
+                        width="16"
+                        height="16"
                       />
                     </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div v-for="field in signerFieldKeys" :key="field.key">
+                        <label class="mb-1 block text-xs font-medium text-[var(--color-base-content)]/80">
+                          {{ $t(field.labelKey) }}
+                        </label>
+                        <input
+                          v-model="s[field.key]"
+                          :type="field.type"
+                          class="w-full rounded-lg border border-[var(--color-base-300)] bg-[var(--color-base-100)] px-3 py-2 text-sm text-[var(--color-base-content)] transition-colors hover:border-[var(--color-base-content)]/20 focus:border-[var(--color-primary)] focus:outline-2 focus:outline-offset-0 focus:outline-[var(--color-primary)]"
+                          :placeholder="$t('common.optional')"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
                 </template>
                 <div
                   v-if="insertBeforeIndex === createSubmitters.length && draggedSignerIndex !== null"
@@ -193,7 +197,7 @@
           <Alert v-if="createdLinks.length" variant="success" class="mt-4">
             <div class="space-y-3">
               <div class="flex items-center justify-between">
-                <span class="font-medium">{{ t('signing.links') }}</span>
+                <span class="font-medium">{{ t("signing.links") }}</span>
                 <button
                   type="button"
                   class="rounded p-1.5 transition-colors hover:bg-[var(--color-base-content)]/10"
@@ -204,7 +208,7 @@
                   <SvgIcon name="copy" class="h-5 w-5" />
                 </button>
               </div>
-              <p class="text-sm opacity-90">{{ t('signing.sendEachLinkHint') }}</p>
+              <p class="text-sm opacity-90">{{ t("signing.sendEachLinkHint") }}</p>
               <div class="space-y-2">
                 <div
                   v-for="l in createdLinks"
@@ -245,10 +249,10 @@
       <template #footer="{ submit, cancel, isSubmitting }">
         <div class="flex justify-end gap-3">
           <Button variant="ghost" :disabled="isSubmitting" @click="cancel">
-            {{ $t('common.cancel') }}
+            {{ $t("common.cancel") }}
           </Button>
           <Button variant="primary" :loading="isSubmitting" :disabled="isSubmitting" @click="submit">
-            {{ $t('common.save') }}
+            {{ $t("common.save") }}
           </Button>
         </div>
       </template>
@@ -257,11 +261,19 @@
     <!-- Links Modal (available anytime after creation) -->
     <Modal
       v-model="linksModalOpen"
-      :title="activeSigning ? t('signing.linksTitleWithTemplate', { template: activeSigning.template_name }) : t('signing.links')"
+      :title="
+        activeSigning
+          ? t('signing.linksTitleWithTemplate', { template: activeSigning.template_name })
+          : t('signing.links')
+      "
       size="lg"
     >
       <template #header>
-        <span>{{ activeSigning ? t('signing.linksTitleWithTemplate', { template: activeSigning.template_name }) : t('signing.links') }}</span>
+        <span>{{
+          activeSigning
+            ? t("signing.linksTitleWithTemplate", { template: activeSigning.template_name })
+            : t("signing.links")
+        }}</span>
       </template>
 
       <div v-if="activeSigning" class="space-y-4">
@@ -282,8 +294,10 @@
           </template>
 
           <template #cell-signer="{ item }">
-            <div class="font-medium">{{ (item as any).name || 'Signer' }}</div>
-            <div v-if="(item as any).phone" class="text-xs text-[--color-base-content]/60">{{ (item as any).phone }}</div>
+            <div class="font-medium">{{ (item as any).name || "Signer" }}</div>
+            <div v-if="(item as any).phone" class="text-xs text-[--color-base-content]/60">
+              {{ (item as any).phone }}
+            </div>
           </template>
 
           <template #cell-status="{ value }">
@@ -293,20 +307,24 @@
           </template>
 
           <template #cell-link="{ item }">
-            <input class="input input-bordered w-full min-w-[360px]" :value="fullSignerUrl((item as any).slug)" readonly />
+            <input
+              class="input input-bordered w-full min-w-[360px]"
+              :value="fullSignerUrl((item as any).slug)"
+              readonly
+            />
           </template>
 
           <template #actions="{ item }">
             <div class="flex items-center gap-2">
-            <button
-              :class="ICON_BUTTON_CLASS"
-              type="button"
-              :title="t('signing.copyLink')"
-              :aria-label="t('signing.copyLink')"
-              @click="copyText(fullSignerUrl((item as any).slug))"
-            >
-              <SvgIcon name="copy" :class="ICON_SVG_CLASS" />
-            </button>
+              <button
+                :class="ICON_BUTTON_CLASS"
+                type="button"
+                :title="t('signing.copyLink')"
+                :aria-label="t('signing.copyLink')"
+                @click="copyText(fullSignerUrl((item as any).slug))"
+              >
+                <SvgIcon name="copy" :class="ICON_SVG_CLASS" />
+              </button>
             </div>
           </template>
         </ResourceTable>
@@ -331,7 +349,11 @@ import SigningModeSelector from "@/components/field/SigningModeSelector.vue";
 import SvgIcon from "@/components/SvgIcon.vue";
 import { fetchWithAuth } from "@/utils/auth";
 import { apiGet } from "@/services/api";
-import { getBadgeVariantForSubmissionStatus, getBadgeVariantForSubmitterStatus, getI18nStatusKey } from "@/utils/status";
+import {
+  getBadgeVariantForSubmissionStatus,
+  getBadgeVariantForSubmitterStatus,
+  getI18nStatusKey
+} from "@/utils/status";
 import { openBlobInNewTab } from "@/utils/file";
 
 const ICON_BUTTON_CLASS =
@@ -393,12 +415,12 @@ let loadSubmissionsPromise: Promise<void> | null = null;
 let loadTemplatesPromise: Promise<void> | null = null;
 
 const columns = computed(() => [
-  { key: "template_name", label: t('submissions.template'), sortable: true },
-  { key: "status", label: t('submissions.status'), sortable: true },
-  { key: "progress", label: t('signing.progress') },
+  { key: "template_name", label: t("submissions.template"), sortable: true },
+  { key: "status", label: t("submissions.status"), sortable: true },
+  { key: "progress", label: t("signing.progress") },
   {
     key: "created_at",
-    label: t('submissions.created'),
+    label: t("submissions.created"),
     sortable: true,
     formatter: (value: unknown): string => new Date(String(value)).toLocaleDateString()
   }
@@ -408,7 +430,7 @@ const signerColumns = computed(() => [
   { key: "index", label: "#", sortable: false, headerClass: "w-16" },
   { key: "signer", label: "Signer", sortable: false },
   { key: "status", label: "Status", sortable: false, headerClass: "w-32" },
-  { key: "link", label: "Link", sortable: false },
+  { key: "link", label: "Link", sortable: false }
 ]);
 
 const createSubmittersForOrder = computed(() =>
@@ -420,7 +442,7 @@ const createSubmittersForOrder = computed(() =>
 );
 
 const modalTitle = computed(() => {
-  return t('submissions.create');
+  return t("submissions.create");
 });
 
 onMounted(async () => {
@@ -470,7 +492,7 @@ async function loadTemplates(): Promise<void> {
       // Use search endpoint which properly filters by organization
       // This will return all templates from root and folders in current organization
       const response = await apiGet("/api/v1/templates/search?limit=1000");
-      
+
       if (response && response.data) {
         // Search endpoint returns: { success: true, message: "templates", data: { templates: [...], total: ... } }
         const result = response.data;
@@ -519,12 +541,12 @@ function getTemplateDisplayName(template: Template): string {
   if (!template.folder_id) {
     return template.name;
   }
-  
+
   const folder = folders.value.find((f) => f.id === template.folder_id);
   if (folder) {
     return `${folder.name} / ${template.name}`;
   }
-  
+
   return template.name;
 }
 
@@ -563,7 +585,9 @@ async function onTemplateChange(templateID: string): Promise<void> {
 
 function onCreateSubmitterOrder(ordered: Array<{ id: string; name: string }>): void {
   const indices = ordered.map((s) => parseInt(s.id, 10));
-  if (indices.some((i) => Number.isNaN(i))) return;
+  if (indices.some((i) => Number.isNaN(i))) {
+    return;
+  }
   const current = [...createSubmitters.value];
   createSubmitters.value = indices.map((i) => current[i]).filter(Boolean);
 }
@@ -583,8 +607,12 @@ function onSignerDragEnd(): void {
 
 function onSignerDragOver(event: DragEvent, cardIndex: number): void {
   event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-  if (draggedSignerIndex.value === null) return;
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+  if (draggedSignerIndex.value === null) {
+    return;
+  }
   const el = event.currentTarget as HTMLElement;
   const rect = el.getBoundingClientRect();
   const mid = rect.top + rect.height / 2;
@@ -594,7 +622,9 @@ function onSignerDragOver(event: DragEvent, cardIndex: number): void {
 function onSignerDrop(event: DragEvent): void {
   event.preventDefault();
   event.stopPropagation();
-  if (draggedSignerIndex.value === null) return;
+  if (draggedSignerIndex.value === null) {
+    return;
+  }
   const pos = insertBeforeIndex.value;
   if (pos === null) {
     draggedSignerIndex.value = null;
@@ -692,8 +722,7 @@ function openLinksModal(signing: Signing): void {
   linksModalOpen.value = true;
 }
 
-function handlePageChange(_page: number): void {
-}
+function handlePageChange(_page: number): void {}
 
 function openUrl(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");

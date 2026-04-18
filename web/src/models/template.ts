@@ -23,42 +23,42 @@ export interface FieldOption {
 /**
  * Condition operator types
  */
-export type ConditionOperator = 
-  | 'equals'
-  | 'not_equals'
-  | 'contains'
-  | 'not_contains'
-  | 'greater_than'
-  | 'less_than'
-  | 'is_empty'
-  | 'is_not_empty'
+export type ConditionOperator =
+  | "equals"
+  | "not_equals"
+  | "contains"
+  | "not_contains"
+  | "greater_than"
+  | "less_than"
+  | "is_empty"
+  | "is_not_empty";
 
 /**
  * Condition action types
  */
-export type ConditionAction = 'show' | 'hide' | 'require' | 'disable'
+export type ConditionAction = "show" | "hide" | "require" | "disable";
 
 /**
  * Logic operator for combining conditions
  */
-export type LogicOperator = 'AND' | 'OR'
+export type LogicOperator = "AND" | "OR";
 
 /**
  * Single field condition
  */
 export interface FieldCondition {
-  field_id: string
-  operator: ConditionOperator
-  value: any
+  field_id: string;
+  operator: ConditionOperator;
+  value: any;
 }
 
 /**
  * Field condition group with AND/OR logic
  */
 export interface FieldConditionGroup {
-  logic: LogicOperator
-  conditions: FieldCondition[]
-  action: ConditionAction
+  logic: LogicOperator;
+  conditions: FieldCondition[];
+  action: ConditionAction;
 }
 
 /**

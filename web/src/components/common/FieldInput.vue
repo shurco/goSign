@@ -2,7 +2,7 @@
   <!-- Calculated field (read-only) -->
   <TextInput
     v-if="isCalculated"
-    :modelValue="formatCalculated(calculatedValue)"
+    :model-value="formatCalculated(calculatedValue)"
     type="text"
     :placeholder="placeholder"
     :required="required"
@@ -10,13 +10,13 @@
     :disabled="disabled"
     :error="error"
     class="calculated-field"
-    @update:modelValue="() => {}"
+    @update:model-value="() => {}"
     @blur="$emit('blur')"
   />
   <!-- Regular text input (includes number with min/max/step) -->
   <TextInput
     v-else-if="isTextType"
-    :modelValue="stringValue"
+    :model-value="stringValue"
     :type="type"
     :placeholder="placeholder"
     :required="required"
@@ -26,77 +26,74 @@
     :min="type === 'number' ? numberMin : undefined"
     :max="type === 'number' ? numberMax : undefined"
     :step="type === 'number' ? numberStep : undefined"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
   <DateInput
     v-else-if="type === 'date'"
-    :modelValue="stringValue"
+    :model-value="stringValue"
     :placeholder="placeholder"
     :required="required"
     :readonly="readonly"
     :disabled="disabled"
     :error="error"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
   <SelectInput
     v-else-if="isSelectType"
-    :modelValue="selectModelValue"
+    :model-value="selectModelValue"
     :type="type as any"
     :placeholder="placeholder"
     :required="required"
     :disabled="disabled"
     :options="options"
     :error="error"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
   <FileInput
     v-else-if="type === 'file' || type === 'image'"
-    :modelValue="stringValue"
+    :model-value="stringValue"
     :type="type"
     :placeholder="placeholder"
     :required="required"
     :readonly="readonly"
     :disabled="disabled"
     :error="error"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
   <SignatureInput
     v-else-if="isSignatureType || type === 'stamp'"
-    :modelValue="stringValue"
+    :model-value="stringValue"
     :mode="type === 'initials' ? 'initials' : type === 'stamp' ? 'stamp' : 'signature'"
     :format="signatureFormat"
     :placeholder="placeholder"
     :required="required"
     :disabled="disabled || (type === 'stamp' && readonly)"
     :error="error"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
   <CellsInput
     v-else-if="type === 'cells'"
-    :modelValue="stringValue"
+    :model-value="stringValue"
     :cell-count="cellCount"
     :placeholder="placeholder"
     :required="required"
     :readonly="readonly"
     :disabled="disabled"
     :error="error"
-    @update:modelValue="handleUpdate"
+    @update:model-value="handleUpdate"
     @blur="$emit('blur')"
   />
-  <div
-    v-else-if="type === 'payment'"
-    class="field-input-wrapper"
-  >
+  <div v-else-if="type === 'payment'" class="field-input-wrapper">
     <div class="text-lg font-semibold">
       {{ formatPaymentPrice(price, currency) }}
     </div>
-    <div class="text-sm text-gray-500 mt-1">
-      {{ placeholder || 'Payment required' }}
+    <div class="mt-1 text-sm text-gray-500">
+      {{ placeholder || "Payment required" }}
     </div>
     <div v-if="error" class="mt-1 text-sm text-[var(--color-error)]">{{ error }}</div>
   </div>
@@ -131,7 +128,7 @@ interface Props {
   options?: Option[];
   error?: string;
   formula?: string;
-  calculationType?: 'number' | 'currency';
+  calculationType?: "number" | "currency";
   calculatedValue?: number;
   cellCount?: number;
   price?: number;
@@ -172,9 +169,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
 
-const stringValue = computed(() =>
-  typeof localValue.value === "string" ? localValue.value : ""
-);
+const stringValue = computed(() => (typeof localValue.value === "string" ? localValue.value : ""));
 
 const selectModelValue = computed(() => {
   if (props.type === "checkbox") {
@@ -208,12 +203,14 @@ const isSignatureType = computed(() => {
 });
 
 function formatCalculated(value: number | undefined): string {
-  if (value === undefined || value === null) return '';
+  if (value === undefined || value === null) {
+    return "";
+  }
 
-  if (props.calculationType === 'currency') {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+  if (props.calculationType === "currency") {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD"
     }).format(value);
   }
 
@@ -221,9 +218,9 @@ function formatCalculated(value: number | undefined): string {
 }
 
 function formatPaymentPrice(price: number | undefined, currency: string | undefined): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency || 'USD'
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD"
   }).format(price ?? 0);
 }
 

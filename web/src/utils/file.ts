@@ -32,4 +32,3 @@ export function openBlobInNewTab(blob: Blob): void {
   // Revoke later to avoid breaking viewers that load progressively.
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
-

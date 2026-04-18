@@ -30,11 +30,7 @@
           @click="save({ force: true })"
         >
           <LoadingSpinner v-if="isSaving" class="mr-2 h-4 w-4" />
-          <SvgIcon
-            v-else-if="!isDirty && lastSavedAt && !lastSaveError"
-            name="check-circle"
-            class="mr-2 h-4 w-4"
-          />
+          <SvgIcon v-else-if="!isDirty && lastSavedAt && !lastSaveError" name="check-circle" class="mr-2 h-4 w-4" />
           <SvgIcon v-else-if="lastSaveError" name="error-circle" class="mr-2 h-4 w-4" />
           <span>
             {{
@@ -58,7 +54,10 @@
       </div>
     </div>
 
-    <div v-else-if="template && template.schema && template.schema.length > 0" class="flex flex-1 min-h-0 overflow-hidden">
+    <div
+      v-else-if="template && template.schema && template.schema.length > 0"
+      class="flex min-h-0 flex-1 overflow-hidden"
+    >
       <!-- Left previews: fixed column; scrolls only when hovered and overflowing -->
       <div ref="previewsRef" class="hidden h-full w-28 flex-none overflow-x-hidden overflow-y-auto pr-3 lg:block">
         <DocumentPreview
@@ -78,7 +77,7 @@
         />
         <button
           type="button"
-          class="mt-2 flex w-full cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50/80 py-4 transition-colors hover:border-gray-400 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+          class="mt-2 flex w-full cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50/80 py-4 transition-colors hover:border-gray-400 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           :class="[{ 'aspect-[210/297]': template?.schema?.length }, 'min-h-[5rem]']"
           :disabled="uploading"
           :aria-label="$t('templates.addPages')"
@@ -90,7 +89,7 @@
       </div>
 
       <!-- Center documents: the ONLY column that should scroll by default -->
-      <div class="flex-1 min-h-0 overflow-hidden">
+      <div class="min-h-0 flex-1 overflow-hidden">
         <div ref="documents" class="h-full overflow-x-hidden overflow-y-auto pr-3.5 pl-0.5">
           <template v-for="document in sortedDocuments" :key="document.id">
             <Document
@@ -164,7 +163,7 @@
         <label
           for="templateEditFileInput"
           class="relative block h-40 w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 hover:bg-gray-50"
-          :class="{ 'bg-gray-50 border-blue-400': selectedFile, 'opacity-60 cursor-not-allowed': uploading }"
+          :class="{ 'border-blue-400 bg-gray-50': selectedFile, 'cursor-not-allowed opacity-60': uploading }"
           @dragover.prevent
           @drop.prevent="handleDrop"
         >
@@ -224,7 +223,7 @@
           <label
             for="addPagesFileInput"
             class="relative block h-32 w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 hover:bg-gray-50"
-            :class="{ 'bg-gray-50 border-blue-400': addPagesSelectedFile }"
+            :class="{ 'border-blue-400 bg-gray-50': addPagesSelectedFile }"
             @dragover.prevent
             @drop.prevent="handleAddPagesDrop"
           >
@@ -361,7 +360,9 @@ function applyLoadedTemplate(tpl: any): void {
 
 async function uploadAndApplyPdf(file: File, append = false): Promise<void> {
   const templateId = route.params.id as string;
-  if (!templateId) return;
+  if (!templateId) {
+    return;
+  }
 
   uploading.value = true;
   uploadError.value = null;
@@ -457,7 +458,9 @@ function buildUpdatePayload(): Record<string, any> {
 
 async function putTemplateUpdate(payload: any, { keepalive }: { keepalive: boolean }): Promise<void> {
   const id = template.value?.id;
-  if (!id) return;
+  if (!id) {
+    return;
+  }
 
   const res = await fetchWithAuth(`/api/v1/templates/${id}`, {
     method: "PUT",
@@ -475,7 +478,9 @@ async function putTemplateUpdate(payload: any, { keepalive }: { keepalive: boole
 }
 
 async function flushSave({ keepalive } = { keepalive: false }): Promise<void> {
-  if (!template.value) return;
+  if (!template.value) {
+    return;
+  }
 
   if (isSaving.value) {
     saveQueued.value = true;
@@ -710,7 +715,9 @@ function onDraw(area: any): void {
         const documentRef = documentRefs.value.find(
           (e: any) => e && e.document && e.document.id === area.attachment_id
         );
-        if (!documentRef) return;
+        if (!documentRef) {
+          return;
+        }
         const maxPage = documentRef.pageRefs.length;
         area.page = Math.max(0, Math.min(area.page, maxPage - 1));
         const pageMask = documentRef.pageRefs[area.page].$refs.mask;
@@ -766,7 +773,9 @@ function onDraw(area: any): void {
     save();
   } else {
     const documentRef = documentRefs.value.find((e: any) => e?.document?.id === area.attachment_id);
-    if (!documentRef) return;
+    if (!documentRef) {
+      return;
+    }
     const maxPage = documentRef.pageRefs.length;
     area.page = Math.max(0, Math.min(area.page, maxPage - 1));
     const pageMask = documentRef.pageRefs[area.page].$refs.mask;
@@ -794,8 +803,8 @@ function onDraw(area: any): void {
       // Ensure page number and attachment_id are preserved
       const areaToAdd = {
         ...area,
-        page: typeof area.page === 'number' ? area.page : 0,
-        attachment_id: area.attachment_id || ''
+        page: typeof area.page === "number" ? area.page : 0,
+        attachment_id: area.attachment_id || ""
       };
 
       const field = {
@@ -911,7 +920,9 @@ function onDropfield(area: any): void {
 }
 
 function onDocumentRemove(item: any): void {
-  if (!template.value) return;
+  if (!template.value) {
+    return;
+  }
   if (window.confirm("Are you sure?")) {
     if (template.value.schema) {
       template.value.schema.splice(template.value.schema.indexOf(item), 1);
@@ -939,7 +950,9 @@ function onDocumentReplace({
   schema: any[];
   documents: any[];
 }): void {
-  if (!template.value) return;
+  if (!template.value) {
+    return;
+  }
   if (template.value.schema) {
     template.value.schema.splice(template.value.schema.indexOf(replaceSchemaItem), 1, schema[0]);
   }
@@ -959,9 +972,13 @@ function onDocumentReplace({
 }
 
 function moveDocument(item: any, direction: any): void {
-  if (!template.value || !template.value.schema) return;
+  if (!template.value || !template.value.schema) {
+    return;
+  }
   const currentIndex = template.value.schema.indexOf(item);
-  if (currentIndex === -1) return;
+  if (currentIndex === -1) {
+    return;
+  }
   template.value.schema.splice(currentIndex, 1);
 
   if (currentIndex + direction > template.value.schema.length) {
@@ -1006,7 +1023,9 @@ const handleFileSelect = async (event: Event) => {
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     uploadError.value = t("templates.invalidFileType");
     selectedFile.value = null;
-    if (input) input.value = "";
+    if (input) {
+      input.value = "";
+    }
     return;
   }
 
@@ -1021,10 +1040,14 @@ const handleFileSelect = async (event: Event) => {
 };
 
 const handleDrop = async (event: DragEvent) => {
-  if (uploading.value) return;
+  if (uploading.value) {
+    return;
+  }
   event.preventDefault();
   const file = event.dataTransfer?.files?.[0];
-  if (!file) return;
+  if (!file) {
+    return;
+  }
 
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     uploadError.value = t("templates.invalidFileType");
@@ -1049,13 +1072,17 @@ const handleDrop = async (event: DragEvent) => {
 const removeSelectedFile = () => {
   selectedFile.value = null;
   uploadError.value = null;
-  if (templateFileInput.value) templateFileInput.value.value = "";
+  if (templateFileInput.value) {
+    templateFileInput.value.value = "";
+  }
 };
 
 const resetAddPagesSelection = () => {
   addPagesSelectedFile.value = null;
   addPagesError.value = null;
-  if (addPagesFileInput.value) addPagesFileInput.value.value = "";
+  if (addPagesFileInput.value) {
+    addPagesFileInput.value.value = "";
+  }
 };
 
 const handleAddPagesFileSelect = (event: Event) => {
@@ -1076,10 +1103,14 @@ const handleAddPagesFileSelect = (event: Event) => {
 };
 
 const handleAddPagesDrop = (event: DragEvent) => {
-  if (uploading.value) return;
+  if (uploading.value) {
+    return;
+  }
   event.preventDefault();
   const file = event.dataTransfer?.files?.[0];
-  if (!file) return;
+  if (!file) {
+    return;
+  }
 
   if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     addPagesError.value = t("templates.invalidFileType");
@@ -1099,7 +1130,9 @@ const handleAddPagesSubmit = async (): Promise<void> => {
   if (!addPagesSelectedFile.value) {
     addPagesError.value = t("templates.selectPdfFile");
     // Keep modal open; stop loading state on button
-    if (addPagesModalRef.value?.resetSubmitting) addPagesModalRef.value.resetSubmitting();
+    if (addPagesModalRef.value?.resetSubmitting) {
+      addPagesModalRef.value.resetSubmitting();
+    }
     return;
   }
 
@@ -1110,7 +1143,9 @@ const handleAddPagesSubmit = async (): Promise<void> => {
     resetAddPagesSelection();
   } catch (err: any) {
     addPagesError.value = err?.message || t("templates.uploadError");
-    if (addPagesModalRef.value?.resetSubmitting) addPagesModalRef.value.resetSubmitting();
+    if (addPagesModalRef.value?.resetSubmitting) {
+      addPagesModalRef.value.resetSubmitting();
+    }
   }
 };
 
@@ -1124,7 +1159,9 @@ function updateTemplateBuilderDataset(): void {
 }
 
 async function save({ force } = { force: false }): Promise<object> {
-  if (!template.value) return {};
+  if (!template.value) {
+    return {};
+  }
 
   // Mark as dirty when any change occurs (even without auto-save)
   isDirty.value = true;

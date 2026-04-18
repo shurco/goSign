@@ -56,13 +56,7 @@
         </div>
 
         <div>
-          <Button
-            type="submit"
-            variant="primary"
-            class="w-full"
-            :loading="isLoading"
-            :disabled="isLoading || !token"
-          >
+          <Button type="submit" variant="primary" class="w-full" :loading="isLoading" :disabled="isLoading || !token">
             <span v-if="isLoading">Resetting password...</span>
             <span v-else-if="!token">Invalid reset link</span>
             <span v-else>Reset password</span>

@@ -8,12 +8,15 @@
             v-for="(name, code) in supportedLocales"
             :key="code"
             :class="[
-              'rounded-md border px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
+              'cursor-pointer rounded-md border px-4 py-2 text-sm font-medium transition-colors',
               selectedLocale === code
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
             ]"
-            @click="selectedLocale = code; loadTemplates()"
+            @click="
+              selectedLocale = code;
+              loadTemplates();
+            "
           >
             {{ name }}
           </button>
@@ -38,7 +41,7 @@
 
       <template #cell-subject="{ value }">
         <span v-if="value" class="text-gray-700">{{ value }}</span>
-        <span v-else class="text-gray-400 italic">{{ $t('common.optional') }}</span>
+        <span v-else class="text-gray-400 italic">{{ $t("common.optional") }}</span>
       </template>
 
       <template #actions="{ item }">
@@ -46,15 +49,15 @@
           <button
             v-if="!(item as EmailTemplate).is_system"
             class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
-            @click.stop="deleteTemplate(item as EmailTemplate)"
             :title="$t('common.delete')"
+            @click.stop="deleteTemplate(item as EmailTemplate)"
           >
             <SvgIcon name="trash-x" class="h-5 w-5 stroke-[2]" />
           </button>
           <button
             class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-            @click.stop="editTemplate(item as EmailTemplate)"
             :title="$t('common.edit')"
+            @click.stop="editTemplate(item as EmailTemplate)"
           >
             <SvgIcon name="settings" class="h-5 w-5 stroke-[2]" />
           </button>
@@ -79,7 +82,7 @@
               v-for="(name, code) in supportedLocales"
               :key="code"
               :class="[
-                'rounded-md border px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
+                'cursor-pointer rounded-md border px-4 py-2 text-sm font-medium transition-colors',
                 (formData.locale || selectedLocale) === code
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
@@ -94,29 +97,29 @@
         <FormControl :label="$t('settings.subject')">
           <Input
             :model-value="String(formData.subject || '')"
-            @update:model-value="formData.subject = $event"
             :placeholder="$t('settings.emailSubjectPlaceholder')"
+            @update:model-value="formData.subject = $event"
           />
         </FormControl>
 
         <FormControl :label="$t('settings.templateContent')" required>
           <textarea
             :value="String(formData.content || '')"
-            @input="formData.content = ($event.target as HTMLTextAreaElement).value"
             class="min-h-[400px] w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm"
             :placeholder="$t('settings.emailTemplatePlaceholder')"
+            @input="formData.content = ($event.target as HTMLTextAreaElement).value"
           />
         </FormControl>
 
         <div class="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
-          <p class="font-medium">{{ $t('settings.availableVariables') }}:</p>
+          <p class="font-medium">{{ $t("settings.availableVariables") }}:</p>
           <ul class="mt-1 list-inside list-disc space-y-1">
-            <li>{{ $t('settings.variableRecipientName') }}</li>
-            <li>{{ $t('settings.variableDocumentName') }}</li>
-            <li>{{ $t('settings.variableSigningLink') }}</li>
-            <li>{{ $t('settings.variableExpiresAt') }}</li>
-            <li>{{ $t('settings.variableSenderName') }}</li>
-            <li>{{ $t('settings.variableCustomMessage') }}</li>
+            <li>{{ $t("settings.variableRecipientName") }}</li>
+            <li>{{ $t("settings.variableDocumentName") }}</li>
+            <li>{{ $t("settings.variableSigningLink") }}</li>
+            <li>{{ $t("settings.variableExpiresAt") }}</li>
+            <li>{{ $t("settings.variableSenderName") }}</li>
+            <li>{{ $t("settings.variableCustomMessage") }}</li>
           </ul>
         </div>
       </template>
@@ -125,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, nextTick } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { SUPPORTED_LOCALES } from "@/i18n";
 import { apiGet } from "@/services/api";
@@ -158,11 +161,11 @@ const selectedLocale = ref<string>(locale.value as string);
 const supportedLocales = SUPPORTED_LOCALES;
 
 const templateColumns = computed(() => [
-  { key: "name", label: t('settings.templateName'), sortable: true },
-  { key: "subject", label: t('settings.subject') },
+  { key: "name", label: t("settings.templateName"), sortable: true },
+  { key: "subject", label: t("settings.subject") },
   {
     key: "updated_at",
-    label: t('settings.lastUpdated'),
+    label: t("settings.lastUpdated"),
     formatter: (value: unknown): string => formatDate(String(value))
   }
 ]);
@@ -194,7 +197,7 @@ function getTemplateDisplayName(name: string): string {
     base: t("settings.templateBase"),
     invitation: t("settings.templateInvitation"),
     reminder: t("settings.templateReminder"),
-    completed: t("settings.templateCompleted"),
+    completed: t("settings.templateCompleted")
   };
   return names[name] || name;
 }
@@ -206,24 +209,26 @@ function formatDate(dateString: string): string {
 async function editTemplate(template: EmailTemplate): Promise<void> {
   editingTemplate.value = { ...template };
   isEditModalOpen.value = true;
-  
+
   // Initialize formData with template data
   await nextTick();
   if (formModalRef.value) {
     formModalRef.value.setFormData({
       locale: template.locale || selectedLocale.value,
       subject: template.subject || "",
-      content: template.content,
+      content: template.content
     });
   }
 }
 
 async function handleLocaleChange(newLocale: string, formData: any): Promise<void> {
-  if (!editingTemplate.value?.name) return;
-  
+  if (!editingTemplate.value?.name) {
+    return;
+  }
+
   const templateName = editingTemplate.value.name;
   formData.locale = newLocale;
-  
+
   // Helper to reset template for new translation
   const resetForNewTranslation = () => {
     formData.subject = "";
@@ -238,19 +243,19 @@ async function handleLocaleChange(newLocale: string, formData: any): Promise<voi
         subject: "",
         is_system: current.is_system,
         created_at: current.created_at || new Date().toISOString(),
-        updated_at: current.updated_at || new Date().toISOString(),
+        updated_at: current.updated_at || new Date().toISOString()
       };
     }
   };
-  
+
   try {
     const url = `/api/v1/email-templates/${templateName}?locale=${newLocale}`;
     const response = await fetchWithAuth(url);
-    
+
     if (response.ok) {
       const data = await response.json();
       const template = data.data?.template || data.template;
-      
+
       if (template) {
         formData.subject = template.subject || "";
         formData.content = template.content || "";
@@ -273,20 +278,22 @@ function closeEditModal(): void {
 }
 
 async function saveTemplate(formData: any): Promise<void> {
-  if (!editingTemplate.value || !editingTemplate.value.name) return;
+  if (!editingTemplate.value || !editingTemplate.value.name) {
+    return;
+  }
 
   try {
     const locale = formData.locale || selectedLocale.value;
     const templateName = editingTemplate.value.name;
-    
+
     // Use existing template ID if available, otherwise check if template exists
     let templateId: string | null = editingTemplate.value.id || null;
-    
+
     if (!templateId) {
       // Check if template exists for this locale
       const checkUrl = `/api/v1/email-templates/${templateName}?locale=${locale}`;
       const checkResponse = await fetchWithAuth(checkUrl);
-      
+
       if (checkResponse.ok) {
         const checkData = await checkResponse.json();
         const existingTemplate = checkData.data?.template || checkData.template;
@@ -295,10 +302,8 @@ async function saveTemplate(formData: any): Promise<void> {
         }
       }
     }
-    
-    const url = templateId
-      ? `/api/v1/email-templates/${templateId}`
-      : "/api/v1/email-templates";
+
+    const url = templateId ? `/api/v1/email-templates/${templateId}` : "/api/v1/email-templates";
     const method = templateId ? "PUT" : "POST";
 
     const response = await fetchWithAuth(url, {
@@ -308,8 +313,8 @@ async function saveTemplate(formData: any): Promise<void> {
         name: templateName,
         locale: locale,
         subject: formData.subject || "",
-        content: formData.content,
-      }),
+        content: formData.content
+      })
     });
 
     if (response.ok) {
@@ -331,7 +336,7 @@ async function deleteTemplate(template: EmailTemplate): Promise<void> {
 
   try {
     const response = await fetchWithAuth(`/api/v1/email-templates/${template.id}`, {
-      method: "DELETE",
+      method: "DELETE"
     });
 
     if (response.ok) {

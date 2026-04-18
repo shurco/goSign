@@ -341,7 +341,8 @@ func TestPasswordHashing(t *testing.T) {
 		plainPassword := "SecureP@ssw0rd123"
 
 		// When: hashing the password
-		hashedPassword := password.GeneratePassword(plainPassword)
+		hashedPassword, err := password.GeneratePassword(plainPassword)
+		require.NoError(t, err)
 
 		// Then: hash should not be empty
 		assert.NotEmpty(t, hashedPassword)
@@ -358,8 +359,10 @@ func TestPasswordHashing(t *testing.T) {
 
 	t.Run("same password produces different hashes", func(t *testing.T) {
 		// Given: same password hashed twice
-		password1 := password.GeneratePassword("SamePassword123")
-		password2 := password.GeneratePassword("SamePassword123")
+		password1, err1 := password.GeneratePassword("SamePassword123")
+		password2, err2 := password.GeneratePassword("SamePassword123")
+		require.NoError(t, err1)
+		require.NoError(t, err2)
 
 		// Then: hashes should be different (due to salt)
 		assert.NotEqual(t, password1, password2)
@@ -483,13 +486,18 @@ func TestUserRoles(t *testing.T) {
 func BenchmarkPasswordHashing(b *testing.B) {
 	pwd := "SecureP@ssw0rd123"
 	for i := 0; i < b.N; i++ {
-		password.GeneratePassword(pwd)
+		if _, err := password.GeneratePassword(pwd); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
 func BenchmarkPasswordVerification(b *testing.B) {
 	pwd := "SecureP@ssw0rd123"
-	hash := password.GeneratePassword(pwd)
+	hash, err := password.GeneratePassword(pwd)
+	if err != nil {
+		b.Fatal(err)
+	}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

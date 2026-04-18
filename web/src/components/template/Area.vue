@@ -101,66 +101,76 @@
     >
       <span v-if="field" class="flex h-full items-center justify-center space-x-1" :class="{ 'w-full': isWFullType }">
         <div
-          v-if="isDefaultValuePresent || isValueInput || isSelectInput || (field.areas?.length && field.type !== 'checkbox')"
+          v-if="
+            isDefaultValuePresent || isValueInput || isSelectInput || (field.areas?.length && field.type !== 'checkbox')
+          "
           ref="textContainer"
-          class="flex items-center px-0.5 flex-1 min-w-0 h-full"
-          :class="{ 'w-full h-full': isWFullType }"
+          class="flex h-full min-w-0 flex-1 items-center px-0.5"
+          :class="{ 'h-full w-full': isWFullType }"
           :style="fontStyle"
         >
           <div
-            class="flex items-center flex-1 min-w-0"
-            :class="{ 'w-full h-full': isWFullType }"
+            class="flex min-w-0 flex-1 items-center"
+            :class="{ 'h-full w-full': isWFullType }"
             :style="{ color: field.preferences?.color }"
           >
             <SvgIcon
               v-if="field.type === 'checkbox' && field.default_value"
               name="check-circle"
-              class="aspect-square mx-auto flex-shrink-0"
-              :class="areaWiderThanHigh ? '!w-auto !h-full' : '!w-full !h-auto'"
+              class="mx-auto aspect-square flex-shrink-0"
+              :class="areaWiderThanHigh ? '!h-full !w-auto' : '!h-auto !w-full'"
             />
             <template v-else-if="(field.type === 'radio' || field.type === 'multiple') && hasMultipleAreas">
               <SvgIcon
-                v-if="field.type === 'multiple' ? (Array.isArray(field.default_value) && field.default_value.includes(buildAreaOptionValue(area))) : (buildAreaOptionValue(area) === field.default_value)"
+                v-if="
+                  field.type === 'multiple'
+                    ? Array.isArray(field.default_value) && field.default_value.includes(buildAreaOptionValue(area))
+                    : buildAreaOptionValue(area) === field.default_value
+                "
                 name="check-circle"
-                class="aspect-square mx-auto flex-shrink-0"
-                :class="areaWiderThanHigh ? '!w-auto !h-full' : '!w-full !h-auto'"
+                class="mx-auto aspect-square flex-shrink-0"
+                :class="areaWiderThanHigh ? '!h-full !w-auto' : '!h-auto !w-full'"
               />
             </template>
             <span
-              v-else-if="field.type === 'number' && (field.default_value != null && String(field.default_value) !== '')"
+              v-else-if="field.type === 'number' && field.default_value != null && String(field.default_value) !== ''"
               class="whitespace-pre-wrap"
-            >{{ formatNumber(field.default_value, field.preferences?.format) }}</span>
-            <span v-else-if="isDatePlaceholder">{{ t('signing.signing_date') }}</span>
-            <div
-              v-else-if="field.type === 'cells' && field.default_value"
-              class="w-full flex items-center"
+              >{{ formatNumber(field.default_value, field.preferences?.format) }}</span
             >
+            <span v-else-if="isDatePlaceholder">{{ t("signing.signing_date") }}</span>
+            <div v-else-if="field.type === 'cells' && field.default_value" class="flex w-full items-center">
               <div
                 v-for="(char, index) in String(field.default_value)"
                 :key="index"
-                class="text-center flex-none"
-                :style="{ width: (area.w && effectiveCellW ? (effectiveCellW / area.w * 100) : 0) + '%' }"
+                class="flex-none text-center"
+                :style="{ width: (area.w && effectiveCellW ? (effectiveCellW / area.w) * 100 : 0) + '%' }"
               >
                 {{ char }}
               </div>
             </div>
-            <span
-              v-else-if="isSelectInput && field.default_value"
-              class="whitespace-pre-wrap"
-            >{{ field.default_value }}</span>
+            <span v-else-if="isSelectInput && field.default_value" class="whitespace-pre-wrap">{{
+              field.default_value
+            }}</span>
             <span
               v-else-if="isValueInput"
               ref="defaultValue"
               :contenteditable="editable && !defaultField"
               dir="auto"
-              class="whitespace-pre-wrap outline-none flex-1 min-w-0 empty:before:content-[attr(data-placeholder)] before:text-base-content/30"
+              class="before:text-base-content/30 min-w-0 flex-1 whitespace-pre-wrap outline-none empty:before:content-[attr(data-placeholder)]"
               :class="{ 'cursor-text': editable }"
-              :data-placeholder="field.type === 'date' ? (field.preferences?.format || t('fields.type_value')) : t('fields.type_value')"
+              :data-placeholder="
+                field.type === 'date' ? field.preferences?.format || t('fields.type_value') : t('fields.type_value')
+              "
               @blur="onDefaultValueBlur"
               @focus="focusArea(area)"
               @paste.prevent="onDefaultValuePaste"
               @keydown.enter.prevent="onDefaultValueEnter"
-            >{{ field.type === 'date' && field.default_value ? formatDateByPattern(String(field.default_value), field.preferences?.format || 'DD/MM/YYYY') : field.default_value }}</span>
+              >{{
+                field.type === "date" && field.default_value
+                  ? formatDateByPattern(String(field.default_value), field.preferences?.format || "DD/MM/YYYY")
+                  : field.default_value
+              }}</span
+            >
           </div>
         </div>
         <SvgIcon
@@ -168,7 +178,7 @@
           :name="fieldIcons[field.type]"
           width="100%"
           height="100%"
-          class="max-h-10 opacity-50 flex-shrink-0"
+          class="max-h-10 flex-shrink-0 opacity-50"
         />
       </span>
     </div>
@@ -243,12 +253,22 @@ const isSelectInput = computed(() =>
   props.field ? ["select", "radio", "multiple"].includes(props.field.type) : false
 );
 const isDefaultValuePresent = computed(() => {
-  if (!props.field) return false;
+  if (!props.field) {
+    return false;
+  }
   const v = props.field.default_value;
-  if (props.field.type === "checkbox") return !!v;
-  if (props.field.type === "multiple") return Array.isArray(v) ? v.length > 0 : !!v;
-  if (props.field.type === "radio" || props.field.type === "select") return v != null && v !== "";
-  if (props.field.type === "number") return v != null && v !== "" && !Number.isNaN(Number(v));
+  if (props.field.type === "checkbox") {
+    return !!v;
+  }
+  if (props.field.type === "multiple") {
+    return Array.isArray(v) ? v.length > 0 : !!v;
+  }
+  if (props.field.type === "radio" || props.field.type === "select") {
+    return v != null && v !== "";
+  }
+  if (props.field.type === "number") {
+    return v != null && v !== "" && !Number.isNaN(Number(v));
+  }
   return v != null && v !== "";
 });
 const isWFullType = computed(() =>
@@ -257,58 +277,75 @@ const isWFullType = computed(() =>
 
 const areaWiderThanHigh = computed(() => props.area.w > props.area.h);
 
-const hasMultipleAreas = computed(
-  () => (props.field?.areas?.length ?? 0) > 1
-);
+const hasMultipleAreas = computed(() => (props.field?.areas?.length ?? 0) > 1);
 
-const isDatePlaceholder = computed(
-  () => props.field?.default_value === "\u007b\u007bdate\u007d\u007d"
-);
+const isDatePlaceholder = computed(() => props.field?.default_value === "\u007b\u007bdate\u007d\u007d");
 
 function buildAreaOptionValue(area: Area): string {
-  if (!area.option_id || !props.field?.options) return "";
+  if (!area.option_id || !props.field?.options) {
+    return "";
+  }
   const option = props.field.options.find((o: { id?: string; value?: string }) => o.id === area.option_id);
   return (option && "value" in option ? option.value : "") ?? "";
 }
 
 function formatNumber(value: number | string, format?: string): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (Number.isNaN(num)) return String(value);
-  if (!format || format === "none") return String(num);
-  if (format === "comma") return new Intl.NumberFormat("en-US").format(num);
-  if (format === "dot") return new Intl.NumberFormat("de-DE").format(num);
-  if (format === "space") return new Intl.NumberFormat("fr-FR").format(num);
-  if (format === "usd")
+  if (Number.isNaN(num)) {
+    return String(value);
+  }
+  if (!format || format === "none") {
+    return String(num);
+  }
+  if (format === "comma") {
+    return new Intl.NumberFormat("en-US").format(num);
+  }
+  if (format === "dot") {
+    return new Intl.NumberFormat("de-DE").format(num);
+  }
+  if (format === "space") {
+    return new Intl.NumberFormat("fr-FR").format(num);
+  }
+  if (format === "usd") {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num);
-  if (format === "eur")
+  }
+  if (format === "eur") {
     return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(num);
-  if (format === "gbp")
+  }
+  if (format === "gbp") {
     return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(num);
+  }
   return String(num);
 }
 
 const fontStyle = computed(() => {
   const field = props.field;
-  if (!field?.preferences) return {};
+  if (!field?.preferences) {
+    return {};
+  }
   const style: Record<string, string> = {};
-  if (field.preferences.font) style.fontFamily = field.preferences.font;
-  if (field.preferences.font_size) style.fontSize = String(field.preferences.font_size) + "px";
+  if (field.preferences.font) {
+    style.fontFamily = field.preferences.font;
+  }
+  if (field.preferences.font_size) {
+    style.fontSize = String(field.preferences.font_size) + "px";
+  }
   if (field.preferences.font_type) {
-    if (field.preferences.font_type === "bold") style.fontWeight = "bold";
-    else if (field.preferences.font_type === "italic") style.fontStyle = "italic";
-    else if (field.preferences.font_type === "bold_italic") {
+    if (field.preferences.font_type === "bold") {
+      style.fontWeight = "bold";
+    } else if (field.preferences.font_type === "italic") {
+      style.fontStyle = "italic";
+    } else if (field.preferences.font_type === "bold_italic") {
       style.fontWeight = "bold";
       style.fontStyle = "italic";
     }
   }
-  if (field.preferences.align) style.textAlign = field.preferences.align;
+  if (field.preferences.align) {
+    style.textAlign = field.preferences.align;
+  }
   if (field.preferences.valign) {
     style.alignItems =
-      field.preferences.valign === "top"
-        ? "flex-start"
-        : field.preferences.valign === "bottom"
-          ? "flex-end"
-          : "center";
+      field.preferences.valign === "top" ? "flex-start" : field.preferences.valign === "bottom" ? "flex-end" : "center";
   }
   return style;
 });
@@ -347,14 +384,20 @@ const defaultName = computed(() => {
 
 const optionIndexText = computed(() => {
   const opts = props.field?.options as Array<{ id?: string }> | undefined;
-  if (!props.area.option_id || !opts?.length) return "";
+  if (!props.area.option_id || !opts?.length) {
+    return "";
+  }
   const idx = opts.findIndex((o) => o && typeof o === "object" && "id" in o && o.id === props.area.option_id);
   return idx >= 0 ? `${idx + 1}.` : "";
 });
 
 function getEffectiveCellW(area: Area): number {
-  if (area.cell_w != null && area.cell_w > 0) return area.cell_w;
-  if (area.w <= 0) return 0;
+  if (area.cell_w != null && area.cell_w > 0) {
+    return area.cell_w;
+  }
+  if (area.w <= 0) {
+    return 0;
+  }
   if (area.h > 0) {
     const denom = Math.floor(area.w / area.h);
     return denom > 0 ? (area.w * 2) / denom : area.w / 5;
@@ -365,7 +408,9 @@ function getEffectiveCellW(area: Area): number {
 /** Returns number of cells for a cells-type area (same formula as cells computed). */
 function getCellCountFromArea(area: Area): number {
   const cellWidth = getEffectiveCellW(area);
-  if (!cellWidth || cellWidth <= 0 || area.w <= 0) return 0;
+  if (!cellWidth || cellWidth <= 0 || area.w <= 0) {
+    return 0;
+  }
   let currentWidth = 0;
   let count = 0;
   while (currentWidth + (cellWidth + cellWidth / 4) < area.w) {
@@ -460,7 +505,9 @@ function isDefaultName(name: string): boolean {
 }
 
 function onNameFocus(): void {
-  if (selectedAreaRef) selectedAreaRef.value = props.area;
+  if (selectedAreaRef) {
+    selectedAreaRef.value = props.area;
+  }
   isNameFocus.value = true;
   if (name.value) {
     name.value.style.minWidth = name.value.clientWidth + "px";
@@ -497,7 +544,9 @@ function onNameEnter(): void {
 
 function onDefaultValueBlur(): void {
   const el = defaultValue.value;
-  if (!el || !props.field) return;
+  if (!el || !props.field) {
+    return;
+  }
   const text = el.innerText.trim();
   if (props.field.default_value !== text) {
     (props.field as { default_value?: string }).default_value = text;
@@ -516,7 +565,9 @@ function onDefaultValueEnter(): void {
 }
 
 function focusArea(a: Area): void {
-  if (selectedAreaRef) selectedAreaRef.value = a;
+  if (selectedAreaRef) {
+    selectedAreaRef.value = a;
+  }
 }
 
 function maybeUpdateOptions(): void {
@@ -563,7 +614,9 @@ function handleDoubleClick(): void {
 
 // Unified pointer event handlers
 function handleDragStart(e: PointerEvent): void {
-  if (selectedAreaRef) selectedAreaRef.value = props.area;
+  if (selectedAreaRef) {
+    selectedAreaRef.value = props.area;
+  }
 
   if (!props.editable) {
     return;
@@ -598,7 +651,9 @@ function handleDragStart(e: PointerEvent): void {
 }
 
 function handleResizeStart(e: PointerEvent): void {
-  if (selectedAreaRef) selectedAreaRef.value = props.area;
+  if (selectedAreaRef) {
+    selectedAreaRef.value = props.area;
+  }
   if (e.pointerType === "touch") {
     name.value?.blur();
     e.preventDefault();
@@ -647,7 +702,9 @@ function handlePointerUp(): void {
 
 function getMaskForArea(): HTMLElement | null {
   let current: HTMLElement | null = touchTarget.value;
-  if (!current) return null;
+  if (!current) {
+    return null;
+  }
 
   while (current && current.parentElement) {
     current = current.parentElement;
@@ -669,7 +726,9 @@ function getMaskForArea(): HTMLElement | null {
 function handleDrag(e: PointerEvent): void {
   const mask: HTMLElement | null =
     getMaskForArea() || ((e.target as HTMLElement).id === "mask" ? (e.target as HTMLElement) : null);
-  if (!mask) return;
+  if (!mask) {
+    return;
+  }
 
   isDragged.value = true;
 
@@ -687,7 +746,9 @@ function handleResize(e: PointerEvent): void {
   if (!mask && (e.target as HTMLElement).id === "mask") {
     mask = e.target as HTMLElement;
   }
-  if (!mask) return;
+  if (!mask) {
+    return;
+  }
 
   if (e.pointerType === "touch") {
     const rect = mask.getBoundingClientRect();
@@ -710,7 +771,9 @@ function handleResizeCell(e: PointerEvent): void {
   if (!mask && (e.target as HTMLElement).id === "mask") {
     mask = e.target as HTMLElement;
   }
-  if (!mask) return;
+  if (!mask) {
+    return;
+  }
 
   let positionX: number;
   if ((e.target as HTMLElement).id === "mask") {

@@ -69,14 +69,11 @@ const previewImagesIndex = computed(() => {
   if (!props.document) {
     return {};
   }
-  return props.document.preview_images.reduce<Record<number, any>>(
-    (acc, e) => {
-      const entry = { ...e, url: `${props.document.url}/${props.document.id}` };
-      acc[parseInt(e.filename, 10)] = entry;
-      return acc;
-    },
-    {}
-  );
+  return props.document.preview_images.reduce<Record<number, any>>((acc, e) => {
+    const entry = { ...e, url: `${props.document.url}/${props.document.id}` };
+    acc[parseInt(e.filename, 10)] = entry;
+    return acc;
+  }, {});
 });
 
 const sortedPreviewImages = computed(() => {
@@ -136,8 +133,8 @@ function handleDraw(event: any): void {
     return;
   }
   // Preserve page number from the event and add attachment_id
-  emit("draw", { 
-    ...event, 
+  emit("draw", {
+    ...event,
     attachment_id: props.document.id,
     page: event.page !== undefined ? event.page : 0 // Ensure page is preserved
   });

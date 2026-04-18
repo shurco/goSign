@@ -3,13 +3,13 @@
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold">{{ $t('organizations.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-600">{{ $t('organizations.description') }}</p>
+        <h1 class="text-3xl font-bold">{{ $t("organizations.title") }}</h1>
+        <p class="mt-1 text-sm text-gray-600">{{ $t("organizations.description") }}</p>
       </div>
       <div class="flex items-center gap-3">
         <Button variant="primary" @click="openCreateModal">
           <SvgIcon name="plus" class="mr-2 h-5 w-5" />
-          {{ $t('organizations.createOrganization') }}
+          {{ $t("organizations.createOrganization") }}
         </Button>
       </div>
     </div>
@@ -38,14 +38,14 @@
             v-if="currentOrganization && (item as Organization).id === currentOrganization.id"
             class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800"
           >
-            {{ $t('organizations.current') }}
+            {{ $t("organizations.current") }}
           </span>
         </div>
       </template>
 
       <template #cell-description="{ value, item }">
         <span class="text-sm text-gray-500">
-          {{ value || $t('organizations.noDescription') }}
+          {{ value || $t("organizations.noDescription") }}
         </span>
       </template>
 
@@ -58,22 +58,22 @@
           <button
             v-if="currentOrganization && (item as Organization).id === currentOrganization.id"
             class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-red-600"
-            @click.stop="exitOrganization"
             :title="$t('organizations.exitOrganization')"
+            @click.stop="exitOrganization"
           >
             <SvgIcon name="exit" class="h-5 w-5 stroke-[2]" />
           </button>
           <button
             class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-            @click.stop="editOrganization(item as Organization)"
             :title="$t('organizations.editOrganization')"
+            @click.stop="editOrganization(item as Organization)"
           >
             <SvgIcon name="settings" class="h-5 w-5 stroke-[2]" />
           </button>
           <button
             class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-gray-600"
-            @click.stop="manageMembers(item as Organization)"
             :title="$t('organizations.manageMembers')"
+            @click.stop="manageMembers(item as Organization)"
           >
             <SvgIcon name="users" class="h-5 w-5 stroke-[2]" />
           </button>
@@ -97,7 +97,7 @@
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { apiDelete, apiGet, apiPost } from "@/services/api";
+import { apiGet, apiPost } from "@/services/api";
 import { Organization } from "@/models";
 import CreateOrganizationModal from "@/components/organization/CreateOrganizationModal.vue";
 import EditOrganizationModal from "@/components/organization/EditOrganizationModal.vue";
@@ -117,11 +117,11 @@ const currentUserId = ref("");
 const currentOrganization = ref<{ id: string; name: string; role?: string } | null>(null);
 
 const columns = computed(() => [
-  { key: "name", label: t('organizations.organizationName'), sortable: true },
-  { key: "description", label: t('organizations.description'), sortable: false },
+  { key: "name", label: t("organizations.organizationName"), sortable: true },
+  { key: "description", label: t("organizations.description"), sortable: false },
   {
     key: "created_at",
-    label: t('submissions.created'),
+    label: t("submissions.created"),
     sortable: true,
     formatter: (value: unknown): string => formatDate(value as string)
   }
@@ -160,7 +160,7 @@ const loadOrganizations = async () => {
 
       // API returns: { success: true, message: "...", data: [...] } or { success: true, message: "...", data: { organizations: [...] } }
       let data = response.data;
-      if (data && typeof data === 'object' && 'organizations' in data) {
+      if (data && typeof data === "object" && "organizations" in data) {
         data = data.organizations;
       }
       // Ensure organizations is always an array
@@ -235,7 +235,7 @@ const exitOrganization = async () => {
     await loadOrganizations();
   } catch (error) {
     console.error("Failed to exit organization:", error);
-    alert(t('organizations.exitError') || 'Failed to exit organization');
+    alert(t("organizations.exitError") || "Failed to exit organization");
   }
 };
 
@@ -299,7 +299,7 @@ onMounted(() => {
   });
   // TODO: Get current user ID
   currentUserId.value = "user-id"; // Replace with actual user ID
-  
+
   // Load current organization from localStorage
   const storedOrg = localStorage.getItem("current_organization");
   if (storedOrg) {

@@ -3,8 +3,8 @@
     :class="selectClasses"
     :style="arrowStyle"
     :value="modelValue"
-    @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     v-bind="$attrs"
+    @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
   >
     <slot />
   </select>
@@ -39,7 +39,8 @@ const arrowStyle = {
 };
 
 const selectClasses = computed(() => {
-  const base = "w-full rounded border bg-white transition-colors focus:outline-none focus:ring-2 cursor-pointer appearance-none pr-10";
+  const base =
+    "w-full rounded border bg-white transition-colors focus:outline-none focus:ring-2 cursor-pointer appearance-none pr-10";
 
   const borderColor = props.error
     ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
@@ -56,4 +57,3 @@ const selectClasses = computed(() => {
   return [base, borderColor, sizes[props.size], disabled].filter(Boolean).join(" ");
 });
 </script>
-

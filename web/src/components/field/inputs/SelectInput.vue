@@ -3,9 +3,13 @@
     <Select
       v-if="type === 'select'"
       :model-value="typeof localValue === 'string' ? localValue : String(localValue || '')"
-      @update:model-value="(val) => { localValue = String(val); }"
       :required="required"
       :disabled="disabled"
+      @update:model-value="
+        (val) => {
+          localValue = String(val);
+        }
+      "
       @blur="handleBlur"
     >
       <option value="">{{ placeholder || "Select..." }}</option>
@@ -22,17 +26,30 @@
       >
         <Radio
           :model-value="typeof localValue === 'string' ? localValue : String(localValue || '')"
-          @update:model-value="(val) => { localValue = val; }"
           :name="radioGroupName"
           :value="option.value ?? option.id ?? ''"
           :disabled="disabled"
+          @update:model-value="
+            (val) => {
+              localValue = val;
+            }
+          "
         />
         <span>{{ option.label || option.value }}</span>
       </label>
     </div>
 
     <div v-else-if="type === 'checkbox'" class="flex items-center gap-2">
-      <Checkbox :model-value="typeof localValue === 'boolean' ? localValue : Boolean(localValue)" @update:model-value="(val) => { localValue = val; }" :disabled="disabled" @blur="handleBlur" />
+      <Checkbox
+        :model-value="typeof localValue === 'boolean' ? localValue : Boolean(localValue)"
+        :disabled="disabled"
+        @update:model-value="
+          (val) => {
+            localValue = val;
+          }
+        "
+        @blur="handleBlur"
+      />
       <span v-if="placeholder">{{ placeholder }}</span>
     </div>
 
@@ -42,11 +59,7 @@
         :key="option.id || option.value"
         class="flex cursor-pointer items-center gap-2"
       >
-        <Checkbox
-          v-model="selectedValues"
-          :value="option.value || option.id"
-          :disabled="disabled"
-        />
+        <Checkbox v-model="selectedValues" :value="option.value || option.id" :disabled="disabled" />
         <span>{{ option.label || option.value }}</span>
       </label>
     </div>
@@ -56,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, useId } from "vue";
+import { computed, ref, useId, watch } from "vue";
 import Select from "@/components/ui/Select.vue";
 import Radio from "@/components/ui/Radio.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
@@ -100,7 +113,9 @@ const radioGroupName = useId();
 // Normalize options: accept objects { id?, value?, label? } or strings
 const normalizedOptions = computed((): Option[] => {
   const raw = props.options ?? [];
-  if (!Array.isArray(raw)) return [];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
   return raw.map((item): Option => {
     if (typeof item === "string") {
       return { id: item, value: item, label: item };
@@ -146,4 +161,3 @@ function handleBlur(): void {
   emit("blur");
 }
 </script>
-

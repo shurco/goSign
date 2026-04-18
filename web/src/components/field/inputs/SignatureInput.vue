@@ -2,19 +2,16 @@
   <div class="signature-input">
     <div
       class="rounded-lg border border-[var(--color-base-300)] bg-white p-3"
-      :class="{ 'opacity-60 pointer-events-none': disabled }"
+      :class="{ 'pointer-events-none opacity-60': disabled }"
     >
       <div class="mb-2 flex items-center justify-between gap-3">
         <div class="text-sm font-medium text-[--color-base-content]">
-          {{ mode === "initials" ? t('fields.initials') : mode === "stamp" ? t('fields.stamp') : t('fields.signature') }}
+          {{
+            mode === "initials" ? t("fields.initials") : mode === "stamp" ? t("fields.stamp") : t("fields.signature")
+          }}
         </div>
-        <button
-          type="button"
-          class="btn btn-ghost btn-xs"
-          :disabled="disabled"
-          @click="clear"
-        >
-          {{ t('common.clear') }}
+        <button type="button" class="btn btn-ghost btn-xs" :disabled="disabled" @click="clear">
+          {{ t("common.clear") }}
         </button>
       </div>
 
@@ -55,10 +52,7 @@
           v-if="!hasValue && activeTab === 'drawn'"
           class="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-[--color-base-content]/60"
         >
-          {{
-            placeholder ||
-            (mode === "initials" ? t("signing.drawInitials") : t("signing.drawSignature"))
-          }}
+          {{ placeholder || (mode === "initials" ? t("signing.drawInitials") : t("signing.drawSignature")) }}
         </div>
       </div>
 
@@ -100,7 +94,7 @@
         </div>
       </div>
 
-      <div v-if="error" class="mt-2 text-sm text-error">
+      <div v-if="error" class="text-error mt-2 text-sm">
         {{ error }}
       </div>
     </div>
@@ -112,13 +106,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { useI18n } from "vue-i18n";
 import FileDropZone from "@/components/ui/FileDropZone.vue";
 
-export type SignatureFormat =
-  | ""
-  | "drawn"
-  | "typed"
-  | "drawn_or_typed"
-  | "drawn_or_upload"
-  | "upload";
+export type SignatureFormat = "" | "drawn" | "typed" | "drawn_or_typed" | "drawn_or_upload" | "upload";
 
 interface Props {
   modelValue?: string;
@@ -159,25 +147,37 @@ const typedPreviewUrl = ref("");
 // Which panels to show (DocuSeal-style: enable/disable drawn, typed, upload)
 const showDrawn = computed(() => {
   const f = (props.format || "").toLowerCase();
-  if (!f || f === "any") return true;
+  if (!f || f === "any") {
+    return true;
+  }
   return f === "drawn" || f === "drawn_or_typed" || f === "drawn_or_upload";
 });
 const showTyped = computed(() => {
   const f = (props.format || "").toLowerCase();
-  if (!f || f === "any") return true;
+  if (!f || f === "any") {
+    return true;
+  }
   return f === "typed" || f === "drawn_or_typed";
 });
 const showUpload = computed(() => {
   const f = (props.format || "").toLowerCase();
-  if (!f || f === "any") return true;
+  if (!f || f === "any") {
+    return true;
+  }
   return f === "upload" || f === "drawn_or_upload";
 });
 
 const tabs = computed(() => {
   const list: { id: "drawn" | "typed" | "upload"; label: string }[] = [];
-  if (showDrawn.value) list.push({ id: "drawn", label: t("signing.signatureDraw") });
-  if (showTyped.value) list.push({ id: "typed", label: t("signing.signatureType") });
-  if (showUpload.value) list.push({ id: "upload", label: t("signing.signatureUpload") });
+  if (showDrawn.value) {
+    list.push({ id: "drawn", label: t("signing.signatureDraw") });
+  }
+  if (showTyped.value) {
+    list.push({ id: "typed", label: t("signing.signatureType") });
+  }
+  if (showUpload.value) {
+    list.push({ id: "upload", label: t("signing.signatureUpload") });
+  }
   return list;
 });
 
@@ -187,12 +187,16 @@ const activeTab = ref<"drawn" | "typed" | "upload">("drawn");
 watch(
   () => [showDrawn.value, showTyped.value, showUpload.value],
   () => {
-    if (showDrawn.value && (activeTab.value === "drawn" || !tabs.value.find((x) => x.id === activeTab.value)))
+    if (showDrawn.value && (activeTab.value === "drawn" || !tabs.value.find((x) => x.id === activeTab.value))) {
       activeTab.value = "drawn";
-    else if (showTyped.value && activeTab.value !== "drawn" && activeTab.value !== "upload") activeTab.value = "typed";
-    else if (showUpload.value) activeTab.value = "upload";
-    if (tabs.value.length && !tabs.value.some((x) => x.id === activeTab.value))
+    } else if (showTyped.value && activeTab.value !== "drawn" && activeTab.value !== "upload") {
+      activeTab.value = "typed";
+    } else if (showUpload.value) {
+      activeTab.value = "upload";
+    }
+    if (tabs.value.length && !tabs.value.some((x) => x.id === activeTab.value)) {
       activeTab.value = tabs.value[0].id;
+    }
   },
   { immediate: true }
 );
@@ -207,15 +211,21 @@ const TYPED_CANVAS_HEIGHT = 120;
 
 function getCtx(): CanvasRenderingContext2D | null {
   const c = canvasEl.value;
-  if (!c) return null;
+  if (!c) {
+    return null;
+  }
   return c.getContext("2d");
 }
 
 function setupCanvasSize(): void {
   const c = canvasEl.value;
-  if (!c) return;
+  if (!c) {
+    return;
+  }
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) {
+    return;
+  }
 
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = c.getBoundingClientRect().width;
@@ -238,7 +248,9 @@ function setupCanvasSize(): void {
 function clearCanvas(): void {
   const c = canvasEl.value;
   const ctx = getCtx();
-  if (!c || !ctx) return;
+  if (!c || !ctx) {
+    return;
+  }
   ctx.clearRect(0, 0, c.width, c.height);
 }
 
@@ -249,7 +261,9 @@ function drawFromModelValue(dataUrl: string): void {
   }
   const ctx = getCtx();
   const c = canvasEl.value;
-  if (!ctx || !c) return;
+  if (!ctx || !c) {
+    return;
+  }
 
   const img = new Image();
   img.onload = () => {
@@ -271,12 +285,18 @@ function getPoint(e: PointerEvent): { x: number; y: number } {
 }
 
 function onPointerDown(e: PointerEvent): void {
-  if (props.disabled) return;
-  if (!canvasEl.value) return;
+  if (props.disabled) {
+    return;
+  }
+  if (!canvasEl.value) {
+    return;
+  }
   setupCanvasSize();
 
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) {
+    return;
+  }
 
   isDrawing.value = true;
   const p = getPoint(e);
@@ -292,9 +312,13 @@ function onPointerDown(e: PointerEvent): void {
 }
 
 function onPointerMove(e: PointerEvent): void {
-  if (!isDrawing.value || props.disabled) return;
+  if (!isDrawing.value || props.disabled) {
+    return;
+  }
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) {
+    return;
+  }
 
   const p = getPoint(e);
   ctx.lineTo(p.x, p.y);
@@ -303,11 +327,15 @@ function onPointerMove(e: PointerEvent): void {
 }
 
 async function onPointerUp(): Promise<void> {
-  if (!isDrawing.value) return;
+  if (!isDrawing.value) {
+    return;
+  }
   isDrawing.value = false;
 
   const c = canvasEl.value;
-  if (!c) return;
+  if (!c) {
+    return;
+  }
   const dataUrl = c.toDataURL("image/png");
   emit("update:modelValue", dataUrl);
   await nextTick();
@@ -316,12 +344,16 @@ async function onPointerUp(): Promise<void> {
 
 /** Render typed text to image (data URL) using offscreen canvas. */
 function typedTextToDataUrl(text: string): string {
-  if (!text || !text.trim()) return "";
+  if (!text || !text.trim()) {
+    return "";
+  }
   const canvas = document.createElement("canvas");
   canvas.width = TYPED_CANVAS_WIDTH;
   canvas.height = TYPED_CANVAS_HEIGHT;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
+  if (!ctx) {
+    return "";
+  }
   ctx.fillStyle = "transparent";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#111827";
@@ -360,7 +392,9 @@ function clearUpload(): void {
 }
 
 function clear(): void {
-  if (props.disabled) return;
+  if (props.disabled) {
+    return;
+  }
   clearCanvas();
   typedText.value = "";
   typedPreviewUrl.value = "";
@@ -376,7 +410,9 @@ onMounted(() => {
   if (canvasEl.value && typeof ResizeObserver !== "undefined") {
     resizeObserver = new ResizeObserver(() => {
       setupCanvasSize();
-      if (activeTab.value === "drawn") drawFromModelValue(props.modelValue || "");
+      if (activeTab.value === "drawn") {
+        drawFromModelValue(props.modelValue || "");
+      }
     });
     resizeObserver.observe(canvasEl.value);
   }
@@ -393,8 +429,12 @@ watch(
   () => props.modelValue,
   (v) => {
     setupCanvasSize();
-    if (activeTab.value === "drawn") drawFromModelValue(v || "");
-    if (activeTab.value === "upload") typedPreviewUrl.value = "";
+    if (activeTab.value === "drawn") {
+      drawFromModelValue(v || "");
+    }
+    if (activeTab.value === "upload") {
+      typedPreviewUrl.value = "";
+    }
     if (!v) {
       typedText.value = "";
       typedPreviewUrl.value = "";

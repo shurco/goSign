@@ -36,13 +36,7 @@
         </div>
 
         <div>
-          <Button
-            type="submit"
-            variant="primary"
-            class="w-full"
-            :loading="isLoading"
-            :disabled="isLoading"
-          >
+          <Button type="submit" variant="primary" class="w-full" :loading="isLoading" :disabled="isLoading">
             <span v-if="isLoading">Sending...</span>
             <span v-else>Send reset link</span>
           </Button>

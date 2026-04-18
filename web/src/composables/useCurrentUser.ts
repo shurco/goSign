@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import { apiGet } from "@/services/api";
 
 export interface CurrentUserData {
@@ -19,7 +19,9 @@ const USER_CACHE_KEY = "user_cache";
 function getCachedUser(): CurrentUserData | null {
   try {
     const raw = sessionStorage.getItem(USER_CACHE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
     const data = JSON.parse(raw) as CurrentUserData;
     return data && typeof data.id === "string" ? data : null;
   } catch {
@@ -44,7 +46,9 @@ export function useCurrentUser() {
         const cached = getCachedUser();
         if (cached) {
           userData.value = cached;
-          if (cached.role !== undefined) cachedUserRole.value = cached.role;
+          if (cached.role !== undefined) {
+            cachedUserRole.value = cached.role;
+          }
         }
       }
 
@@ -75,7 +79,9 @@ export function useCurrentUser() {
     const cached = getCachedUser();
     if (cached) {
       userData.value = cached;
-      if (cached.role !== undefined) cachedUserRole.value = cached.role;
+      if (cached.role !== undefined) {
+        cachedUserRole.value = cached.role;
+      }
     }
   }
 

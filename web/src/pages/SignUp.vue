@@ -99,13 +99,7 @@
         </div>
 
         <div>
-          <Button
-            type="submit"
-            variant="primary"
-            class="w-full"
-            :loading="isLoading"
-            :disabled="isLoading"
-          >
+          <Button type="submit" variant="primary" class="w-full" :loading="isLoading" :disabled="isLoading">
             <span v-if="isLoading">Creating account...</span>
             <span v-else>Sign up</span>
           </Button>
@@ -118,12 +112,8 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn">
-            Google
-          </Button>
-          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn">
-            GitHub
-          </Button>
+          <Button variant="ghost" class="w-full" @click="handleGoogleSignIn"> Google </Button>
+          <Button variant="ghost" class="w-full" @click="handleGitHubSignIn"> GitHub </Button>
         </div>
       </form>
     </div>

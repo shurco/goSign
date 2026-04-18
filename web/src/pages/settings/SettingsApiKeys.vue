@@ -13,7 +13,7 @@
     >
       <template #cell-enabled="{ value }">
         <Badge :variant="value ? 'success' : 'ghost'">
-          {{ value ? $t('apikeys.active') : $t('apikeys.disabled') }}
+          {{ value ? $t("apikeys.active") : $t("apikeys.disabled") }}
         </Badge>
       </template>
 
@@ -23,7 +23,7 @@
           :variant="(item as APIKey).enabled ? 'warning' : 'success'"
           @click="toggleAPIKey(item as APIKey)"
         >
-          {{ (item as APIKey).enabled ? $t('apikeys.disable') : $t('apikeys.enable') }}
+          {{ (item as APIKey).enabled ? $t("apikeys.disable") : $t("apikeys.enable") }}
         </Button>
       </template>
     </ResourceTable>
@@ -47,9 +47,9 @@
               <SvgIcon name="info" class="h-6 w-6 shrink-0" />
             </template>
             <div>
-              <p class="font-bold">{{ $t('apikeys.saveThisKey') }}</p>
+              <p class="font-bold">{{ $t("apikeys.saveThisKey") }}</p>
               <p class="text-sm">{{ newAPIKey }}</p>
-              <p class="mt-1 text-xs">{{ $t('apikeys.wontBeShownAgain') }}</p>
+              <p class="mt-1 text-xs">{{ $t("apikeys.wontBeShownAgain") }}</p>
             </div>
           </Alert>
         </div>
@@ -85,7 +85,7 @@ const showAPIKeyModal = ref(false);
 const newAPIKey = ref("");
 
 // Get trigger ref from parent and register open function
-const apiKeyModalTrigger = inject<{ value: (() => void) | null }>('apiKeyModalTrigger');
+const apiKeyModalTrigger = inject<{ value: (() => void) | null }>("apiKeyModalTrigger");
 
 // Register open function with parent
 if (apiKeyModalTrigger) {
@@ -95,18 +95,18 @@ if (apiKeyModalTrigger) {
 }
 
 const apiKeyColumns = computed(() => [
-  { key: "name", label: t('apikeys.name'), sortable: true },
+  { key: "name", label: t("apikeys.name"), sortable: true },
   {
     key: "last_used_at",
-    label: t('apikeys.lastUsed'),
-    formatter: (value: unknown): string => (value ? new Date(String(value)).toLocaleDateString() : t('apikeys.never'))
+    label: t("apikeys.lastUsed"),
+    formatter: (value: unknown): string => (value ? new Date(String(value)).toLocaleDateString() : t("apikeys.never"))
   },
   {
     key: "expires_at",
-    label: t('apikeys.expires'),
-    formatter: (value: unknown): string => (value ? new Date(String(value)).toLocaleDateString() : t('apikeys.never'))
+    label: t("apikeys.expires"),
+    formatter: (value: unknown): string => (value ? new Date(String(value)).toLocaleDateString() : t("apikeys.never"))
   },
-  { key: "enabled", label: t('apikeys.status') }
+  { key: "enabled", label: t("apikeys.status") }
 ]);
 
 onMounted(async () => {
@@ -149,22 +149,22 @@ async function saveAPIKey(formData: any): Promise<void> {
       newAPIKey.value = data.data.key;
       await loadAPIKeys();
       setTimeout(() => {
-        if (confirm(t('apikeys.savedKeyConfirm'))) {
+        if (confirm(t("apikeys.savedKeyConfirm"))) {
           showAPIKeyModal.value = false;
           newAPIKey.value = "";
         }
       }, 2000);
     } else {
-      alert(t('apikeys.createError'));
+      alert(t("apikeys.createError"));
     }
   } catch (error) {
     console.error("Failed to create API key:", error);
-    alert(t('apikeys.createError'));
+    alert(t("apikeys.createError"));
   }
 }
 
 async function deleteAPIKey(apiKey: any): Promise<void> {
-  if (!confirm(t('apikeys.deleteConfirm'))) {
+  if (!confirm(t("apikeys.deleteConfirm"))) {
     return;
   }
 
@@ -176,11 +176,11 @@ async function deleteAPIKey(apiKey: any): Promise<void> {
     if (response.ok) {
       await loadAPIKeys();
     } else {
-      alert(t('apikeys.deleteError'));
+      alert(t("apikeys.deleteError"));
     }
   } catch (error) {
     console.error("Failed to delete API key:", error);
-    alert(t('apikeys.deleteError'));
+    alert(t("apikeys.deleteError"));
   }
 }
 

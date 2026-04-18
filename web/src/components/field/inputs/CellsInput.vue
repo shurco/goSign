@@ -8,7 +8,7 @@
         v-model="cellValues[index]"
         type="text"
         maxlength="1"
-        class="h-12 w-12 rounded border border-gray-300 text-center text-lg font-semibold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+        class="focus:border-primary focus:ring-primary h-12 w-12 rounded border border-gray-300 text-center text-lg font-semibold focus:ring-2 focus:outline-none"
         :class="{ 'border-error': error }"
         :disabled="disabled"
         :readonly="readonly"
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { nextTick, ref, watch } from "vue";
 
 interface Props {
   modelValue?: string;
@@ -87,13 +87,13 @@ function getCombinedValue(): string {
 function handleCellInput(index: number, event: Event): void {
   const input = event.target as HTMLInputElement;
   const value = input.value.trim().slice(-1); // Take only last character
-  
+
   // Update the cell value
   cellValues.value[index] = value;
-  
+
   // Emit combined value
   emit("update:modelValue", getCombinedValue());
-  
+
   // Auto-advance to next cell if value entered
   if (value && index < props.cellCount - 1) {
     nextTick(() => {
@@ -110,7 +110,7 @@ function handleKeyDown(index: number, event: KeyboardEvent): void {
     cellInputs.value[index - 1]?.focus();
     emit("update:modelValue", getCombinedValue());
   }
-  
+
   // Handle arrow keys
   if (event.key === "ArrowLeft" && index > 0) {
     event.preventDefault();
@@ -120,7 +120,7 @@ function handleKeyDown(index: number, event: KeyboardEvent): void {
     event.preventDefault();
     cellInputs.value[index + 1]?.focus();
   }
-  
+
   // Only allow alphanumeric characters
   if (event.key.length === 1 && !/[a-zA-Z0-9]/.test(event.key)) {
     event.preventDefault();
@@ -131,16 +131,16 @@ function handlePaste(index: number, event: ClipboardEvent): void {
   event.preventDefault();
   const pastedText = event.clipboardData?.getData("text") || "";
   const chars = pastedText.slice(0, props.cellCount - index).split("");
-  
+
   chars.forEach((char, i) => {
     const cellIndex = index + i;
     if (cellIndex < props.cellCount && /[a-zA-Z0-9]/.test(char)) {
       cellValues.value[cellIndex] = char;
     }
   });
-  
+
   emit("update:modelValue", getCombinedValue());
-  
+
   // Focus the next empty cell or last cell
   const nextIndex = Math.min(index + chars.length, props.cellCount - 1);
   nextTick(() => {

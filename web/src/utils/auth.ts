@@ -108,11 +108,11 @@ async function refreshAccessToken(): Promise<string | null> {
       }
 
       const data = await response.json();
-      
+
       // Handle different response formats
       let newAccessToken: string | undefined;
       let newRefreshToken: string | undefined;
-      
+
       if (data.data) {
         // Format: { success: true, message: "...", data: { access_token: "...", refresh_token: "..." } }
         newAccessToken = data.data.access_token;

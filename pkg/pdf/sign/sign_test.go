@@ -100,6 +100,10 @@ func TestReaderCanReadPDF(t *testing.T) {
 }
 
 func TestSignPDF(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping PDF signing test in -short mode (requires network for TSA)")
+	}
+
 	failedDir := filepath.Join(testPDFFixturesDir(t), "failed")
 	_ = os.RemoveAll(failedDir)
 	_ = os.MkdirAll(failedDir, 0o777)

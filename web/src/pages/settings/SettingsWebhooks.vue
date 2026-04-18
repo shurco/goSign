@@ -13,7 +13,7 @@
     >
       <template #cell-enabled="{ value }">
         <Badge :variant="value ? 'success' : 'ghost'">
-          {{ value ? $t('webhooks.active') : $t('webhooks.inactive') }}
+          {{ value ? $t("webhooks.active") : $t("webhooks.inactive") }}
         </Badge>
       </template>
 
@@ -22,7 +22,9 @@
           <Badge v-for="event in value.slice(0, 3)" :key="event" size="sm">
             {{ event }}
           </Badge>
-          <Badge v-if="value.length > 3" variant="ghost" size="sm">+{{ value.length - 3 }} {{ $t('webhooks.more') }}</Badge>
+          <Badge v-if="value.length > 3" variant="ghost" size="sm"
+            >+{{ value.length - 3 }} {{ $t("webhooks.more") }}</Badge
+          >
         </div>
       </template>
     </ResourceTable>
@@ -65,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, watch } from "vue";
+import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import FormModal from "@/components/common/FormModal.vue";
@@ -81,7 +83,7 @@ const webhooks = ref([]);
 const showWebhookModal = ref(false);
 
 // Get trigger ref from parent and register open function
-const webhookModalTrigger = inject<{ value: (() => void) | null }>('webhookModalTrigger');
+const webhookModalTrigger = inject<{ value: (() => void) | null }>("webhookModalTrigger");
 
 // Register open function with parent
 if (webhookModalTrigger) {
@@ -100,9 +102,9 @@ const availableEvents = [
 ];
 
 const webhookColumns = computed(() => [
-  { key: "url", label: t('webhooks.url'), sortable: true },
-  { key: "events", label: t('webhooks.events') },
-  { key: "enabled", label: t('webhooks.status') }
+  { key: "url", label: t("webhooks.url"), sortable: true },
+  { key: "events", label: t("webhooks.events") },
+  { key: "enabled", label: t("webhooks.status") }
 ]);
 
 onMounted(async () => {
@@ -145,19 +147,18 @@ async function saveWebhook(formData: any): Promise<void> {
       showWebhookModal.value = false;
       await loadWebhooks();
     } else {
-      alert(t('webhooks.saveError'));
+      alert(t("webhooks.saveError"));
     }
   } catch (error) {
     console.error("Failed to save webhook:", error);
-    alert(t('webhooks.saveError'));
+    alert(t("webhooks.saveError"));
   }
 }
 
-function editWebhook(webhook: any): void {
-}
+function editWebhook(webhook: any): void {}
 
 async function deleteWebhook(webhook: any): Promise<void> {
-  if (!confirm(t('webhooks.deleteConfirm'))) {
+  if (!confirm(t("webhooks.deleteConfirm"))) {
     return;
   }
 
@@ -169,11 +170,11 @@ async function deleteWebhook(webhook: any): Promise<void> {
     if (response.ok) {
       await loadWebhooks();
     } else {
-      alert(t('webhooks.deleteError'));
+      alert(t("webhooks.deleteError"));
     }
   } catch (error) {
     console.error("Failed to delete webhook:", error);
-    alert(t('webhooks.deleteError'));
+    alert(t("webhooks.deleteError"));
   }
 }
 

@@ -11,9 +11,9 @@
 
       <FormControl :label="$t('settings.encryption')">
         <Select v-model="smtpSettings.encryption">
-          <option value="tls">{{ $t('settings.tls') }}</option>
-          <option value="ssl">{{ $t('settings.ssl') }}</option>
-          <option value="none">{{ $t('settings.none') }}</option>
+          <option value="tls">{{ $t("settings.tls") }}</option>
+          <option value="ssl">{{ $t("settings.ssl") }}</option>
+          <option value="none">{{ $t("settings.none") }}</option>
         </Select>
       </FormControl>
     </div>
@@ -31,8 +31,8 @@
     </FormControl>
 
     <div class="flex justify-end gap-3 pt-4">
-      <Button variant="ghost" @click="testSmtp">{{ $t('settings.testConnection') }}</Button>
-      <Button variant="primary" @click="saveSmtp">{{ $t('common.save') }}</Button>
+      <Button variant="ghost" @click="testSmtp">{{ $t("settings.testConnection") }}</Button>
+      <Button variant="primary" @click="saveSmtp">{{ $t("common.save") }}</Button>
     </div>
   </div>
 </template>
@@ -101,7 +101,7 @@ async function saveSmtp(): Promise<void> {
       from_email: smtpSettings.value.from_email,
       from_name: smtpSettings.value.from_name
     };
-    
+
     const response = await fetchWithAuth("/api/v1/settings/email", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -120,6 +120,6 @@ async function saveSmtp(): Promise<void> {
 }
 
 async function testSmtp(): Promise<void> {
-  alert(t('settings.sendingTestEmail'));
+  alert(t("settings.sendingTestEmail"));
 }
 </script>

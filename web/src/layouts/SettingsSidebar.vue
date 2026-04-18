@@ -30,12 +30,12 @@
               :title="isCollapsed ? $t('navigation.dashboard') : ''"
             >
               <SvgIcon name="dashboard" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.dashboard') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t("navigation.dashboard") }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.dashboard') }}
+                {{ $t("navigation.dashboard") }}
               </span>
             </RouterLink>
           </li>
@@ -48,12 +48,14 @@
               :title="isCollapsed ? $t('navigation.submissions') : ''"
             >
               <SvgIcon name="submissions" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.submissions') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{
+                $t("navigation.submissions")
+              }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.submissions') }}
+                {{ $t("navigation.submissions") }}
               </span>
             </RouterLink>
           </li>
@@ -66,12 +68,12 @@
               :title="isCollapsed ? $t('navigation.templates') : ''"
             >
               <SvgIcon name="templates" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.templates') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t("navigation.templates") }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.templates') }}
+                {{ $t("navigation.templates") }}
               </span>
             </RouterLink>
           </li>
@@ -80,16 +82,19 @@
             <RouterLink
               to="/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[{ 'bg-gray-100 text-gray-900': isActive('/settings') && !isActive('/admin/settings') }, isCollapsed ? 'justify-center' : '']"
+              :class="[
+                { 'bg-gray-100 text-gray-900': isActive('/settings') && !isActive('/admin/settings') },
+                isCollapsed ? 'justify-center' : ''
+              ]"
               :title="isCollapsed ? $t('navigation.settings') : ''"
             >
               <SvgIcon name="settings" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.settings') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t("navigation.settings") }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.settings') }}
+                {{ $t("navigation.settings") }}
               </span>
             </RouterLink>
           </li>
@@ -100,7 +105,7 @@
               v-show="!isCollapsed"
               class="mb-1.5 px-2.5 text-[11px] font-semibold tracking-wider text-gray-400 uppercase"
             >
-              {{ $t('navigation.administrator') }}
+              {{ $t("navigation.administrator") }}
             </div>
             <div v-if="isCollapsed" class="mb-1.5 border-t border-gray-200"></div>
           </li>
@@ -108,16 +113,21 @@
             <RouterLink
               to="/admin/organizations"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[{ 'bg-gray-100 text-gray-900': isActive('/admin/organizations') }, isCollapsed ? 'justify-center' : '']"
+              :class="[
+                { 'bg-gray-100 text-gray-900': isActive('/admin/organizations') },
+                isCollapsed ? 'justify-center' : ''
+              ]"
               :title="isCollapsed ? $t('navigation.organizations') : ''"
             >
               <SvgIcon name="organizations" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.organizations') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{
+                $t("navigation.organizations")
+              }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.organizations') }}
+                {{ $t("navigation.organizations") }}
               </span>
             </RouterLink>
           </li>
@@ -125,16 +135,19 @@
             <RouterLink
               to="/admin/settings"
               class="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              :class="[{ 'bg-gray-100 text-gray-900': isActive('/admin/settings') }, isCollapsed ? 'justify-center' : '']"
+              :class="[
+                { 'bg-gray-100 text-gray-900': isActive('/admin/settings') },
+                isCollapsed ? 'justify-center' : ''
+              ]"
               :title="isCollapsed ? $t('navigation.settings') : ''"
             >
               <SvgIcon name="settings" class="h-4 w-4 flex-shrink-0" />
-              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t('navigation.settings') }}</span>
+              <span v-show="!isCollapsed" class="text-[13px] whitespace-nowrap">{{ $t("navigation.settings") }}</span>
               <span
                 v-if="isCollapsed"
                 class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
               >
-                {{ $t('navigation.settings') }}
+                {{ $t("navigation.settings") }}
               </span>
             </RouterLink>
           </li>
@@ -157,7 +170,7 @@
             v-if="isCollapsed"
             class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
           >
-            {{ $t('navigation.expand') }}
+            {{ $t("navigation.expand") }}
           </span>
         </button>
       </div>
@@ -180,11 +193,11 @@
             <p class="truncate text-[13px] font-medium text-gray-900">
               {{
                 userData?.first_name || userData?.last_name
-                  ? `${userData.first_name || ""} ${userData.last_name || ""}`.trim() || $t('navigation.user')
-                  : $t('navigation.user')
+                  ? `${userData.first_name || ""} ${userData.last_name || ""}`.trim() || $t("navigation.user")
+                  : $t("navigation.user")
               }}
             </p>
-            <p class="truncate text-[11px] text-gray-500">{{ userData?.email || $t('navigation.loading') }}</p>
+            <p class="truncate text-[11px] text-gray-500">{{ userData?.email || $t("navigation.loading") }}</p>
           </div>
         </div>
         <div v-else class="flex justify-center">
@@ -203,18 +216,18 @@
         <div class="mt-2" :class="isCollapsed ? 'flex justify-center' : ''">
           <button
             type="button"
-            @click="handleLogout"
             class="group relative flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1.5 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50"
             :class="isCollapsed ? 'h-8 w-8 p-0' : 'w-full'"
             :title="isCollapsed ? $t('navigation.exit') : ''"
+            @click="handleLogout"
           >
             <SvgIcon name="exit" class="h-3.5 w-3.5 flex-shrink-0" />
-            <span v-show="!isCollapsed">{{ $t('navigation.exit') }}</span>
+            <span v-show="!isCollapsed">{{ $t("navigation.exit") }}</span>
             <span
               v-if="isCollapsed"
               class="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100"
             >
-              {{ $t('navigation.exit') }}
+              {{ $t("navigation.exit") }}
             </span>
           </button>
         </div>
@@ -222,11 +235,11 @@
     </aside>
 
     <!-- Settings Sidebar -->
-    <aside class="flex h-screen flex-col border-e border-[#e7e2df] bg-white w-64">
+    <aside class="flex h-screen w-64 flex-col border-e border-[#e7e2df] bg-white">
       <!-- Settings Header -->
       <div class="flex h-14 items-center border-b border-gray-100 px-4">
         <h2 class="text-base font-semibold text-gray-900">
-          {{ isAdminSettings ? $t('settings.adminSettings') : $t('navigation.settings') }}
+          {{ isAdminSettings ? $t("settings.adminSettings") : $t("navigation.settings") }}
         </h2>
       </div>
 
@@ -258,13 +271,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { logout } from "@/utils/auth";
 import { apiGet, apiPost } from "@/services/api";
 import SvgIcon from "@/components/SvgIcon.vue";
-import Select from "@/components/ui/Select.vue";
 import { Organization } from "@/models";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 
@@ -280,23 +292,23 @@ const currentOrganizationId = ref<string>("");
 const currentOrganizationName = ref<string>("");
 
 // Check if current route is admin settings
-const isAdminSettings = computed(() => route.path.startsWith('/admin/settings'));
+const isAdminSettings = computed(() => route.path.startsWith("/admin/settings"));
 
 // Organization settings tabs (available to all users; templates are per-organization)
 const organizationTabs = computed(() => [
-  { id: "general", label: t('settings.general'), routeName: "settings-general" },
-  { id: "email_templates", label: t('settings.emailTemplates'), routeName: "settings-email-templates" },
-  { id: "webhooks", label: t('settings.webhooks'), routeName: "settings-webhooks" },
-  { id: "api_keys", label: t('settings.apiKeys'), routeName: "settings-api-keys" },
-  { id: "branding", label: t('settings.branding'), routeName: "settings-branding" }
+  { id: "general", label: t("settings.general"), routeName: "settings-general" },
+  { id: "email_templates", label: t("settings.emailTemplates"), routeName: "settings-email-templates" },
+  { id: "webhooks", label: t("settings.webhooks"), routeName: "settings-webhooks" },
+  { id: "api_keys", label: t("settings.apiKeys"), routeName: "settings-api-keys" },
+  { id: "branding", label: t("settings.branding"), routeName: "settings-branding" }
 ]);
 
 // Admin/Global settings tabs (only for admins)
 const adminTabs = computed(() => [
-  { id: "smtp", label: `${t('settings.email')} (${t('settings.smtp')})`, routeName: "admin-settings-smtp" },
+  { id: "smtp", label: `${t("settings.email")} (${t("settings.smtp")})`, routeName: "admin-settings-smtp" },
   { id: "sms", label: "SMS (Twilio)", routeName: "admin-settings-sms" },
-  { id: "storage", label: t('settings.storage'), routeName: "admin-settings-storage" },
-  { id: "geolocation", label: t('settings.geolocation'), routeName: "admin-settings-geolocation" }
+  { id: "storage", label: t("settings.storage"), routeName: "admin-settings-storage" },
+  { id: "geolocation", label: t("settings.geolocation"), routeName: "admin-settings-geolocation" }
 ]);
 
 // Active tabs based on current route
@@ -312,11 +324,11 @@ const loadOrganizations = async () => {
   try {
     const response = await apiGet("/api/v1/organizations");
     let data = response.data;
-    if (data && typeof data === 'object' && 'organizations' in data) {
+    if (data && typeof data === "object" && "organizations" in data) {
       data = data.organizations;
     }
     organizations.value = Array.isArray(data) ? data : [];
-    
+
     // Update current organization from localStorage
     updateCurrentOrganization();
   } catch (error) {

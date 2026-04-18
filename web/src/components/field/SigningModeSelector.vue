@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h3 class="mb-3 text-sm font-medium text-gray-700">{{ $t('signingMode.title') }}</h3>
+    <h3 class="mb-3 text-sm font-medium text-gray-700">{{ $t("signingMode.title") }}</h3>
     <div class="space-y-3">
       <!-- Mode Selection -->
       <ButtonGroup
@@ -22,15 +22,15 @@
           <div class="flex items-start gap-2">
             <SvgIcon name="info" width="16" height="16" class="mt-0.5 text-amber-600" />
             <div class="text-sm text-amber-800">
-              <p class="mb-1 font-medium">{{ $t('signingMode.orderTitle') }}</p>
-              <p>{{ $t('signingMode.orderHint') }}</p>
+              <p class="mb-1 font-medium">{{ $t("signingMode.orderTitle") }}</p>
+              <p>{{ $t("signingMode.orderHint") }}</p>
             </div>
           </div>
         </div>
 
         <!-- Draggable Submitter Order List -->
         <div class="space-y-2">
-          <h4 class="text-sm font-medium text-gray-700">{{ $t('signingMode.signingOrder') }}</h4>
+          <h4 class="text-sm font-medium text-gray-700">{{ $t("signingMode.signingOrder") }}</h4>
           <div ref="submittersList" class="space-y-2" @dragover.prevent="onDragOver" @drop="onDrop">
             <div
               v-for="(submitter, index) in orderedSubmitters"

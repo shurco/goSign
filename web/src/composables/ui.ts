@@ -46,7 +46,9 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, isActive: Re
   let lastFocusable: HTMLElement | null = null;
 
   const getFocusableElements = () => {
-    if (!containerRef.value) return [];
+    if (!containerRef.value) {
+      return [];
+    }
 
     const focusableSelectors = [
       "a[href]",
@@ -61,12 +63,18 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, isActive: Re
   };
 
   const trapFocus = (event: KeyboardEvent) => {
-    if (!isActive.value || !containerRef.value) return;
+    if (!isActive.value || !containerRef.value) {
+      return;
+    }
 
-    if (event.key !== "Tab") return;
+    if (event.key !== "Tab") {
+      return;
+    }
 
     const focusableElements = getFocusableElements();
-    if (focusableElements.length === 0) return;
+    if (focusableElements.length === 0) {
+      return;
+    }
 
     firstFocusable = focusableElements[0];
     lastFocusable = focusableElements[focusableElements.length - 1];

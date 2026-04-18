@@ -58,7 +58,7 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 ### ⚙️ Backend
 
 - **Language**: Go 1.26+
-- **Framework**: Fiber v2
+- **Framework**: Fiber v3
 - **Database**: PostgreSQL 14+ with JSONB
 - **Cache**: Redis 6+
 - **Migrations**: goose
@@ -210,6 +210,21 @@ cd web
 bun install
 bun run dev
 ```
+
+### Makefile shortcuts
+
+A top-level `Makefile` bundles the most common commands — run `make help` to see all targets:
+
+```bash
+make run          # start the server locally
+make test         # go test -short -race ./...
+make web-test     # Vitest suite
+make check        # vet + Go tests + typecheck + Vitest
+make lint         # golangci-lint run ./...
+make ci           # full quality gate (lint + check)
+```
+
+See [`AGENTS.md`](AGENTS.md) for the contributor / agent handbook and the module-level `AGENTS.md` files in `internal/`, `pkg/`, and `web/`.
 
 ## 🧭 Usage
 

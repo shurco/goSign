@@ -55,8 +55,12 @@ const emit = defineEmits<Emits>();
 const localValue = ref(props.modelValue);
 
 const inputType = computed(() => {
-  if (props.type === "number") return "number";
-  if (props.type === "phone") return "tel";
+  if (props.type === "number") {
+    return "number";
+  }
+  if (props.type === "phone") {
+    return "tel";
+  }
   return "text";
 });
 
@@ -75,4 +79,3 @@ function handleBlur(): void {
   emit("blur");
 }
 </script>
-

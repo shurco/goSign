@@ -1,9 +1,4 @@
-import {
-  createRouter,
-  createWebHistory,
-  type NavigationGuardReturn,
-  type RouteLocationNormalized
-} from "vue-router";
+import { createRouter, createWebHistory, type NavigationGuardReturn, type RouteLocationNormalized } from "vue-router";
 import * as NProgress from "nprogress";
 
 const router = createRouter({

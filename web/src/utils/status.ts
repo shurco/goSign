@@ -49,4 +49,3 @@ export function getBadgeVariantForSubmitterStatus(status: unknown): BadgeVariant
       return "ghost";
   }
 }
-
