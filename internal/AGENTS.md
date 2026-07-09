@@ -11,13 +11,12 @@ Application code that must not be imported by external packages. See the repo-le
 | `config/`                 | `GOSIGN_`-prefixed environment loader; returns `*config.Config`. `JWT_SECRET` is required; CORS origins follow dev-mode defaults. |
 | `handlers/api/`           | REST `v1` JSON handlers (auth-guarded). One file per resource.                                                                    |
 | `handlers/public/`        | Publicly reachable endpoints: auth (`/auth/*`), OAuth, signing (`/sign/`), health, `verify`, submitter signing links.             |
-| `middleware/`             | Fiber middleware: CORS, helmet, recover, request logger, JWT/API-key auth, org permission guard, rate limiters.                   |
+| `middleware/`             | Fiber middleware: CORS, helmet, recover, request logger, JWT/API-key auth, rate limiters.                                         |
 | `models/`                 | Plain data types (DTOs) shared by queries, handlers, and services.                                                                |
 | `queries/`                | `pgx/v5` repositories. `Init(pool)` must be called once; `DB` is the global facade.                                               |
 | `routes/`                 | Wires handler instances onto Fiber routers (`ApiRoutes`, `SiteRoutes`, `NotFoundRoute`).                                          |
-| `services/`               | Business-logic services: `apikey`, `completed_document`, `reminder`, plus `email/`, `field/`, `formula/`, `submission/`.          |
+| `services/`               | Business-logic services: `apikey`, `auth_tokens`, `completed_document`, `webhook_notifier`, plus `field/`, `formula/`, `submission/`. |
 | `trust/`                  | Background updater for Adobe trust lists (runs every 12 h on startup).                                                            |
-| `worker/`                 | Background worker + `tasks/reminders.go` for scheduled reminders.                                                                 |
 | `testutil/`               | Test helpers: `pgtestdb` fixtures, JWT minting, authenticated requests.                                                           |
 
 ## Handler conventions

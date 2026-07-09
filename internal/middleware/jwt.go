@@ -42,6 +42,7 @@ type MyCustomClaims struct {
 	Id             string `json:"id"`
 	Name           string `json:"name"`
 	Email          string `json:"email"`
+	AccountId      string `json:"account_id,omitempty"`
 	OrganizationId string `json:"organization_id,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -59,17 +60,13 @@ func SetAPIKeyValidator(validator APIKeyValidator) {
 	apiKeyValidator = validator
 }
 
-// CreateToken generates JWT access token with claims (15 minutes)
-func CreateToken(user *models.User) (string, error) {
-	return CreateTokenWithOrg(user, "")
-}
-
 // CreateTokenWithOrg generates JWT access token with claims and organization ID (15 minutes)
 func CreateTokenWithOrg(user *models.User, organizationID string) (string, error) {
 	claims := MyCustomClaims{
 		Id:             user.ID,
 		Name:           user.Name,
 		Email:          user.Email,
+		AccountId:      user.AccountID,
 		OrganizationId: organizationID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			// Keep user ID also in standard `jti` so callers/tests using RegisteredClaims.ID work.
@@ -174,6 +171,7 @@ func Protected() fiber.Handler {
 				AccountID: keyModel.AccountID,
 			})
 			c.Locals("user_id", keyModel.AccountID)
+			c.Locals("account_id", keyModel.AccountID)
 
 			return c.Next()
 		}
@@ -192,45 +190,21 @@ func Protected() fiber.Handler {
 
 		// Store auth context
 		c.Locals("auth", &AuthContext{
-			Type:   AuthTypeJWT,
-			UserID: claims.Id,
-			Email:  claims.Email,
-			Name:   claims.Name,
+			Type:      AuthTypeJWT,
+			UserID:    claims.Id,
+			AccountID: claims.AccountId,
+			Email:     claims.Email,
+			Name:      claims.Name,
 		})
 
-		// Also store user_id and organization_id for easier access
+		// Also store user_id, account_id and organization_id for easier access
 		c.Locals("user_id", claims.Id)
+		if claims.AccountId != "" {
+			c.Locals("account_id", claims.AccountId)
+		}
 		if claims.OrganizationId != "" {
 			c.Locals("organization_id", claims.OrganizationId)
 		}
-
-		return c.Next()
-	}
-}
-
-// RequireEmailVerification checks if user has verified their email
-func RequireEmailVerification() fiber.Handler {
-	return func(c fiber.Ctx) error {
-		// Get auth context
-		auth := GetAuthContext(c)
-		if auth == nil {
-			return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-		}
-
-		// Only check for JWT auth (API keys don't need email verification)
-		if auth.Type != AuthTypeJWT {
-			return c.Next()
-		}
-
-		// Note: In a real implementation, you would check the database
-		// to see if the user's email is verified. For now, we'll just
-		// rely on the fact that the token was issued after verification.
-
-		// TODO: Add database check for email verification status
-		// user, err := queries.DB.GetUserByID(ctx, auth.UserID)
-		// if err != nil || !user.EmailVerified {
-		//     return webutil.StatusForbidden(c, "Email not verified")
-		// }
 
 		return c.Next()
 	}

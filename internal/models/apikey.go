@@ -20,4 +20,3 @@ type APIKeyWithPlainKey struct {
 	APIKey
 	PlainKey string `json:"api_key"` // shown only once during creation
 }
-

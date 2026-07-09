@@ -206,4 +206,3 @@ func TestI18nHandler_UpdateAccountLocale(t *testing.T) {
 		})
 	}
 }
-

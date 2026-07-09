@@ -166,4 +166,3 @@ func TestInvitationHandler(t *testing.T) {
 		}
 	})
 }
-

@@ -43,7 +43,7 @@
         </div>
       </template>
 
-      <template #cell-description="{ value, item }">
+      <template #cell-description="{ value }">
         <span class="text-sm text-gray-500">
           {{ value || $t("organizations.noDescription") }}
         </span>
@@ -241,10 +241,6 @@ const exitOrganization = async () => {
 
 const openCreateModal = () => {
   showCreateModal.value = true;
-};
-
-const handleCloseModal = () => {
-  showCreateModal.value = false;
 };
 
 const onOrganizationCreated = (newOrg: Organization) => {

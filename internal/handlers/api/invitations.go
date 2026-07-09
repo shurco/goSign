@@ -4,7 +4,6 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
-	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -154,82 +153,9 @@ func (h *InvitationHandler) GetInvitationDetails(c fiber.Ctx) error {
 	})
 }
 
-// RevokeInvitation revokes an invitation (admin/owner only)
-// @Summary Revoke invitation
-// @Description Revoke pending invitation (admin/owner permissions required)
-// @Tags organizations
-// @Produce json
-// @Param organization_id path string true "Organization ID"
-// @Param invitation_id path string true "Invitation ID"
-// @Success 200 {object} map[string]any
-// @Failure 401 {object} map[string]any
-// @Failure 403 {object} map[string]any
-// @Failure 404 {object} map[string]any
-// @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/invitations/{invitation_id} [delete]
-func (h *InvitationHandler) RevokeInvitation(c fiber.Ctx) error {
-	orgID := c.Params("organization_id")
-	invitationID := c.Params("invitation_id")
-
-	if orgID == "" || invitationID == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "Organization ID and Invitation ID are required", nil)
-	}
-
-	userIDStr, err := GetUserID(c)
-	if err != nil {
-		return err
-	}
-
-	userMember, err := h.organizationQueries.GetOrganizationMember(c.Context(), orgID, userIDStr)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to check user membership")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to check permissions", nil)
-	}
-
-	if userMember == nil {
-		return webutil.Response(c, fiber.StatusForbidden, "Access denied", nil)
-	}
-
-	// Only admins and owners can revoke invitations
-	if userMember.Role != models.OrganizationRoleAdmin && userMember.Role != models.OrganizationRoleOwner {
-		return webutil.Response(c, fiber.StatusForbidden, "Insufficient permissions to revoke invitations", nil)
-	}
-
-	// Get all invitations to find the one to revoke
-	invitations, err := h.organizationQueries.GetOrganizationInvitations(c.Context(), orgID)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get organization invitations")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to get invitations", nil)
-	}
-
-	var targetInvitation *models.OrganizationInvitation
-	for _, inv := range invitations {
-		if inv.ID == invitationID {
-			targetInvitation = &inv
-			break
-		}
-	}
-
-	if targetInvitation == nil {
-		return webutil.Response(c, fiber.StatusNotFound, "Invitation not found", nil)
-	}
-
-	// Revoke invitation (delete it)
-	if err := h.organizationQueries.DeleteOrganizationInvitation(c.Context(), orgID, targetInvitation.Email); err != nil {
-		log.Error().Err(err).Msg("Failed to revoke invitation")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to revoke invitation", nil)
-	}
-
-	return webutil.Response(c, fiber.StatusOK, "Invitation revoked successfully", nil)
-}
-
 // RegisterRoutes registers all invitation routes
 func (h *InvitationHandler) RegisterRoutes(router fiber.Router) {
 	// Public routes (no auth required)
 	router.Get("/:token", h.GetInvitationDetails)
 	router.Post("/:token/accept", h.AcceptInvitation)
-
-	// Protected routes (organization context required)
-	// Note: These would be registered in the organization group
 }
-

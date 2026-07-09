@@ -117,4 +117,3 @@ func (s *APIKeyService) DeleteKey(keyID string) error {
 func (s *APIKeyService) ListAccountKeys(accountID string) ([]*models.APIKey, error) {
 	return s.repo.ListByAccount(accountID)
 }
-

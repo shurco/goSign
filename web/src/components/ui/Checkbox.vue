@@ -62,7 +62,7 @@ const checkboxClasses = computed(() => {
     md: "h-5 w-5"
   };
 
-  const disabled = "$attrs.disabled" in ["", true] ? "opacity-50 cursor-not-allowed" : "";
+  const disabled = attrs.disabled === "" || attrs.disabled === true ? "opacity-50 cursor-not-allowed" : "";
 
   return [base, sizes[props.size], disabled].filter(Boolean).join(" ");
 });

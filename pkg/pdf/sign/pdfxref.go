@@ -158,7 +158,7 @@ func encodeInt(i int) []byte {
 func EncodePNGSUBBytes(columns int, data []byte) ([]byte, error) {
 	rowCount := len(data) / columns
 	if len(data)%columns != 0 {
-		return nil, errors.New("Invalid row/column length")
+		return nil, errors.New("invalid row/column length")
 	}
 
 	buffer := bytes.NewBuffer(nil)
@@ -191,7 +191,7 @@ func EncodePNGSUBBytes(columns int, data []byte) ([]byte, error) {
 func EncodePNGUPBytes(columns int, data []byte) ([]byte, error) {
 	rowCount := len(data) / columns
 	if len(data)%columns != 0 {
-		return nil, errors.New("Invalid row/column length")
+		return nil, errors.New("invalid row/column length")
 	}
 
 	prevRowData := make([]byte, columns)

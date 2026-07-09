@@ -100,13 +100,13 @@ func TestAccessTokenCreation(t *testing.T) {
 		Email: "test@example.com",
 	}
 
-	accessToken, err := middleware.CreateToken(user)
+	accessToken, err := middleware.CreateTokenWithOrg(user, "")
 	if err != nil {
-		t.Fatalf("CreateToken() failed: %v", err)
+		t.Fatalf("CreateTokenWithOrg() failed: %v", err)
 	}
 
 	if accessToken == "" {
-		t.Error("CreateToken() returned empty token")
+		t.Error("CreateTokenWithOrg() returned empty token")
 	}
 
 	// Validate the access token
@@ -261,4 +261,3 @@ func TestTokenRotation(t *testing.T) {
 		t.Error("Both tokens should contain the same user ID")
 	}
 }
-

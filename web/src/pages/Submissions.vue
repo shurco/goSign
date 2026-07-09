@@ -709,14 +709,6 @@ async function copyAllCreatedLinks(): Promise<void> {
   await copyText(createdLinks.value.map((l) => l.full_url).join("\n"));
 }
 
-async function copyLinks(signing: Signing): Promise<void> {
-  const urls = (signing.links || []).map((l) => `${window.location.origin}${l.direct_url}`);
-  if (!urls.length) {
-    return;
-  }
-  await copyText(urls.join("\n"));
-}
-
 function openLinksModal(signing: Signing): void {
   activeSigning.value = signing;
   linksModalOpen.value = true;

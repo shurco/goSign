@@ -244,114 +244,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
-import { useI18n } from "vue-i18n";
 import { logout } from "@/utils/auth";
-import { apiGet, apiPost } from "@/services/api";
 import SvgIcon from "@/components/SvgIcon.vue";
-import { Organization } from "@/models";
 import { useCurrentUser } from "@/composables/useCurrentUser";
 
-const { t } = useI18n();
 const { userData, isAdmin, loadUserData, clearUser } = useCurrentUser();
 
 const route = useRoute();
 const isCollapsed = ref(false);
 
-// Organizations data
-const organizations = ref<Organization[]>([]);
-const currentOrganizationId = ref<string>("");
-const currentOrganizationName = ref<string>("");
-
-// Load organizations
-const loadOrganizations = async () => {
-  try {
-    const response = await apiGet("/api/v1/organizations");
-    let data = response.data;
-    if (data && typeof data === "object" && "organizations" in data) {
-      data = data.organizations;
-    }
-    organizations.value = Array.isArray(data) ? data : [];
-
-    // Update current organization from localStorage
-    updateCurrentOrganization();
-  } catch (error) {
-    console.error("Failed to load organizations:", error);
-    organizations.value = [];
-  }
-};
-
-// Update current organization from localStorage
-const updateCurrentOrganization = () => {
-  const storedOrg = localStorage.getItem("current_organization");
-  if (storedOrg) {
-    try {
-      const org = JSON.parse(storedOrg);
-      currentOrganizationId.value = org.id || "";
-      currentOrganizationName.value = org.name || "";
-    } catch (e) {
-      console.error("Failed to parse current organization:", e);
-      currentOrganizationId.value = "";
-      currentOrganizationName.value = "";
-    }
-  } else {
-    currentOrganizationId.value = "";
-    currentOrganizationName.value = "";
-  }
-};
-
-// Handle organization change
-const handleOrganizationChange = async (orgId: string) => {
-  if (orgId === "") {
-    // Exit organization
-    try {
-      const response = await apiPost("/api/v1/organizations/switch");
-      localStorage.setItem("access_token", response.data.access_token);
-      localStorage.setItem("refresh_token", response.data.refresh_token);
-      localStorage.removeItem("current_organization");
-      currentOrganizationId.value = "";
-      currentOrganizationName.value = "";
-      // Reload page to refresh data
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to exit organization:", error);
-    }
-  } else {
-    // Switch to organization
-    const org = organizations.value.find((o) => o.id === orgId);
-    if (org) {
-      try {
-        const response = await apiPost(`/api/v1/organizations/${orgId}/switch`);
-        localStorage.setItem("access_token", response.data.access_token);
-        localStorage.setItem("refresh_token", response.data.refresh_token);
-        const orgData = {
-          id: org.id,
-          name: org.name,
-          role: response.data.role
-        };
-        localStorage.setItem("current_organization", JSON.stringify(orgData));
-        currentOrganizationId.value = orgId;
-        currentOrganizationName.value = org.name;
-        // Reload page to refresh data
-        window.location.reload();
-      } catch (error) {
-        console.error("Failed to switch organization:", error);
-      }
-    }
-  }
-};
-
-// Watch for localStorage changes
-const watchStorage = () => {
-  window.addEventListener("storage", updateCurrentOrganization);
-  // Also check periodically for same-tab updates
-  setInterval(updateCurrentOrganization, 1000);
-};
-
 onMounted(() => {
   loadUserData();
-  loadOrganizations();
-  updateCurrentOrganization();
-  watchStorage();
 });
 
 /**

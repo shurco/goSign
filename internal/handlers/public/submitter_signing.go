@@ -20,15 +20,22 @@ import (
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
+// WebhookSender delivers an event to all subscribed webhooks of the account.
+// Implemented by *services.WebhookNotifier.
+type WebhookSender interface {
+	SendEvent(ctx context.Context, accountID string, event *models.WebhookEvent)
+}
+
 // PublicSigningHandler exposes public (no-auth) endpoints for signing by slug.
 // This is used by the signer-facing UI at /s/:slug.
 type PublicSigningHandler struct {
 	pool            *pgxpool.Pool
-	templateQueries  *queries.TemplateQueries
+	templateQueries *queries.TemplateQueries
 	userQueries     *queries.UserQueries
-	notificationSvc  *notification.Service
-	completedDoc     *services.CompletedDocumentBuilder
-	geolocationSvc   *geolocation.Service
+	notificationSvc *notification.Service
+	completedDoc    *services.CompletedDocumentBuilder
+	geolocationSvc  *geolocation.Service
+	webhooks        WebhookSender
 }
 
 func NewPublicSigningHandler(
@@ -38,22 +45,24 @@ func NewPublicSigningHandler(
 	notificationSvc *notification.Service,
 	completedDoc *services.CompletedDocumentBuilder,
 	geolocationSvc *geolocation.Service,
+	webhooks WebhookSender,
 ) *PublicSigningHandler {
 	return &PublicSigningHandler{
 		pool:            pool,
-		templateQueries:  templateQueries,
+		templateQueries: templateQueries,
 		userQueries:     userQueries,
-		notificationSvc:  notificationSvc,
-		completedDoc:     completedDoc,
-		geolocationSvc:   geolocationSvc,
+		notificationSvc: notificationSvc,
+		completedDoc:    completedDoc,
+		geolocationSvc:  geolocationSvc,
+		webhooks:        webhooks,
 	}
 }
 
 type getBySlugResponse struct {
-	Template            *models.Template  `json:"template"`
-	Submitter           *models.Submitter `json:"submitter"`
-	SubmissionStatus    string            `json:"submission_status"`
-	CompletedDocumentURL string           `json:"completed_document_url,omitempty"`
+	Template             *models.Template  `json:"template"`
+	Submitter            *models.Submitter `json:"submitter"`
+	SubmissionStatus     string            `json:"submission_status"`
+	CompletedDocumentURL string            `json:"completed_document_url,omitempty"`
 }
 
 // GetBySlug returns template + submitter data for the signing portal.
@@ -75,17 +84,17 @@ func (h *PublicSigningHandler) GetBySlug(c fiber.Ctx) error {
 
 	// Fetch submitter + template_id (via submission).
 	var (
-		submitterID   string
-		submissionID  string
-		name          string
-		email         string
-		phone         string
-		status        string
-		completedAt   *time.Time
-		declinedAt    *time.Time
-		openedAt      *time.Time
-		updatedAt     time.Time
-		templateID    string
+		submitterID    string
+		submissionID   string
+		name           string
+		email          string
+		phone          string
+		status         string
+		completedAt    *time.Time
+		declinedAt     *time.Time
+		openedAt       *time.Time
+		updatedAt      time.Time
+		templateID     string
 		metaJSONString string
 	)
 
@@ -228,7 +237,7 @@ func (h *PublicSigningHandler) Open(c fiber.Ctx) error {
 	}
 
 	// Also record an event for the submission dashboard (best-effort).
-	clientIP := getClientIP(c)
+	clientIP := webutil.ClientIP(c)
 	_, _ = h.pool.Exec(c.Context(), `
 		WITH upd AS (
 			UPDATE submitter
@@ -308,15 +317,14 @@ func (h *PublicSigningHandler) UpdateSubmitter(c fiber.Ctx) error {
 	if h.userQueries != nil {
 		user, err := h.userQueries.GetUserByEmail(ctx, req.Email)
 		if err == nil && user != nil {
-			// Link submission to user account
+			// Link submission to the user; account is derived via created_by_user_id.
 			_, execErr := h.pool.Exec(ctx, `
 				UPDATE submission
 				SET created_by_user_id = $2,
-				    account_id = $3,
 				    updated_at = NOW()
 				WHERE id = $1
 				  AND created_by_user_id IS NULL
-			`, submissionID, user.ID, user.AccountID)
+			`, submissionID, user.ID)
 			if execErr != nil {
 				log.Warn().Err(execErr).Str("submission_id", submissionID).Str("user_id", user.ID).Msg("Failed to link submission to user account")
 			}
@@ -366,8 +374,8 @@ func (h *PublicSigningHandler) Complete(c fiber.Ctx) error {
 	}
 
 	// Mark as completed and return ids (single statement).
-	clientIP := getClientIP(c)
-	
+	clientIP := webutil.ClientIP(c)
+
 	// Determine location from IP address (saved once, used later for certificate)
 	var locationData map[string]any
 	if h.geolocationSvc != nil && clientIP != "" {
@@ -390,7 +398,7 @@ func (h *PublicSigningHandler) Complete(c fiber.Ctx) error {
 			log.Debug().Msg("Client IP is empty")
 		}
 	}
-	
+
 	// Build metadata with fields and location
 	metadataUpdates := map[string]any{
 		"fields": req.Fields,
@@ -402,7 +410,7 @@ func (h *PublicSigningHandler) Complete(c fiber.Ctx) error {
 	if err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid fields payload", nil)
 	}
-	
+
 	var submissionID string
 	var submitterID string
 	err = h.pool.QueryRow(c.Context(), `
@@ -466,7 +474,7 @@ func (h *PublicSigningHandler) Decline(c fiber.Ctx) error {
 	var req declineRequest
 	_ = c.Bind().JSON(&req) // optional
 
-	clientIP := getClientIP(c)
+	clientIP := webutil.ClientIP(c)
 	tag, err := h.pool.Exec(c.Context(), `
 		WITH upd AS (
 			UPDATE submitter
@@ -632,6 +640,9 @@ func (h *PublicSigningHandler) finalizeIfCompleted(ctx context.Context, submissi
 		return // not completed yet OR already sent
 	}
 
+	// Notify account webhooks (best-effort).
+	h.sendSubmissionWebhook(ctx, submissionID, models.EventSubmissionCompleted)
+
 	// Ensure the completed PDF exists (cached).
 	_, _ = h.completedDoc.EnsureCompletedPDF(ctx, submissionID)
 
@@ -683,28 +694,31 @@ func (h *PublicSigningHandler) finalizeIfCompleted(ctx context.Context, submissi
 	}
 }
 
-// getClientIP extracts the real client IP address from the request
-// It checks X-Forwarded-For, X-Real-IP headers first, then falls back to c.IP()
-func getClientIP(c fiber.Ctx) string {
-	// Check X-Forwarded-For header (first IP in the chain)
-	forwardedFor := c.Get("X-Forwarded-For")
-	if forwardedFor != "" {
-		// X-Forwarded-For can contain multiple IPs, take the first one
-		ips := strings.Split(forwardedFor, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
-		}
+// sendSubmissionWebhook delivers a submission event to the owning account's webhooks.
+// The account is resolved through the creating user or the template folder.
+func (h *PublicSigningHandler) sendSubmissionWebhook(ctx context.Context, submissionID, eventType string) {
+	if h.webhooks == nil {
+		return
 	}
 
-	// Check X-Real-IP header
-	realIP := c.Get("X-Real-IP")
-	if realIP != "" {
-		return strings.TrimSpace(realIP)
+	var accountID string
+	err := h.pool.QueryRow(ctx, `
+		SELECT COALESCE(u.account_id::text, tf.account_id::text, '')
+		FROM submission sub
+		LEFT JOIN "user" u ON u.id = sub.created_by_user_id
+		LEFT JOIN template t ON t.id = sub.template_id
+		LEFT JOIN template_folder tf ON tf.id = t.folder_id
+		WHERE sub.id = $1
+	`, submissionID).Scan(&accountID)
+	if err != nil || accountID == "" {
+		return
 	}
 
-	// Fallback to Fiber's IP() method
-	return c.IP()
+	h.webhooks.SendEvent(ctx, accountID, &models.WebhookEvent{
+		Type:      eventType,
+		Timestamp: time.Now(),
+		Data:      map[string]any{"submission_id": submissionID},
+	})
 }
 
 // NOTE: Do not add helpers that discard context cancel funcs; always call cancel().
-

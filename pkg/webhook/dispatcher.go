@@ -54,7 +54,7 @@ func (d *Dispatcher) Send(ctx context.Context, webhook *models.Webhook, event *m
 	}
 
 	// Generate signature
-	signature := d.generateSignature(payload, webhook.Secret)
+	signature := generateSignature(payload, webhook.Secret)
 
 	// Send with retry
 	var lastErr error
@@ -120,13 +120,6 @@ func (d *Dispatcher) sendRequest(ctx context.Context, url string, payload []byte
 	return nil
 }
 
-// generateSignature generates HMAC-SHA256 signature
-func (d *Dispatcher) generateSignature(payload []byte, secret string) string {
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write(payload)
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 // isSubscribed checks if webhook is subscribed to event
 func (d *Dispatcher) isSubscribed(webhook *models.Webhook, eventType string) bool {
 	return slices.Contains(webhook.Events, eventType) || slices.Contains(webhook.Events, "*")
@@ -138,10 +131,9 @@ func VerifySignature(payload []byte, signature, secret string) bool {
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
 
-// generateSignature helper function for signature generation
+// generateSignature generates HMAC-SHA256 signature
 func generateSignature(payload []byte, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	return hex.EncodeToString(h.Sum(nil))
 }
-

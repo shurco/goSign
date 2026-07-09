@@ -50,7 +50,7 @@ interface Props {
 
 interface Emits {
   (e: "update:modelValue", value: boolean): void;
-  (e: "submit", formData: Record<string, unknown>): void | Promise<void>;
+  (e: "submit", formData: Record<string, unknown>): void;
   (e: "cancel" | "close"): void;
 }
 
@@ -127,25 +127,18 @@ async function handleSubmit(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    // Try to call onSubmit prop first (if provided), then emit
-    let result: void | Promise<void> | undefined;
-
     if (props.onSubmit) {
-      result = props.onSubmit(formData.value);
+      const result = props.onSubmit(formData.value);
+      // If we got a Promise, wait for it, then reset the submitting state.
+      // For sync handlers, keep isSubmitting true: the parent closes the
+      // modal or resets it on success/error, preserving the loading state.
+      if (result instanceof Promise) {
+        await result;
+        isSubmitting.value = false;
+      }
     } else {
       // Emit submit event - parent handler should handle async operations
       emit("submit", formData.value);
-    }
-
-    // If we got a Promise, wait for it
-    if (result instanceof Promise) {
-      await result;
-      // After promise resolves, reset submitting state
-      isSubmitting.value = false;
-    } else {
-      // For non-async handlers, keep isSubmitting true
-      // Parent should close modal or reset it on success/error
-      // This allows the loading state to persist during async operations
     }
   } catch (error) {
     // Re-throw error so parent component can handle it
@@ -178,7 +171,8 @@ function setError(field: string, message: string): void {
 }
 
 function clearError(field: string): void {
-  delete errors.value[field];
+  const { [field]: _removed, ...rest } = errors.value;
+  errors.value = rest;
 }
 
 function clearAllErrors(): void {

@@ -60,4 +60,3 @@ func TestBrandingHandler(t *testing.T) {
 		}
 	})
 }
-

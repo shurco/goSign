@@ -105,4 +105,3 @@ func TestSubmitterHandler_ListAndNoAuthGuards(t *testing.T) {
 		})
 	}
 }
-

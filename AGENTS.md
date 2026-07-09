@@ -14,7 +14,7 @@
 | Path            | Purpose                                                                               |
 | --------------- | ------------------------------------------------------------------------------------- |
 | `cmd/`          | Entry points: `goSign`, `cert`, `pdf-cert`                                            |
-| `internal/`     | Application code (handlers, services, queries, middleware, worker). **Not importable by external packages.** |
+| `internal/`     | Application code (handlers, services, queries, middleware). **Not importable by external packages.** |
 | `pkg/`          | Reusable libraries: `pdf`, `security`, `storage`, `notification`, `webhook`, `geolocation`, `logging`, `utils`, `appdir` |
 | `web/`          | Vue 3 frontend (Vite + Bun)                                                           |
 | `migrations/`   | Numbered goose SQL migrations, embedded via `embed.go`                                |

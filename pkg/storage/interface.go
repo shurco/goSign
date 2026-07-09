@@ -48,4 +48,3 @@ type Config struct {
 	BasePath string            // base path (for local)
 	Options  map[string]string // additional options
 }
-

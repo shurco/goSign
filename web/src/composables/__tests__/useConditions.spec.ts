@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ref, type Ref } from "vue";
-import { useConditions } from "../useConditions";
+import { useConditions } from "@/composables/useConditions";
 import type { ConditionOperator, Field, FieldCondition, FieldConditionGroup } from "@/models/template";
 
 describe("useConditions - Condition Evaluation Logic", () => {

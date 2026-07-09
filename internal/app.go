@@ -34,6 +34,7 @@ import (
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
 	"github.com/shurco/gosign/pkg/utils"
+	"github.com/shurco/gosign/pkg/webhook"
 )
 
 func New() error {
@@ -108,7 +109,13 @@ func New() error {
 		submissionRepo: submissionRepo,
 	}
 
-	submissionService := submission.NewService(submissionRepo, nil, nil)
+	notificationService := initNotificationService(settingQueries)
+
+	// Webhook storage + async delivery (HMAC-signed, retries, auto-disable).
+	webhookQueries := queries.NewWebhookQueries(pool)
+	webhookNotifier := services.NewWebhookNotifier(webhookQueries, webhook.NewDispatcher(3, 30*time.Second))
+
+	submissionService := submission.NewService(submissionRepo, notificationService, webhookNotifier)
 
 	// update trust certs
 	if err = trust.Update(); err != nil {
@@ -138,11 +145,6 @@ func New() error {
 	app.Use("/drive/signed", static.New(appdir.LcSigned()))
 	app.Use("/drive/uploads", static.New(appdir.LcUploads()))
 
-	// Initialize webhook repository
-	webhookRepo := &simpleWebhookRepository{}
-
-	notificationService := initNotificationService(settingQueries)
-
 	// Completed document builder (filesystem-backed cache).
 	completedDoc := &services.CompletedDocumentBuilder{
 		Pool:            pool,
@@ -171,6 +173,8 @@ func New() error {
 	// Initialize API key repository and service
 	apiKeyRepo := queries.NewAPIKeyRepository(pool)
 	apiKeyService := services.NewAPIKeyService(apiKeyRepo)
+	// Required for X-API-Key authentication in middleware.Protected().
+	middleware.SetAPIKeyValidator(apiKeyService)
 
 	// Initialize email template queries
 	emailTemplateQueries := &queries.EmailTemplateQueries{Pool: pool}
@@ -178,10 +182,10 @@ func New() error {
 	// Initialize API handlers
 	apiHandlers := &routes.APIHandlers{
 		Submissions:    api.NewSubmissionHandler(submissionRepoImpl, submissionService),
-		Submitters:     nil, // TODO: initialize with repository and service
+		Submitters:     api.NewSubmitterHandler(queries.NewSubmitterResourceRepository(pool), submissionService),
 		SigningLinks:   api.NewSigningLinkHandler(pool, templateQueries, completedDoc),
 		Templates:      api.NewTemplateHandler(templateRepo, templateQueries),
-		Webhooks:       api.NewWebhookHandler(webhookRepo),
+		Webhooks:       api.NewWebhookHandler(webhookQueries),
 		Settings:       api.NewSettingsHandler(notificationService, accountQueries, userQueries, geolocationSvc, settingQueries),
 		APIKeys:        api.NewAPIKeyHandler(apiKeyService),
 		Stats:          api.NewStatsHandler(pool),
@@ -191,9 +195,10 @@ func New() error {
 		Invitations:    api.NewInvitationHandler(organizationQueries),
 		Users:          api.NewUserHandler(userQueries),
 		I18n:           api.NewI18nHandler(userQueries, accountQueries),
-		Branding:       api.NewBrandingHandler(accountQueries, userQueries, nil), // TODO: initialize with storage
+		Branding:       api.NewBrandingHandler(accountQueries, userQueries, nil),
 		EmailTemplates: api.NewEmailTemplateHandler(emailTemplateQueries, userQueries),
-		PublicSigning:  public.NewPublicSigningHandler(pool, templateQueries, userQueries, notificationService, completedDoc, geolocationSvc),
+		PublicSigning:  public.NewPublicSigningHandler(pool, templateQueries, userQueries, notificationService, completedDoc, geolocationSvc, webhookNotifier),
+		Embed:          public.NewEmbedHandler(submissionRepo),
 	}
 
 	routes.ApiRoutes(app, apiHandlers)
@@ -258,7 +263,7 @@ func createDirs() error {
 }
 
 func initNotificationService(settingQueries *queries.SettingQueries) *notification.Service {
-	svc := notification.NewService(nil)
+	svc := notification.NewService()
 	ctx := context.Background()
 
 	if smtpMap, err := settingQueries.GetGlobalSetting(ctx, "smtp"); err == nil && utils.GetStringFromMap(smtpMap, "provider", "") == "smtp" {

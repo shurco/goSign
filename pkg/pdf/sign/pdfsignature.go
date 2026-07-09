@@ -93,9 +93,9 @@ func (context *SignContext) createSignaturePlaceholder() (dssd string, byte_rang
 
 func (context *SignContext) fetchRevocationData() error {
 	if context.SignData.RevocationFunction != nil {
-		if context.SignData.CertificateChains != nil && (len(context.SignData.CertificateChains) > 0) {
+		if len(context.SignData.CertificateChains) > 0 {
 			certificate_chain := context.SignData.CertificateChains[0]
-			if certificate_chain != nil && (len(certificate_chain) > 0) {
+			if len(certificate_chain) > 0 {
 				for i, certificate := range certificate_chain {
 					if i < len(certificate_chain)-1 {
 						err := context.SignData.RevocationFunction(certificate, certificate_chain[i+1], &context.SignData.RevocationData)

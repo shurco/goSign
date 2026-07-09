@@ -170,7 +170,7 @@
       <!-- Full-width document preview (padding for fixed bottom panel) -->
       <div class="relative" @click="onSigningAreaClick">
         <div class="overflow-hidden">
-          <div v-for="(doc, docIndex) in sortedDocuments" :key="doc.id">
+          <div v-for="doc in sortedDocuments" :key="doc.id">
             <div v-for="(page, pageIndex) in getSortedPreviewImages(doc)" :key="page.id" class="relative mb-4">
               <div class="relative">
                 <img
@@ -833,14 +833,14 @@ function hasWithSignatureId(field: Field): boolean {
 
 function generateSignatureId(field: Field): string {
   const prefix = field.type === "stamp" ? "STMP-" : "SIG-";
-  const hex = "0123456789ABCDEF";
-  let s = prefix;
   const bytes = new Uint8Array(4);
   crypto.getRandomValues(bytes);
-  for (let i = 0; i < 4; i++) {
-    s += hex[bytes[i]! >> 4] + hex[bytes[i]! & 15];
-  }
-  return s;
+  return (
+    prefix +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
+      .join("")
+  );
 }
 
 function getCellCount(field: Field): number {
@@ -1003,7 +1003,7 @@ function clearAllFieldHighlights(): void {
   });
 }
 
-function scrollToField(fieldId: string, documentOnly = false): void {
+function scrollToField(fieldId: string): void {
   expandedFieldId.value = fieldId;
   const idx = visibleFields.value.findIndex((f) => f.id === fieldId);
   if (idx >= 0) {
@@ -1017,12 +1017,6 @@ function scrollToField(fieldId: string, documentOnly = false): void {
     docEl.classList.add("ring-2", "ring-primary", "rounded");
   }
   highlightTimeout = setTimeout(clearAllFieldHighlights, 2000);
-}
-
-/** Expand this form block (collapse others) and scroll document to the field. */
-function expandFieldAndScrollToDocument(fieldId: string): void {
-  expandedFieldId.value = fieldId;
-  scrollToFieldOnDocument(fieldId);
 }
 
 function getPrevUnfilledIndex(): number {
@@ -1064,7 +1058,7 @@ function goToPrevField(): void {
   currentFieldIndex.value = idx;
   const field = visibleFields.value[idx];
   if (field) {
-    scrollToField(field.id, true);
+    scrollToField(field.id);
   }
 }
 
@@ -1076,7 +1070,7 @@ function goToNextField(): void {
   currentFieldIndex.value = idx;
   const field = visibleFields.value[idx];
   if (field) {
-    scrollToField(field.id, true);
+    scrollToField(field.id);
   }
 }
 
@@ -1174,7 +1168,8 @@ function validateField(field: Field): void {
     }
   }
 
-  delete fieldErrors.value[field.id];
+  const { [field.id]: _removed, ...rest } = fieldErrors.value;
+  fieldErrors.value = rest;
 }
 
 async function handleSubmit(): Promise<void> {
@@ -1364,7 +1359,7 @@ async function handleUpdateSubmitter(event?: Event): Promise<void> {
     if (contentType && contentType.includes("application/json")) {
       try {
         data = await response.json();
-      } catch (parseErr) {
+      } catch {
         // If JSON parsing fails, read as text
         const text = await response.text();
         error.value = text || t("signing.updateFailed");

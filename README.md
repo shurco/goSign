@@ -99,11 +99,9 @@ goSign/
 │   ├── routes/              # Route registration
 │   ├── services/            # Business logic
 │   │   ├── submission/      # Multi-signer workflow state machine
-│   │   ├── email/           # Email template rendering
 │   │   ├── field/           # Field validation
 │   │   └── formula/         # Formula evaluation
-│   ├── trust/               # Trust certificate management
-│   └── worker/              # Background task scheduler
+│   └── trust/               # Trust certificate management
 ├── pkg/
 │   ├── pdf/
 │   │   ├── sign/            # Digital signing

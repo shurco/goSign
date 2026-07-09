@@ -10,50 +10,51 @@ import (
 
 // APIHandlers contains all API handlers
 type APIHandlers struct {
-	Submissions     *api.SubmissionHandler
-	Submitters      *api.SubmitterHandler
-	SigningLinks    *api.SigningLinkHandler
-	Templates       *api.TemplateHandler
-	Webhooks        *api.WebhookHandler
-	Settings        *api.SettingsHandler
-	APIKeys         *api.APIKeyHandler
-	Stats           *api.StatsHandler
-	Events          *api.EventHandler
-	Organizations   *api.OrganizationHandler
-	Members         *api.MemberHandler
-	Invitations     *api.InvitationHandler
-	Users           *api.UserHandler
-	I18n            *api.I18nHandler
-	Branding        *api.BrandingHandler
-	EmailTemplates  *api.EmailTemplateHandler
-	PublicSigning   *public.PublicSigningHandler
+	Submissions    *api.SubmissionHandler
+	Submitters     *api.SubmitterHandler
+	SigningLinks   *api.SigningLinkHandler
+	Templates      *api.TemplateHandler
+	Webhooks       *api.WebhookHandler
+	Settings       *api.SettingsHandler
+	APIKeys        *api.APIKeyHandler
+	Stats          *api.StatsHandler
+	Events         *api.EventHandler
+	Organizations  *api.OrganizationHandler
+	Members        *api.MemberHandler
+	Invitations    *api.InvitationHandler
+	Users          *api.UserHandler
+	I18n           *api.I18nHandler
+	Branding       *api.BrandingHandler
+	EmailTemplates *api.EmailTemplateHandler
+	PublicSigning  *public.PublicSigningHandler
+	Embed          *public.EmbedHandler
 }
 
 // ApiRoutes configures all API routes
 func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	// Auth group (public routes)
 	auth := c.Group("/auth")
-	
+
 	// Basic authentication
 	auth.Post("/signup", public.SignUp)
 	auth.Post("/signin", public.SignIn)
 	auth.Post("/refresh", public.RefreshToken)
 	auth.Post("/signout", middleware.Protected(), public.SignOut)
-	
+
 	// Email verification
 	auth.Get("/verify-email", public.VerifyEmail)
-	
+
 	// Password management
 	password := auth.Group("/password")
 	password.Post("/forgot", public.ForgotPassword)
 	password.Post("/reset", public.ResetPassword)
-	
+
 	// Two-factor authentication (protected routes)
 	twoFactor := auth.Group("/2fa", middleware.Protected())
 	twoFactor.Post("/enable", public.Enable2FA)
 	twoFactor.Post("/verify", public.Verify2FA)
 	twoFactor.Post("/disable", public.Disable2FA)
-	
+
 	// OAuth routes
 	oauth := auth.Group("/oauth")
 	oauth.Get("/google", public.GoogleLogin)
@@ -72,6 +73,11 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	if handlers.PublicSigning != nil {
 		publicAPI := c.Group("/public")
 		handlers.PublicSigning.RegisterRoutes(publicAPI)
+	}
+
+	// Embedded signing iframe (no authentication)
+	if handlers.Embed != nil {
+		handlers.Embed.RegisterRoutes(c)
 	}
 
 	// API v1 (protected routes with rate limiting)
@@ -113,14 +119,14 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	// Organizations API
 	if handlers.Organizations != nil {
 		organizations := apiV1.Group("/organizations")
-		
+
 		// Members API (organization members and invitations)
 		// Register members routes FIRST to avoid route conflicts
 		// More specific routes should be registered before less specific ones
 		if handlers.Members != nil {
 			handlers.Members.RegisterRoutes(organizations)
 		}
-		
+
 		// Then register organization routes
 		handlers.Organizations.RegisterRoutes(organizations)
 	}

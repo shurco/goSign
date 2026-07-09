@@ -41,7 +41,7 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 		p.SetXY(50, 50)
 		p.Cell(nil, "base")
 		var buf bytes.Buffer
-		if err := p.Write(&buf); err != nil {
+		if _, err := p.WriteTo(&buf); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(pagePath, buf.Bytes(), 0644); err != nil {

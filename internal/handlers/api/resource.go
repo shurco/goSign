@@ -68,13 +68,13 @@ func (h *ResourceHandler[T]) List(c fiber.Ctx) error {
 
 	// Collect filters
 	filters := make(map[string]string)
-	c.RequestCtx().QueryArgs().VisitAll(func(key, value []byte) {
+	for key, value := range c.RequestCtx().QueryArgs().All() {
 		keyStr := string(key)
 		// Skip pagination parameters
 		if keyStr != "page" && keyStr != "page_size" {
 			filters[keyStr] = string(value)
 		}
-	})
+	}
 
 	// Get data from repository
 	items, total, err := h.repository.List(page, pageSize, filters)

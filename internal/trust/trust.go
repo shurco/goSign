@@ -110,7 +110,7 @@ func parseTL(list, url string) error {
 	}
 
 	securityFile := "SecuritySettings.xml"
-	
+
 	// Extract embedded file using digitorus/pdf
 	fileContents, err := extractEmbeddedFile(bytes.NewReader(data), int64(len(data)), securityFile)
 	if err != nil {
@@ -121,7 +121,7 @@ func parseTL(list, url string) error {
 	if len(fileContents) == 0 {
 		return errors.New("extracted file is empty")
 	}
-	
+
 	// Check if data starts with XML declaration or root element
 	if !bytes.HasPrefix(fileContents, []byte("<?xml")) && !bytes.HasPrefix(fileContents, []byte("<")) {
 		return fmt.Errorf("extracted file does not appear to be XML (starts with: %q)", string(fileContents[:min(50, len(fileContents))]))
@@ -219,7 +219,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 		}
 		fileNameValue := namesArray.Index(i)
 		fileName := fileNameValue.Text()
-		
+
 		// Check if this is the file we're looking for
 		if fileName != filename {
 			continue
@@ -249,7 +249,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 		// digitorus/pdf should automatically resolve references
 		// Try to use f directly as the stream object
 		fileStream := f
-		
+
 		// Extract object number from F reference for file reading fallback
 		// F reference format is typically "X Y R" where X is object number
 		fStr := f.String()
@@ -262,7 +262,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 				}
 			}
 		}
-		
+
 		// If f doesn't have Length (not resolved), try to get object directly
 		if fileStream.Key("Length").IsNull() && targetObjNum >= 0 {
 			// Try to find the stream object by object number in xref
@@ -270,7 +270,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 				ptr := x.Ptr()
 				objID := ptr.GetID()
 				objIDStr := fmt.Sprintf("%v", objID)
-				
+
 				// Match by object number
 				if strings.Contains(objIDStr, fmt.Sprintf("%d", targetObjNum)) {
 					obj, err := pdfReader.GetObject(objID)
@@ -291,11 +291,11 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 			// Try to get Length from the object itself if it's a direct value
 			lengthVal = f.Key("Length")
 		}
-		
+
 		// Try to get stream data using RawString()
 		// In digitorus/pdf, stream data might be accessible this way
 		rawData := fileStream.RawString()
-		
+
 		// If RawString() returns empty, try to read stream data from file
 		// Stream data in PDF is located after the stream dictionary in the file
 		if len(rawData) == 0 {
@@ -304,14 +304,14 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 			if !lengthVal.IsNull() {
 				streamLength = lengthVal.Int64()
 			}
-			
+
 			if streamLength > 0 {
 				// Try to read stream data from file using ReaderAt
 				// Stream data follows "stream\n" marker after the dictionary
-				if readerAt, ok := reader.(io.ReaderAt); ok {
+				{
 					// Read entire file to search for stream
 					fileContent := make([]byte, size)
-					if n, err := readerAt.ReadAt(fileContent, 0); err == nil && n > 0 {
+					if n, err := reader.ReadAt(fileContent, 0); err == nil && n > 0 {
 						// Try to find stream by searching for object number pattern near stream markers
 						// Format: "X Y obj\n<<...>>\nstream\n"
 						if targetObjNum >= 0 {
@@ -322,7 +322,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 								[]byte(fmt.Sprintf("%d 0 obj\n", targetObjNum)),
 								[]byte(fmt.Sprintf("%d 0 obj\r\n", targetObjNum)),
 							}
-							
+
 							var objIdx int = -1
 							for _, pattern := range objPatterns {
 								idx := bytes.LastIndex(fileContent[:n], pattern)
@@ -331,7 +331,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 									break
 								}
 							}
-							
+
 							if objIdx >= 0 {
 								// Found object declaration, search for "stream" after it
 								// Look for stream marker within reasonable distance (up to 4KB)
@@ -340,7 +340,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 								if searchEnd > n {
 									searchEnd = n
 								}
-								
+
 								// Try different stream marker formats
 								streamMarkers := [][]byte{
 									[]byte("\nstream\n"),
@@ -349,14 +349,14 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 									[]byte("stream\r\n"),
 									[]byte("\nstream\r\n"),
 								}
-								
+
 								for _, streamMarker := range streamMarkers {
 									streamIdx := bytes.Index(fileContent[searchStart:searchEnd], streamMarker)
 									if streamIdx >= 0 {
 										streamIdx += searchStart
 										dataStart := streamIdx + len(streamMarker)
 										dataEnd := dataStart + int(streamLength)
-										
+
 										// Verify that "endstream" comes after our data
 										if dataEnd <= n {
 											// Check for endstream marker after data
@@ -372,7 +372,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 								}
 							}
 						}
-						
+
 						// If not found by object number, try searching all stream markers
 						// Try different stream marker variations
 						streamMarkers := [][]byte{
@@ -382,10 +382,10 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 							[]byte("stream\r\n"),
 							[]byte("\nstream\r\n"),
 						}
-						
+
 						var allIndices []int
 						var usedMarker []byte
-						
+
 						for _, marker := range streamMarkers {
 							indices := findAllIndices(fileContent[:n], marker)
 							if len(indices) > 0 {
@@ -394,7 +394,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 								break
 							}
 						}
-						
+
 						if len(allIndices) > 0 {
 							// Try each stream marker position, starting from the end
 							// Embedded files are usually near the end of the PDF
@@ -402,30 +402,30 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 								streamIdx := allIndices[i]
 								dataStart := streamIdx + len(usedMarker)
 								dataEnd := dataStart + int(streamLength)
-								
+
 								// Check bounds
 								if dataEnd > n {
 									continue
 								}
-								
+
 								candidateData := fileContent[dataStart:dataEnd]
-								
+
 								// Must match exact length (or close to it, accounting for potential whitespace)
 								if len(candidateData) < int(streamLength)-10 || len(candidateData) > int(streamLength)+10 {
 									continue
 								}
-								
+
 								// Must not be all zeros
 								if isAllZeros(candidateData) {
 									continue
 								}
-								
+
 								// For SecuritySettings.xml, it should be XML content or compressed data
 								// Try this candidate - it matches length and has content
 								rawData = string(candidateData)
 								break
 							}
-							
+
 							// If still not found with exact length, try the last stream
 							if len(rawData) == 0 && len(allIndices) > 0 {
 								streamIdx := allIndices[len(allIndices)-1]
@@ -445,7 +445,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 					}
 				}
 			}
-			
+
 			// If still no data, return error
 			if len(rawData) == 0 {
 				if !lengthVal.IsNull() {
@@ -478,7 +478,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 
 		// Convert to bytes
 		fileBytes := []byte(rawData)
-		
+
 		// Handle hex-encoded strings (PDF format: <hexdata>)
 		// Only if it looks like hex (starts and ends with < > and contains only hex chars)
 		if len(fileBytes) >= 2 && fileBytes[0] == '<' && fileBytes[len(fileBytes)-1] == '>' {
@@ -510,7 +510,7 @@ func extractEmbeddedFile(reader io.ReaderAt, size int64, filename string) ([]byt
 				return nil, fmt.Errorf("failed to create zlib reader: %w", err)
 			}
 			defer zr.Close()
-			
+
 			decompressed, err := io.ReadAll(zr)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decompress stream: %w", err)

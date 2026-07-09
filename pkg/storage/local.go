@@ -153,4 +153,3 @@ func (s *LocalStorage) GetMetadata(ctx context.Context, key string) (*BlobMetada
 		Modified: info.ModTime(),
 	}, nil
 }
-

@@ -61,9 +61,9 @@ func (h *SubmissionHandler) Send(c fiber.Ctx) error {
 
 // BulkCreateRequest request body for bulk creation
 type BulkCreateRequest struct {
-	TemplateID   string              `json:"template_id" validate:"required"`
-	SigningMode  models.SigningMode  `json:"signing_mode,omitempty"`
-	Submitters   []SubmitterBulkData `json:"submitters" validate:"required,min=1"`
+	TemplateID  string              `json:"template_id" validate:"required"`
+	SigningMode models.SigningMode  `json:"signing_mode,omitempty"`
+	Submitters  []SubmitterBulkData `json:"submitters" validate:"required,min=1"`
 }
 
 // SubmitterBulkData submitter data for bulk operation
@@ -188,4 +188,3 @@ func (h *SubmissionHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/bulk", h.BulkCreate)
 	router.Post("/expire", h.Expire)
 }
-

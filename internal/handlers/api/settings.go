@@ -40,7 +40,7 @@ func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *q
 		accountQueries:  accountQueries,
 		userQueries:     userQueries,
 		geolocationSvc:  geolocationSvc,
-		settingQueries: settingQueries,
+		settingQueries:  settingQueries,
 	}
 }
 
@@ -78,9 +78,9 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 			if smsMap, ok := globalSettings["sms"]; ok {
 				safSettings["sms"] = map[string]any{
 					"twilio_enabled":        utils.GetBoolFromMap(smsMap, "twilio_enabled", false),
-					"twilio_account_sid":     utils.GetStringFromMap(smsMap, "twilio_account_sid", ""),
-					"twilio_from_number":     utils.GetStringFromMap(smsMap, "twilio_from_number", ""),
-					"twilio_auth_token_set":  utils.GetStringFromMap(smsMap, "twilio_auth_token", "") != "",
+					"twilio_account_sid":    utils.GetStringFromMap(smsMap, "twilio_account_sid", ""),
+					"twilio_from_number":    utils.GetStringFromMap(smsMap, "twilio_from_number", ""),
+					"twilio_auth_token_set": utils.GetStringFromMap(smsMap, "twilio_auth_token", "") != "",
 				}
 			}
 
@@ -97,13 +97,13 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 			// Geolocation settings (global; paths next to executable)
 			if geolocMap, ok := globalSettings["geolocation"]; ok {
 				safSettings["geolocation"] = map[string]any{
-					"base_dir": appdir.Base(),
-					"db_path":  filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+					"base_dir":                appdir.Base(),
+					"db_path":                 filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
 					"maxmind_license_key_set": utils.GetStringFromMap(geolocMap, "maxmind_license_key", "") != "",
-					"download_url": utils.GetStringFromMap(geolocMap, "download_url", ""),
-					"download_method": utils.GetStringFromMap(geolocMap, "download_method", ""),
-					"last_updated_at":   utils.GetStringFromMap(geolocMap, "last_updated_at", ""),
-					"last_updated_source": utils.GetStringFromMap(geolocMap, "last_updated_source", ""),
+					"download_url":            utils.GetStringFromMap(geolocMap, "download_url", ""),
+					"download_method":         utils.GetStringFromMap(geolocMap, "download_method", ""),
+					"last_updated_at":         utils.GetStringFromMap(geolocMap, "last_updated_at", ""),
+					"last_updated_source":     utils.GetStringFromMap(geolocMap, "last_updated_source", ""),
 				}
 				if licenseKey := utils.GetStringFromMap(geolocMap, "maxmind_license_key", ""); licenseKey != "" {
 					if geolocSettings, ok := safSettings["geolocation"].(map[string]any); ok {
@@ -133,8 +133,8 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 		}
 		if _, ok := safSettings["geolocation"]; !ok {
 			safSettings["geolocation"] = map[string]any{
-				"base_dir": appdir.Base(),
-				"db_path":  filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+				"base_dir":     appdir.Base(),
+				"db_path":      filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
 				"download_url": "", "download_method": "",
 			}
 		}
@@ -171,7 +171,6 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 
 	return webutil.Response(c, fiber.StatusOK, "settings", safSettings)
 }
-
 
 // maskSecretFirstLast4 returns the first 4 and last 4 characters of a secret.
 // Example: "abcd1234WXYZ" -> "abcd…WXYZ"
@@ -299,17 +298,17 @@ func (h *SettingsHandler) UpdateEmail(c fiber.Ctx) error {
 	}
 
 	log.Info().Msg("Email settings updated in database")
-	
+
 	return webutil.Response(c, fiber.StatusOK, "email_settings", map[string]any{
 		"status": "updated",
 	})
 }
 
 type UpdateSMSRequest struct {
-	TwilioEnabled     bool   `json:"twilio_enabled"`
-	TwilioAccountSID  string `json:"twilio_account_sid,omitempty"`
-	TwilioAuthToken   string `json:"twilio_auth_token,omitempty"` // write-only
-	TwilioFromNumber  string `json:"twilio_from_number,omitempty"`
+	TwilioEnabled    bool   `json:"twilio_enabled"`
+	TwilioAccountSID string `json:"twilio_account_sid,omitempty"`
+	TwilioAuthToken  string `json:"twilio_auth_token,omitempty"` // write-only
+	TwilioFromNumber string `json:"twilio_from_number,omitempty"`
 }
 
 func (h *SettingsHandler) UpdateSMS(c fiber.Ctx) error {
@@ -458,7 +457,7 @@ func (h *SettingsHandler) UpdateStorage(c fiber.Ctx) error {
 	}
 
 	log.Info().Str("provider", req.Provider).Msg("Storage settings updated in database")
-	
+
 	return webutil.Response(c, fiber.StatusOK, "storage_settings", map[string]any{
 		"status": "updated",
 	})
@@ -466,9 +465,9 @@ func (h *SettingsHandler) UpdateStorage(c fiber.Ctx) error {
 
 // UpdateBrandingRequest request body for updating branding settings
 type UpdateBrandingRequest struct {
-	CompanyName string `json:"company_name"`
-	LogoURL     string `json:"logo_url"`
-	PrimaryColor string `json:"primary_color"`
+	CompanyName    string `json:"company_name"`
+	LogoURL        string `json:"logo_url"`
+	PrimaryColor   string `json:"primary_color"`
 	SecondaryColor string `json:"secondary_color"`
 }
 
@@ -533,7 +532,7 @@ func (h *SettingsHandler) UpdateBranding(c fiber.Ctx) error {
 	}
 
 	log.Info().Str("account_id", accountID).Msg("Branding settings updated in database")
-	
+
 	return webutil.Response(c, fiber.StatusOK, "branding_settings", map[string]any{
 		"status": "updated",
 	})
@@ -541,14 +540,14 @@ func (h *SettingsHandler) UpdateBranding(c fiber.Ctx) error {
 
 // TestEmailRequest request body for testing email
 type TestEmailRequest struct {
-	Provider   string `json:"provider"`
-	SMTPHost   string `json:"smtp_host" validate:"required"`
-	SMTPPort   string `json:"smtp_port" validate:"required"`
-	SMTPUser   string `json:"smtp_user" validate:"required"`
-	SMTPPass   string `json:"smtp_pass" validate:"required"`
-	FromEmail  string `json:"from_email" validate:"required,email"`
-	FromName   string `json:"from_name"`
-	ToEmail    string `json:"to_email" validate:"required,email"`
+	Provider  string `json:"provider"`
+	SMTPHost  string `json:"smtp_host" validate:"required"`
+	SMTPPort  string `json:"smtp_port" validate:"required"`
+	SMTPUser  string `json:"smtp_user" validate:"required"`
+	SMTPPass  string `json:"smtp_pass" validate:"required"`
+	FromEmail string `json:"from_email" validate:"required,email"`
+	FromName  string `json:"from_name"`
+	ToEmail   string `json:"to_email" validate:"required,email"`
 }
 
 // TestEmail sends test email to verify SMTP settings
@@ -743,8 +742,8 @@ func (h *SettingsHandler) TestStorage(c fiber.Ctx) error {
 // UpdateGeolocationRequest request body for updating geolocation settings
 type UpdateGeolocationRequest struct {
 	MaxMindLicenseKey string `json:"maxmind_license_key,omitempty"` // Optional: MaxMind license key
-	DownloadURL       string `json:"download_url,omitempty"`         // Optional: Download URL
-	DownloadMethod    string `json:"download_method,omitempty"`      // Optional: "maxmind" or "url"
+	DownloadURL       string `json:"download_url,omitempty"`        // Optional: Download URL
+	DownloadMethod    string `json:"download_method,omitempty"`     // Optional: "maxmind" or "url"
 }
 
 // UpdateGeolocation updates geolocation settings (global settings in DB)
@@ -1072,8 +1071,6 @@ func (h *SettingsHandler) DeleteGeolocationMaxMindKey(c fiber.Ctx) error {
 	})
 }
 
-
-
 func (h *SettingsHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.Get)
 	router.Put("/email", h.UpdateEmail)
@@ -1088,4 +1085,3 @@ func (h *SettingsHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/geolocation/download", h.DownloadGeoLite2FromURL)
 	router.Post("/geolocation/download-maxmind", h.DownloadGeoLite2FromMaxMind)
 }
-

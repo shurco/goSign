@@ -14,8 +14,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
-	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/pdf/sign"
 	"github.com/shurco/gosign/pkg/utils"
 	"github.com/shurco/gosign/pkg/utils/webutil"

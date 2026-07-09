@@ -155,7 +155,8 @@ async function saveWebhook(formData: any): Promise<void> {
   }
 }
 
-function editWebhook(webhook: any): void {}
+// Webhook editing is not implemented yet; the table's edit action is a no-op.
+function editWebhook(_webhook: any): void {}
 
 async function deleteWebhook(webhook: any): Promise<void> {
   if (!confirm(t("webhooks.deleteConfirm"))) {

@@ -2,18 +2,18 @@ import { beforeEach } from "vitest";
 
 // Mock localStorage
 const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+  const store = new Map<string, string>();
 
   return {
-    getItem: (key: string) => store[key] || null,
+    getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = value.toString();
+      store.set(key, value.toString());
     },
     removeItem: (key: string) => {
-      delete store[key];
+      store.delete(key);
     },
     clear: () => {
-      store = {};
+      store.clear();
     }
   };
 })();

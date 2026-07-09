@@ -10,7 +10,6 @@ import (
 
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/notification"
-	"github.com/shurco/gosign/pkg/webhook"
 )
 
 // SubmissionState represents submission state
@@ -38,28 +37,34 @@ type Repository interface {
 	CreateEvent(ctx context.Context, event *models.Event) error
 }
 
+// WebhookSender delivers an event to all subscribed webhooks of the account.
+// Implemented by *services.WebhookNotifier.
+type WebhookSender interface {
+	SendEvent(ctx context.Context, accountID string, event *models.WebhookEvent)
+}
+
 // Service manages submission workflow
 type Service struct {
-	repo              Repository
-	notificationSvc   *notification.Service
-	webhookDispatcher *webhook.Dispatcher
+	repo            Repository
+	notificationSvc *notification.Service
+	webhooks        WebhookSender
 }
 
 // NewService creates a new service
-func NewService(repo Repository, notificationSvc *notification.Service, webhookDispatcher *webhook.Dispatcher) *Service {
+func NewService(repo Repository, notificationSvc *notification.Service, webhooks WebhookSender) *Service {
 	return &Service{
-		repo:              repo,
-		notificationSvc:   notificationSvc,
-		webhookDispatcher: webhookDispatcher,
+		repo:            repo,
+		notificationSvc: notificationSvc,
+		webhooks:        webhooks,
 	}
 }
 
 // CreateSubmissionInput is input data for creating a submission
 type CreateSubmissionInput struct {
-	TemplateID   string
-	CreatedByID  string
-	SigningMode  models.SigningMode
-	Submitters   []SubmitterInput
+	TemplateID  string
+	CreatedByID string
+	SigningMode models.SigningMode
+	Submitters  []SubmitterInput
 }
 
 // SubmitterInput is submitter data
@@ -309,11 +314,11 @@ func (s *Service) ResendInvitation(ctx context.Context, submitterID string) erro
 func (s *Service) sendInvitation(ctx context.Context, submission *models.Submission, submitter *models.Submitter) error {
 	now := time.Now()
 	notification := &models.Notification{
-		ID:          uuid.New().String(),
-		Type:        models.NotificationTypeEmail,
-		Recipient:   submitter.Email,
-		Template:    "invitation",
-		Subject:     "Document for signing",
+		ID:        uuid.New().String(),
+		Type:      models.NotificationTypeEmail,
+		Recipient: submitter.Email,
+		Template:  "invitation",
+		Subject:   "Document for signing",
 		Context: map[string]any{
 			"submitter_name": submitter.Name,
 			"document_name":  "Document",
@@ -339,21 +344,21 @@ func (s *Service) sendInvitation(ctx context.Context, submission *models.Submiss
 	return nil
 }
 
-// sendWebhook sends a webhook event
+// sendWebhook delivers a submission event to the account's webhooks
 func (s *Service) sendWebhook(ctx context.Context, eventType string, submission *models.Submission) {
-	// TODO: Get webhooks for account from database
-	// TODO: Send via dispatcher
-	
-	webhookEvent := &models.WebhookEvent{
+	if s.webhooks == nil || submission.AccountID == "" {
+		return
+	}
+
+	s.webhooks.SendEvent(ctx, submission.AccountID, &models.WebhookEvent{
 		Type:      eventType,
 		Timestamp: time.Now(),
 		Data: map[string]any{
 			"submission_id": submission.ID,
 			"template_id":   submission.TemplateID,
+			"status":        submission.Status,
 		},
-	}
-
-	_ = webhookEvent // stub
+	})
 }
 
 // createNotification creates a notification with common fields
@@ -449,4 +454,3 @@ func (s *Service) logEventWithIP(ctx context.Context, eventType, actorID, resour
 
 	return s.repo.CreateEvent(ctx, event)
 }
-

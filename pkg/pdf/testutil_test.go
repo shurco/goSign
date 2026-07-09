@@ -34,7 +34,7 @@ func buildTestPDFData(pages int, cellText string) ([]byte, error) {
 		pdf.Cell(nil, cellText)
 	}
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
+	if _, err := pdf.WriteTo(&buf); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

@@ -3,103 +3,181 @@ package queries
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/shurco/gosign/internal/models"
 )
 
-// GetPendingWebhooks retrieves webhooks that need to be triggered for given event
-func GetPendingWebhooks(ctx context.Context, db *pgxpool.Pool, accountID string, eventType string) ([]*models.Webhook, error) {
-	query := `
-		SELECT id, account_id, name, url, events, enabled, secret, 
-		       last_triggered_at, failure_count, created_at, updated_at
-		FROM webhook
-		WHERE account_id = $1 
-		  AND enabled = true
-		  AND events @> $2::jsonb
-		ORDER BY last_triggered_at ASC NULLS FIRST
-	`
+const webhookColumns = `id, account_id, url, events, secret, enabled, last_triggered_at, failure_count, created_at, updated_at`
 
-	// Convert eventType to JSONB array format
-	eventsJSON, err := json.Marshal([]string{eventType})
-	if err != nil {
+// WebhookQueries provides account-scoped webhook persistence.
+type WebhookQueries struct {
+	pool *pgxpool.Pool
+}
+
+// NewWebhookQueries creates webhook queries.
+func NewWebhookQueries(pool *pgxpool.Pool) *WebhookQueries {
+	return &WebhookQueries{pool: pool}
+}
+
+func scanWebhook(row pgx.Row) (*models.Webhook, error) {
+	var (
+		webhook   models.Webhook
+		eventsRaw []byte
+	)
+	if err := row.Scan(
+		&webhook.ID,
+		&webhook.AccountID,
+		&webhook.URL,
+		&eventsRaw,
+		&webhook.Secret,
+		&webhook.Enabled,
+		&webhook.LastTriggeredAt,
+		&webhook.FailureCount,
+		&webhook.CreatedAt,
+		&webhook.UpdatedAt,
+	); err != nil {
 		return nil, err
 	}
-
-	rows, err := db.Query(ctx, query, accountID, string(eventsJSON))
-	if err != nil {
-		return nil, err
+	if len(eventsRaw) > 0 {
+		if err := json.Unmarshal(eventsRaw, &webhook.Events); err != nil {
+			return nil, fmt.Errorf("unmarshal webhook events: %w", err)
+		}
 	}
+	return &webhook, nil
+}
+
+func collectWebhooks(rows pgx.Rows) ([]models.Webhook, error) {
 	defer rows.Close()
 
-	var webhooks []*models.Webhook
+	var webhooks []models.Webhook
 	for rows.Next() {
-		webhook := &models.Webhook{}
-		var eventsData []byte
-
-		var name string
-		err := rows.Scan(
-			&webhook.ID,
-			&webhook.AccountID,
-			&name,
-			&webhook.URL,
-			&eventsData,
-			&webhook.Enabled,
-			&webhook.Secret,
-			&webhook.LastTriggeredAt,
-			&webhook.FailureCount,
-			&webhook.CreatedAt,
-			&webhook.UpdatedAt,
-		)
+		webhook, err := scanWebhook(rows)
 		if err != nil {
 			return nil, err
 		}
+		webhooks = append(webhooks, *webhook)
+	}
+	return webhooks, rows.Err()
+}
 
-		// Parse events JSON
-		if err := json.Unmarshal(eventsData, &webhook.Events); err != nil {
-			return nil, err
-		}
+// ListWebhooks returns all webhooks of the account.
+func (q *WebhookQueries) ListWebhooks(ctx context.Context, accountID string) ([]models.Webhook, error) {
+	rows, err := q.pool.Query(ctx, `
+		SELECT `+webhookColumns+`
+		FROM webhook
+		WHERE account_id = $1
+		ORDER BY created_at DESC
+	`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("queries: list webhooks: %w", err)
+	}
+	return collectWebhooks(rows)
+}
 
-		webhooks = append(webhooks, webhook)
+// GetWebhook returns a webhook by id within the account. Returns pgx.ErrNoRows when missing.
+func (q *WebhookQueries) GetWebhook(ctx context.Context, accountID, id string) (*models.Webhook, error) {
+	row := q.pool.QueryRow(ctx, `
+		SELECT `+webhookColumns+`
+		FROM webhook
+		WHERE id = $1 AND account_id = $2
+	`, id, accountID)
+	return scanWebhook(row)
+}
+
+// CreateWebhook inserts a webhook and fills generated fields on the passed model.
+func (q *WebhookQueries) CreateWebhook(ctx context.Context, webhook *models.Webhook) error {
+	eventsJSON, err := json.Marshal(webhook.Events)
+	if err != nil {
+		return fmt.Errorf("queries: create webhook: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
+	row := q.pool.QueryRow(ctx, `
+		INSERT INTO webhook (account_id, url, events, secret, enabled)
+		VALUES ($1, $2, $3::jsonb, $4, $5)
+		RETURNING id, created_at, updated_at
+	`, webhook.AccountID, webhook.URL, string(eventsJSON), webhook.Secret, webhook.Enabled)
+	if err := row.Scan(&webhook.ID, &webhook.CreatedAt, &webhook.UpdatedAt); err != nil {
+		return fmt.Errorf("queries: create webhook: %w", err)
+	}
+	return nil
+}
+
+// UpdateWebhook updates a webhook within the account. Returns pgx.ErrNoRows when missing.
+func (q *WebhookQueries) UpdateWebhook(ctx context.Context, webhook *models.Webhook) error {
+	eventsJSON, err := json.Marshal(webhook.Events)
+	if err != nil {
+		return fmt.Errorf("queries: update webhook: %w", err)
 	}
 
-	return webhooks, nil
+	tag, err := q.pool.Exec(ctx, `
+		UPDATE webhook
+		SET url = $3, events = $4::jsonb, secret = $5, enabled = $6, updated_at = NOW()
+		WHERE id = $1 AND account_id = $2
+	`, webhook.ID, webhook.AccountID, webhook.URL, string(eventsJSON), webhook.Secret, webhook.Enabled)
+	if err != nil {
+		return fmt.Errorf("queries: update webhook: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
-// UpdateWebhookLastTriggered updates last_triggered_at timestamp
-func UpdateWebhookLastTriggered(ctx context.Context, db *pgxpool.Pool, webhookID string) error {
-	query := `
+// DeleteWebhook removes a webhook within the account. Returns pgx.ErrNoRows when missing.
+func (q *WebhookQueries) DeleteWebhook(ctx context.Context, accountID, id string) error {
+	tag, err := q.pool.Exec(ctx, `DELETE FROM webhook WHERE id = $1 AND account_id = $2`, id, accountID)
+	if err != nil {
+		return fmt.Errorf("queries: delete webhook: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+// EnabledWebhooksForEvent returns enabled account webhooks subscribed to the event type.
+func (q *WebhookQueries) EnabledWebhooksForEvent(ctx context.Context, accountID, eventType string) ([]models.Webhook, error) {
+	eventsJSON, err := json.Marshal([]string{eventType})
+	if err != nil {
+		return nil, fmt.Errorf("queries: webhooks for event: %w", err)
+	}
+
+	rows, err := q.pool.Query(ctx, `
+		SELECT `+webhookColumns+`
+		FROM webhook
+		WHERE account_id = $1
+		  AND enabled = true
+		  AND (events @> $2::jsonb OR events @> '["*"]'::jsonb)
+		ORDER BY last_triggered_at ASC NULLS FIRST
+	`, accountID, string(eventsJSON))
+	if err != nil {
+		return nil, fmt.Errorf("queries: webhooks for event: %w", err)
+	}
+	return collectWebhooks(rows)
+}
+
+// MarkTriggered records a successful delivery and resets the failure counter.
+func (q *WebhookQueries) MarkTriggered(ctx context.Context, webhookID string) error {
+	_, err := q.pool.Exec(ctx, `
 		UPDATE webhook
-		SET last_triggered_at = NOW()
+		SET last_triggered_at = NOW(), failure_count = 0
 		WHERE id = $1
-	`
-	_, err := db.Exec(ctx, query, webhookID)
+	`, webhookID)
 	return err
 }
 
-// IncrementWebhookFailure increments failure_count
-func IncrementWebhookFailure(ctx context.Context, db *pgxpool.Pool, webhookID string) error {
-	query := `
+// MarkFailed increments the failure counter and disables the webhook once
+// disableAfter consecutive failures are reached.
+func (q *WebhookQueries) MarkFailed(ctx context.Context, webhookID string, disableAfter int) error {
+	_, err := q.pool.Exec(ctx, `
 		UPDATE webhook
-		SET failure_count = failure_count + 1
+		SET failure_count = failure_count + 1,
+		    enabled = CASE WHEN failure_count + 1 >= $2 THEN false ELSE enabled END
 		WHERE id = $1
-	`
-	_, err := db.Exec(ctx, query, webhookID)
+	`, webhookID, disableAfter)
 	return err
 }
-
-// DisableWebhook disables webhook after too many failures
-func DisableWebhook(ctx context.Context, db *pgxpool.Pool, webhookID string) error {
-	query := `
-		UPDATE webhook
-		SET enabled = false
-		WHERE id = $1
-	`
-	_, err := db.Exec(ctx, query, webhookID)
-	return err
-}
-

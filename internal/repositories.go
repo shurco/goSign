@@ -84,25 +84,3 @@ func (r *simpleSubmissionRepository) Update(id string, item *models.Submission) 
 func (r *simpleSubmissionRepository) Delete(id string) error {
 	return fmt.Errorf("not implemented")
 }
-
-type simpleWebhookRepository struct{}
-
-func (r *simpleWebhookRepository) List(page, pageSize int, filters map[string]string) ([]models.Webhook, int, error) {
-	return []models.Webhook{}, 0, nil
-}
-
-func (r *simpleWebhookRepository) Get(id string) (*models.Webhook, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Create(item *models.Webhook) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Update(id string, item *models.Webhook) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (r *simpleWebhookRepository) Delete(id string) error {
-	return fmt.Errorf("not implemented")
-}

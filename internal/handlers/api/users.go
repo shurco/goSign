@@ -74,4 +74,3 @@ func (h *UserHandler) GetCurrentUser(c fiber.Ctx) error {
 func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/me", h.GetCurrentUser)
 }
-

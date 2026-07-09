@@ -26,15 +26,15 @@ type Translation struct {
 
 // Template is ...
 type Template struct {
-	ID             string                 `json:"id"`
-	FolderID       string                 `json:"folder_id"`
-	OrganizationID string                 `json:"organization_id,omitempty"`
-	Slug           string                 `json:"slug"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description,omitempty"`
-	Source         string                 `json:"source,omitempty"`
-	Author         *Author                `json:"author,omitempty"`
-	Submitters     []Submitter            `json:"submitters"`
+	ID             string      `json:"id"`
+	FolderID       string      `json:"folder_id"`
+	OrganizationID string      `json:"organization_id,omitempty"`
+	Slug           string      `json:"slug"`
+	Name           string      `json:"name"`
+	Description    string      `json:"description,omitempty"`
+	Source         string      `json:"source,omitempty"`
+	Author         *Author     `json:"author,omitempty"`
+	Submitters     []Submitter `json:"submitters"`
 	// SubmitterCount is a computed field used by list/search endpoints to avoid
 	// sending full submitters array when only the count is needed.
 	SubmitterCount int                    `json:"submitter_count,omitempty"`
@@ -73,21 +73,21 @@ const (
 
 // Submitter represents document signer
 type Submitter struct {
-	ID            string           `json:"id"`
-	Name          string           `json:"name"`
-	Email         string           `json:"email"`
-	Phone         string           `json:"phone,omitempty"`
-	Slug          string           `json:"slug"` // unique signing link
-	Status        SubmitterStatus  `json:"status"`
-	SubmissionID  string           `json:"submission_id"`
-	Order         int              `json:"order"` // signing order for sequential mode
-	CompletedAt   *time.Time       `json:"completed_at,omitempty"`
-	DeclinedAt    *time.Time       `json:"declined_at,omitempty"`
-	SentAt        *time.Time       `json:"sent_at,omitempty"`
-	OpenedAt      *time.Time       `json:"opened_at,omitempty"`
-	Metadata      map[string]any `json:"metadata,omitempty"`
-	CreatedAt     time.Time        `json:"created_at"`
-	UpdatedAt     time.Time        `json:"updated_at"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	Email        string          `json:"email"`
+	Phone        string          `json:"phone,omitempty"`
+	Slug         string          `json:"slug"` // unique signing link
+	Status       SubmitterStatus `json:"status"`
+	SubmissionID string          `json:"submission_id"`
+	Order        int             `json:"order"` // signing order for sequential mode
+	CompletedAt  *time.Time      `json:"completed_at,omitempty"`
+	DeclinedAt   *time.Time      `json:"declined_at,omitempty"`
+	SentAt       *time.Time      `json:"sent_at,omitempty"`
+	OpenedAt     *time.Time      `json:"opened_at,omitempty"`
+	Metadata     map[string]any  `json:"metadata,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 // FieldType represents field type in template
@@ -115,14 +115,14 @@ const (
 type ConditionOperator string
 
 const (
-	ConditionEquals       ConditionOperator = "equals"
-	ConditionNotEquals    ConditionOperator = "not_equals"
-	ConditionContains     ConditionOperator = "contains"
-	ConditionNotContains  ConditionOperator = "not_contains"
-	ConditionGreaterThan  ConditionOperator = "greater_than"
-	ConditionLessThan     ConditionOperator = "less_than"
-	ConditionIsEmpty      ConditionOperator = "is_empty"
-	ConditionIsNotEmpty   ConditionOperator = "is_not_empty"
+	ConditionEquals      ConditionOperator = "equals"
+	ConditionNotEquals   ConditionOperator = "not_equals"
+	ConditionContains    ConditionOperator = "contains"
+	ConditionNotContains ConditionOperator = "not_contains"
+	ConditionGreaterThan ConditionOperator = "greater_than"
+	ConditionLessThan    ConditionOperator = "less_than"
+	ConditionIsEmpty     ConditionOperator = "is_empty"
+	ConditionIsNotEmpty  ConditionOperator = "is_not_empty"
 )
 
 // ConditionAction represents action to take when condition is met
@@ -145,26 +145,26 @@ const (
 
 // FieldCondition single condition rule
 type FieldCondition struct {
-	FieldID  string            `json:"field_id"`  // target field to check
+	FieldID  string            `json:"field_id"` // target field to check
 	Operator ConditionOperator `json:"operator"`
 	Value    any               `json:"value"` // value to compare against
 }
 
 // FieldConditionGroup allows AND/OR logic
 type FieldConditionGroup struct {
-	Logic      LogicOperator     `json:"logic"` // AND or OR
-	Conditions []FieldCondition  `json:"conditions"`
-	Action     ConditionAction   `json:"action"`
+	Logic      LogicOperator    `json:"logic"` // AND or OR
+	Conditions []FieldCondition `json:"conditions"`
+	Action     ConditionAction  `json:"action"`
 }
 
 // FieldPreferences holds field display/format preferences (DocuSeal-aligned).
 type FieldPreferences struct {
-	Format          string   `json:"format,omitempty"`            // date/number format
-	Align           string   `json:"align,omitempty"`             // left, center, right
+	Format          string   `json:"format,omitempty"` // date/number format
+	Align           string   `json:"align,omitempty"`  // left, center, right
 	Font            string   `json:"font,omitempty"`
-	FontType        string   `json:"font_type,omitempty"`         // bold, italic, bold_italic
+	FontType        string   `json:"font_type,omitempty"` // bold, italic, bold_italic
 	FontSize        int      `json:"font_size,omitempty"`
-	Valign          string   `json:"valign,omitempty"`            // top, center, bottom
+	Valign          string   `json:"valign,omitempty"` // top, center, bottom
 	Color           string   `json:"color,omitempty"`
 	Price           float64  `json:"price,omitempty"`
 	Currency        string   `json:"currency,omitempty"`
@@ -467,4 +467,3 @@ type TemplateFolder struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-

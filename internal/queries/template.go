@@ -250,7 +250,7 @@ func (q *TemplateQueries) UpdateTemplateSchema(ctx context.Context, templateID s
 // TemplateUpdatePatch describes a partial update for the template record.
 // Pointers are used to distinguish "field not provided" from "provided empty".
 type TemplateUpdatePatch struct {
-	Name            *string
+	Name             *string
 	CategoryProvided bool
 	// Category:
 	// - CategoryProvided=false: don't touch DB column
@@ -340,24 +340,24 @@ func (q *TemplateQueries) UpdateTemplate(ctx context.Context, templateID string,
 
 // TemplateSearchRequest represents search and filter parameters
 type TemplateSearchRequest struct {
-	Query         string   `json:"query,omitempty"`
-	Category      string   `json:"category,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	OrganizationID string  `json:"organization_id,omitempty"`
-	Favorites     bool     `json:"favorites,omitempty"`
-	UserID        string   `json:"user_id,omitempty"`
-	Limit         int      `json:"limit,omitempty"`
-	Offset        int      `json:"offset,omitempty"`
-	SortBy        string   `json:"sort_by,omitempty"`    // name, created_at, updated_at
-	SortOrder     string   `json:"sort_order,omitempty"` // asc, desc
+	Query          string   `json:"query,omitempty"`
+	Category       string   `json:"category,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	OrganizationID string   `json:"organization_id,omitempty"`
+	Favorites      bool     `json:"favorites,omitempty"`
+	UserID         string   `json:"user_id,omitempty"`
+	Limit          int      `json:"limit,omitempty"`
+	Offset         int      `json:"offset,omitempty"`
+	SortBy         string   `json:"sort_by,omitempty"`    // name, created_at, updated_at
+	SortOrder      string   `json:"sort_order,omitempty"` // asc, desc
 }
 
 // TemplateSearchResult represents search result with metadata
 type TemplateSearchResult struct {
-	Templates   []models.Template `json:"templates"`
-	Total       int               `json:"total"`
-	HasMore     bool              `json:"has_more"`
-	NextOffset  int               `json:"next_offset,omitempty"`
+	Templates  []models.Template `json:"templates"`
+	Total      int               `json:"total"`
+	HasMore    bool              `json:"has_more"`
+	NextOffset int               `json:"next_offset,omitempty"`
 }
 
 // SearchTemplates searches templates with filters and pagination
@@ -521,7 +521,7 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 		// If no user ID, favorites are always false
 		favoriteCheckSQL = "false as is_user_favorite"
 	}
-	
+
 	// Use LIMIT and OFFSET directly in SQL to avoid parameter type issues
 	// Values are validated (limit <= 100, offset >= 0) so safe to inline
 	dataQuery := `

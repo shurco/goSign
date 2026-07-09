@@ -132,14 +132,3 @@ func (q *TrustQueries) DeleteAdobeTL(ctx context.Context, list string) error {
 	_, err := q.Exec(ctx, query, list)
 	return err
 }
-
-// ClearAdobeTL is ...
-func (q *TrustQueries) ClearAdobeTL(ctx context.Context) error {
-	query := `
-		DELETE FROM "trust_list"
-		WHERE
-			"list" != 'gosing'
-	`
-	_, err := q.Exec(ctx, query)
-	return err
-}

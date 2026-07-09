@@ -116,8 +116,8 @@ export function useConditions(fields: Ref<Field[]>, formData: Ref<Record<string,
   // Computed map of field states
   // Access formData.value inside computed to ensure reactivity
   const fieldStates = computed(() => {
-    // Access formData.value to track changes
-    const _ = formData.value; // Force dependency tracking
+    // Access formData.value to force dependency tracking
+    void formData.value;
     const states: Record<string, FieldState> = {};
 
     for (const field of fields.value) {

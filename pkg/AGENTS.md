@@ -16,8 +16,8 @@ Reusable libraries that can be imported by any package inside this repo (and, in
 | `storage/`          | `interface.go` defines the storage contract. Implementations: `local`, `s3` (MinIO).                                                        |
 | `storage/postgres/` | `pgxpool` factory.                                                                                                                          |
 | `storage/redis/`    | Redis v9 wrapper (`redis.New`, `redis.Conn`).                                                                                               |
-| `notification/`     | Provider-based notifier (`Email`, `SMS`, `Webhook`) + `Worker` + Go templates.                                                              |
-| `webhook/`          | Signed webhook dispatcher with retries.                                                                                                     |
+| `notification/`     | Provider-based notifier (`Email` via SMTP, `SMS` via Twilio); providers register on `Service`.                                              |
+| `webhook/`          | HMAC-signed webhook dispatcher with retries + `VerifySignature` for consumers.                                                              |
 | `geolocation/`      | GeoLite2 reader (`Service`, `Reload`) + `ExtractFromTarGz` / `ExtractFromGzip` helpers.                                                     |
 | `logging/`          | Zerolog wrapper (`logging.Log`).                                                                                                            |
 | `utils/`            | Small pure helpers: `maputil`, `date_utils`, `file_utils`, `webutil` (HTTP response envelope).                                              |

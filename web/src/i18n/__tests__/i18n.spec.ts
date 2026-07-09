@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createI18n } from "vue-i18n";
-import { SIGNING_LOCALES, SUPPORTED_LOCALES } from "../index";
+import { SIGNING_LOCALES, SUPPORTED_LOCALES } from "@/i18n";
 
 type I18nGlobalLike = {
   // In `legacy: false` mode, vue-i18n exposes locale as a ref-like value.

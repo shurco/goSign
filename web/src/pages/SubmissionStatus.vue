@@ -118,7 +118,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import ResourceTable from "@/components/common/ResourceTable.vue";
 import Card from "@/components/ui/Card.vue";
 import Badge from "@/components/ui/Badge.vue";
@@ -159,7 +159,6 @@ type TimelineItem = {
 };
 
 const route = useRoute();
-const router = useRouter();
 const { t, te } = useI18n();
 
 const loading = ref(false);

@@ -7,4 +7,3 @@ func DaysBetween(start, end time.Time) int {
 	duration := end.Sub(start)
 	return int(duration.Hours() / 24)
 }
-

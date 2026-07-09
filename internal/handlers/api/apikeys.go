@@ -189,4 +189,3 @@ func (h *APIKeyHandler) Delete(c fiber.Ctx) error {
 
 	return webutil.Response(c, fiber.StatusOK, "API key deleted successfully", nil)
 }
-

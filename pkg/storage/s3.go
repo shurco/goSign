@@ -158,4 +158,3 @@ func (s *S3Storage) GetMetadata(ctx context.Context, key string) (*BlobMetadata,
 
 	return metadata, nil
 }
-

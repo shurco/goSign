@@ -2,6 +2,7 @@ package field
 
 import (
 	"fmt"
+
 	"github.com/shurco/gosign/internal/models"
 )
 
@@ -11,21 +12,21 @@ func ValidateConditions(fields []models.Field) error {
 	for _, f := range fields {
 		fieldMap[f.ID] = f
 	}
-	
+
 	for _, field := range fields {
 		for _, group := range field.ConditionGroups {
 			for _, cond := range group.Conditions {
 				// Check if referenced field exists
 				if _, exists := fieldMap[cond.FieldID]; !exists {
-					return fmt.Errorf("field %s references non-existent field %s", 
+					return fmt.Errorf("field %s references non-existent field %s",
 						field.ID, cond.FieldID)
 				}
-				
+
 				// Prevent circular dependencies
 				if cond.FieldID == field.ID {
 					return fmt.Errorf("field %s cannot depend on itself", field.ID)
 				}
-				
+
 				// Check for valid operator for field type
 				targetField := fieldMap[cond.FieldID]
 				if err := validateOperatorForType(targetField.Type, cond.Operator); err != nil {
@@ -35,7 +36,7 @@ func ValidateConditions(fields []models.Field) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -51,14 +52,14 @@ func validateOperatorForType(fieldType models.FieldType, operator models.Conditi
 			return fmt.Errorf("operator %s not valid for numeric fields", operator)
 		}
 	}
-	
+
 	// Checkbox can only use equals/not equals
 	if fieldType == models.FieldTypeCheckbox {
 		if operator != models.ConditionEquals && operator != models.ConditionNotEquals {
 			return fmt.Errorf("checkbox fields only support equals/not_equals")
 		}
 	}
-	
+
 	// Text fields can use string operators
 	if fieldType == models.FieldTypeText {
 		validOps := []models.ConditionOperator{
@@ -70,7 +71,7 @@ func validateOperatorForType(fieldType models.FieldType, operator models.Conditi
 			return fmt.Errorf("operator %s not valid for text fields", operator)
 		}
 	}
-	
+
 	return nil
 }
 

@@ -132,4 +132,3 @@ func TestEmailTemplateHandler(t *testing.T) {
 		}
 	})
 }
-

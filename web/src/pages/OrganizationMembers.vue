@@ -411,7 +411,7 @@ const handleInviteMember = async (formData: Record<string, unknown>) => {
   }
 
   try {
-    const response = await apiPost(`/api/v1/organizations/${orgId.value}/members/invite`, {
+    await apiPost(`/api/v1/organizations/${orgId.value}/members/invite`, {
       email,
       role
     });

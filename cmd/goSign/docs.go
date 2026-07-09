@@ -47,4 +47,3 @@ package main
 
 // @tag.name Settings
 // @tag.description Application settings (SMTP, Storage, Branding)
-

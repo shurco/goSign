@@ -285,7 +285,6 @@ async function forceDownloadFromUrl(urlOverride: string) {
     console.error("Failed to download database:", error);
     manualUpdateError.value = error instanceof Error ? error.message : t("settings.failedToDownloadDatabase");
     return false;
-  } finally {
   }
 }
 
@@ -309,7 +308,6 @@ async function forceDownloadFromMaxMind() {
     console.error("Failed to download database from MaxMind:", error);
     manualUpdateError.value = error instanceof Error ? error.message : t("settings.failedToDownloadDatabase");
     return false;
-  } finally {
   }
 }
 

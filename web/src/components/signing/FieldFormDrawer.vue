@@ -33,7 +33,7 @@
                       :placeholder="getFieldLabel(field)"
                       :error="fieldErrors[field.id]"
                       :formula="(field as any).formula ?? field.preferences?.formula"
-                      :calculation-type="(field as any).calculationType as 'number' | 'currency' | undefined"
+                      :calculation-type="getCalculationType(field)"
                       :calculated-value="calculatedValues[field.id]"
                       :cell-count="getCellCount(field)"
                       :price="field.preferences?.price"
@@ -171,6 +171,10 @@ const emit = defineEmits<{
   reset: [];
   submit: [];
 }>();
+
+function getCalculationType(field: Field): "number" | "currency" | undefined {
+  return (field as { calculationType?: "number" | "currency" }).calculationType;
+}
 
 function onUpdate(fieldId: string, value: any): void {
   emit("update:modelValue", value);

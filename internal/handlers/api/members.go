@@ -385,9 +385,9 @@ func (h *MemberHandler) InviteMember(c fiber.Ctx) error {
 		OrganizationID: orgID,
 		Email:          email,
 		Role:           role,
-		Token:          uuid.New().String(), // In production, use crypto/rand
+		Token:          uuid.New().String(),                // In production, use crypto/rand
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		InvitedByID:    accountID, // Use account_id, not user_id
+		InvitedByID:    accountID,                          // Use account_id, not user_id
 		CreatedAt:      time.Now(),
 	}
 
@@ -398,13 +398,13 @@ func (h *MemberHandler) InviteMember(c fiber.Ctx) error {
 			Str("email", email).
 			Str("role", string(role)).
 			Msg("Failed to create invitation")
-		
+
 		// Check for duplicate key error (PostgreSQL unique constraint violation)
 		errStr := err.Error()
 		if strings.Contains(errStr, "duplicate key") || strings.Contains(errStr, "unique constraint") || strings.Contains(errStr, "unique_org_email") {
 			return webutil.Response(c, fiber.StatusConflict, "An invitation has already been sent to this email", nil)
 		}
-		
+
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create invitation", nil)
 	}
 

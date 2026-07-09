@@ -22,11 +22,11 @@ import (
 // - source pages are in PagesDir: lc_pages/{attachment_id}/0.pdf
 // - completed PDFs are written to SignedDir: lc_signed/submission_{submission_id}.pdf
 type CompletedDocumentBuilder struct {
-	Pool           *pgxpool.Pool
+	Pool            *pgxpool.Pool
 	TemplateQueries *queries.TemplateQueries
-	PagesDir       string
-	SignedDir      string
-	AssetsDir      string
+	PagesDir        string
+	SignedDir       string
+	AssetsDir       string
 }
 
 func (b *CompletedDocumentBuilder) CompletedPDFPath(submissionID string) string {
@@ -37,17 +37,6 @@ func (b *CompletedDocumentBuilder) CompletedPDFPath(submissionID string) string 
 
 func (b *CompletedDocumentBuilder) CertificatePDFPath(submissionID string) string {
 	return filepath.Join(b.SignedDir, fmt.Sprintf("submission_%s_certificate_v1.pdf", submissionID))
-}
-
-func firstNonNilTime(ts ...*time.Time) *time.Time {
-	for _, t := range ts {
-		if t == nil || t.IsZero() {
-			continue
-		}
-		tt := *t
-		return &tt
-	}
-	return nil
 }
 
 type loadedSubmitter struct {
@@ -66,11 +55,11 @@ type loadedSubmitter struct {
 }
 
 type submissionData struct {
-	tpl           *models.Template
-	values        map[string]any
-	submitters    []loadedSubmitter
+	tpl            *models.Template
+	values         map[string]any
+	submitters     []loadedSubmitter
 	completedAtMax *time.Time
-	publicBaseURL string
+	publicBaseURL  string
 }
 
 func (b *CompletedDocumentBuilder) loadSubmissionData(ctx context.Context, submissionID string) (*submissionData, error) {
@@ -139,7 +128,7 @@ func (b *CompletedDocumentBuilder) loadSubmissionData(ctx context.Context, submi
 			meta = map[string]any{}
 		}
 		templateSubmitterID, _ := meta["template_submitter_id"].(string)
-		
+
 		// Extract location from metadata (can be string for backward compatibility or map with city/country/full)
 		// Location is stored in submitter.metadata.location when completing signing
 		var location string
@@ -168,7 +157,7 @@ func (b *CompletedDocumentBuilder) loadSubmissionData(ctx context.Context, submi
 			}
 		}
 
-		fieldsAny, _ := meta["fields"]
+		fieldsAny := meta["fields"]
 		fieldsMap, ok := fieldsAny.(map[string]any)
 		if !ok {
 			fieldsMap = map[string]any{}
@@ -500,4 +489,3 @@ func (b *CompletedDocumentBuilder) EnsureCertificatePDF(ctx context.Context, sub
 	}
 	return outPath, nil
 }
-

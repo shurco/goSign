@@ -85,4 +85,3 @@ func TestUserHandler_GetCurrentUser(t *testing.T) {
 		})
 	}
 }
-

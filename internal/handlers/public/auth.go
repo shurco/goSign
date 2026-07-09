@@ -13,6 +13,7 @@ import (
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
+	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/security/password"
 	"github.com/shurco/gosign/pkg/storage/redis"
@@ -137,8 +138,9 @@ func SignIn(c fiber.Ctx) error {
 	}
 
 	// Create tokens
-	accessToken, refreshToken, err := createAuthTokens(ctx, user)
+	accessToken, refreshToken, err := services.IssueAuthTokens(user, "")
 	if err != nil {
+		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
@@ -202,9 +204,10 @@ func RefreshToken(c fiber.Ctx) error {
 
 	// Delete old refresh token and create new ones
 	invalidateRefreshToken(req.RefreshToken)
-	
-	newAccessToken, newRefreshToken, err := createAuthTokens(ctx, user)
+
+	newAccessToken, newRefreshToken, err := services.IssueAuthTokens(user, "")
 	if err != nil {
+		logging.Log.Err(err).Send()
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 

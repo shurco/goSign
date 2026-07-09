@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick, type Ref, ref } from "vue";
-import { useFormulas } from "../useFormulas";
+import { useFormulas } from "@/composables/useFormulas";
 import type { Field } from "@/models/template";
 
 describe("useFormulas - Formula Parsing and Calculation", () => {

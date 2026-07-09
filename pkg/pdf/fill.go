@@ -80,7 +80,7 @@ func FillFields(input FillFieldsInput) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
+	if _, err := pdf.WriteTo(&buf); err != nil {
 		return nil, fmt.Errorf("failed to write filled PDF: %w", err)
 	}
 
@@ -164,7 +164,7 @@ func MergeSignatures(input MergeSignaturesInput) ([]byte, error) {
 
 	// Write to buffer
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
+	if _, err := pdf.WriteTo(&buf); err != nil {
 		return nil, fmt.Errorf("failed to write PDF: %w", err)
 	}
 
@@ -238,7 +238,7 @@ func GenerateAuditTrail(input GenerateAuditTrailInput) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
+	if _, err := pdf.WriteTo(&buf); err != nil {
 		return nil, fmt.Errorf("failed to write PDF: %w", err)
 	}
 	return buf.Bytes(), nil

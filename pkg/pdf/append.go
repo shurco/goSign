@@ -59,7 +59,7 @@ func AppendPDF(basePDF []byte, extraPDF []byte) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := pdf.Write(&buf); err != nil {
+	if _, err := pdf.WriteTo(&buf); err != nil {
 		return nil, fmt.Errorf("failed to write merged PDF: %w", err)
 	}
 	return buf.Bytes(), nil

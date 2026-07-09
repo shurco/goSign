@@ -58,7 +58,7 @@ func (q *UserQueries) CreateUser(ctx context.Context, email, password, firstName
 	// Create account first
 	accountID := uuid.New().String()
 	accountName := fmt.Sprintf("%s %s", firstName, lastName)
-	
+
 	_, err = tx.Exec(ctx, `
 		INSERT INTO account (id, name, timezone, locale, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, NOW(), NOW())
@@ -405,4 +405,3 @@ func generateSecureToken(length int) (string, error) {
 	}
 	return hex.EncodeToString(bytes), nil
 }
-

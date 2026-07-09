@@ -14,13 +14,6 @@ import (
 //go:embed fonts/* img/*
 var Embedded embed.FS
 
-// DefaultOutputDir returns a sensible default directory for extracting embedded assets.
-//
-// We always use "./assets" (next to ./lc_pages, ./lc_signed, ./lc_uploads).
-func DefaultOutputDir() string {
-	return filepath.FromSlash("assets")
-}
-
 type Paths struct {
 	Dir string
 	// Fonts
@@ -97,4 +90,3 @@ func writeFileIfDifferent(efs fs.FS, src string, dst string) error {
 	}
 	return nil
 }
-

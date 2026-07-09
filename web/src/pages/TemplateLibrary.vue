@@ -150,7 +150,10 @@
           <template v-else>
             <button
               class="cursor-pointer rounded-full p-1.5 text-gray-400 transition-colors hover:text-yellow-600"
-              :title="((item as LibraryItem).data as Template).is_favorite ? $t('templates.removeFavorite') : $t('templates.addFavorite')"
+              :title="
+                ((item as LibraryItem).data as Template).is_favorite
+                  ? $t('templates.removeFavorite')
+                  : $t('templates.addFavorite')
               "
               @click.stop="toggleFavorite((item as LibraryItem).data as Template)"
             >
@@ -409,7 +412,6 @@ const { t } = useI18n();
 const templates = ref<Template[]>([]);
 const folders = ref<TemplateFolder[]>([]);
 const loading = ref(false);
-const selectedTemplates = ref<string[]>([]);
 const selectedFolderId = ref<string | null>(null);
 
 // Modals
@@ -433,7 +435,6 @@ const searchQuery = ref("");
 const selectedCategory = ref("");
 const sortBy = ref("name");
 const currentPage = ref(1);
-const pageSize = ref(12);
 
 // Type for unified list item
 interface LibraryItem {
@@ -521,12 +522,20 @@ const libraryItems = computed((): LibraryItem[] => {
   // Sort - parent navigation always first, then folders, then templates
   items.sort((a, b) => {
     // Parent navigation always comes first
-    if (a.type === "parent") {return -1;}
-    if (b.type === "parent") {return 1;}
+    if (a.type === "parent") {
+      return -1;
+    }
+    if (b.type === "parent") {
+      return 1;
+    }
 
     // Folders always come before templates
-    if (a.type === "folder" && b.type === "template") {return -1;}
-    if (a.type === "template" && b.type === "folder") {return 1;}
+    if (a.type === "folder" && b.type === "template") {
+      return -1;
+    }
+    if (a.type === "template" && b.type === "folder") {
+      return 1;
+    }
 
     // Both are folders - sort by name
     if (a.type === "folder" && b.type === "folder") {
@@ -687,7 +696,9 @@ const editTemplate = (template: Template) => {
 };
 
 const handleEditTemplate = async (formData: Record<string, unknown>) => {
-  if (!templateToEdit.value) {return;}
+  if (!templateToEdit.value) {
+    return;
+  }
 
   const name = formData.name as string;
   if (!name || name.trim() === "") {
@@ -718,49 +729,6 @@ const handleEditTemplate = async (formData: Record<string, unknown>) => {
   } catch (error) {
     console.error("Failed to update template:", error);
     alert(t("templates.updateError") || "Failed to update template");
-  }
-};
-
-const createNewTemplate = async () => {
-  try {
-    // Create a new empty template
-    const response = await apiPost("/api/v1/templates", {
-      name: t("templates.newTemplate"),
-      description: "",
-      schema: [],
-      fields: [],
-      submitters: []
-    });
-
-    if (response && response.data) {
-      // API returns: { success: true, message: "template", data: Template }
-      // or: { data: Template } (if wrapped)
-      let newTemplate = response.data;
-
-      // Handle case where data might be wrapped
-      if (newTemplate && typeof newTemplate === "object" && "template" in newTemplate) {
-        newTemplate = newTemplate.template;
-      }
-
-      const templateId =
-        newTemplate?.id ||
-        (newTemplate && typeof newTemplate === "object" && "id" in newTemplate ? newTemplate.id : null);
-
-      if (templateId) {
-        // Navigate to edit page for the new template
-        router.push(`/templates/${templateId}/edit`);
-      } else {
-        console.error("Failed to get template ID from response:", response);
-        alert(t("templates.createTemplateError"));
-      }
-    } else {
-      console.error("Failed to create template: unexpected response", response);
-      alert(t("templates.createTemplateError"));
-    }
-  } catch (error: any) {
-    console.error("Failed to create template:", error);
-    const errorMessage = error?.message || t("templates.createTemplateError");
-    alert(errorMessage);
   }
 };
 
@@ -992,28 +960,14 @@ const toggleFavorite = async (template: Template) => {
   }
 };
 
-const removeFilter = (filterKey: string) => {
-  if (filterKey === "search") {
-    searchQuery.value = "";
-  } else if (filterKey === "category") {
-    selectedCategory.value = "";
-  }
-};
-
-const clearFilters = () => {
-  searchQuery.value = "";
-  selectedCategory.value = "";
-  selectedFolderId.value = null;
-  currentPage.value = 1;
-  router.push("/templates");
-};
-
 const formatDate = (date: string | Date) => {
   return new Date(date).toLocaleDateString();
 };
 
 const translateCategory = (category: string): string => {
-  if (!category) {return '';}
+  if (!category) {
+    return "";
+  }
   // Map category values to translation keys
   const categoryMap: Record<string, string> = {
     business: "templates.business",
@@ -1028,12 +982,6 @@ const translateCategory = (category: string): string => {
   }
   // Fallback to original category if no translation found
   return category;
-};
-
-// Folder operations
-const openFolderMenu = (folder: TemplateFolder, event: MouseEvent) => {
-  event.stopPropagation();
-  folderMenuOpen.value = folderMenuOpen.value === folder.id ? null : folder.id;
 };
 
 const handleCreateFolder = async (formData: Record<string, unknown>) => {
@@ -1068,7 +1016,9 @@ const renameFolder = (folder: TemplateFolder) => {
 };
 
 const handleRenameFolder = async (formData: Record<string, unknown>) => {
-  if (!folderToRename.value) {return;}
+  if (!folderToRename.value) {
+    return;
+  }
 
   const name = formData.name as string;
   if (!name || name.trim() === "") {
@@ -1116,7 +1066,9 @@ const showMoveModal = (template: Template) => {
 };
 
 const handleMoveTemplate = async (formData: Record<string, unknown>) => {
-  if (!templateToMove.value) {return;}
+  if (!templateToMove.value) {
+    return;
+  }
 
   // Get folder_id - null, empty string, or actual folder ID
   let folderId = formData.folder_id as string | null | undefined;
@@ -1241,7 +1193,7 @@ watch(
   () => route.path,
   async (newPath, oldPath) => {
     // Only reload if navigating TO this page (not from it) and we need fresh data
-    if ((newPath === "/templates" || newPath.match(/^\/templates\/[^\/]+\/folder$/)) && oldPath !== newPath) {
+    if ((newPath === "/templates" || newPath.match(/^\/templates\/[^/]+\/folder$/)) && oldPath !== newPath) {
       // Only reload if data is empty or component was reused
       if (templates.value.length === 0 || !hasLoadedOnce) {
         await nextTick();

@@ -1,17 +1,13 @@
 package api
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
-	"github.com/shurco/gosign/pkg/storage/redis"
+	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -28,7 +24,6 @@ func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries, us
 		userQueries:         userQueries,
 	}
 }
-
 
 // CreateOrganization creates a new organization
 // @Summary Create organization
@@ -360,14 +355,14 @@ func (h *OrganizationHandler) SwitchOrganization(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Organization not found", nil)
 	}
 
-	tokens, err := issueOrgTokens(userRecord, orgID)
+	accessToken, refreshToken, err := services.IssueAuthTokens(userRecord, orgID)
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, err.Error(), nil)
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "Organization switched successfully", map[string]any{
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
 		"organization": map[string]any{
 			"id":   org.ID,
 			"name": org.Name,
@@ -400,46 +395,16 @@ func (h *OrganizationHandler) ExitOrganization(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusForbidden, "Only administrators can exit organization", nil)
 	}
 
-	tokens, err := issueOrgTokens(userRecord, "")
+	accessToken, refreshToken, err := services.IssueAuthTokens(userRecord, "")
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, err.Error(), nil)
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "Exited organization successfully", map[string]any{
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
 		"organization":  nil,
 	})
-}
-
-type orgTokens struct {
-	AccessToken  string
-	RefreshToken string
-}
-
-func issueOrgTokens(userRecord *queries.UserRecord, orgID string) (*orgTokens, error) {
-	modelUser := &models.User{
-		ID:    userRecord.ID,
-		Name:  fmt.Sprintf("%s %s", userRecord.FirstName, userRecord.LastName),
-		Email: userRecord.Email,
-	}
-
-	accessToken, err := middleware.CreateTokenWithOrg(modelUser, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create access token: %w", err)
-	}
-
-	refreshToken, err := middleware.CreateRefreshToken(userRecord.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create refresh token: %w", err)
-	}
-
-	refreshKey := fmt.Sprintf("refresh_token:%s", refreshToken)
-	if err := redis.Conn.Set(refreshKey, userRecord.ID, 7*24*time.Hour); err != nil {
-		return nil, fmt.Errorf("failed to store refresh token: %w", err)
-	}
-
-	return &orgTokens{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
 // RegisterRoutes registers all organization routes

@@ -676,7 +676,9 @@ const signatureFormat = computed({
   },
   set: (value: string) => {
     ensurePreferences();
-    props.field.preferences!.format = value;
+    if (props.field.preferences) {
+      props.field.preferences.format = value;
+    }
   }
 });
 const dateFormats = computed(() => [

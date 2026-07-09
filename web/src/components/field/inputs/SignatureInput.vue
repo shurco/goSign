@@ -276,8 +276,10 @@ function drawFromModelValue(dataUrl: string): void {
 }
 
 function getPoint(e: PointerEvent): { x: number; y: number } {
-  const c = canvasEl.value!;
-  const rect = c.getBoundingClientRect();
+  const rect = canvasEl.value?.getBoundingClientRect();
+  if (!rect) {
+    return { x: 0, y: 0 };
+  }
   return {
     x: e.clientX - rect.left,
     y: e.clientY - rect.top

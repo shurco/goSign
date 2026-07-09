@@ -27,7 +27,7 @@ import { SUPPORTED_LOCALES } from "@/i18n";
 import FormControl from "@/components/ui/FormControl.vue";
 import { apiPut } from "@/services/api";
 
-const { locale, t } = useI18n();
+const { locale } = useI18n();
 const locales = SUPPORTED_LOCALES;
 
 const currentLocale = computed(() => locale.value as string);

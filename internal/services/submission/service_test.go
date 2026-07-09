@@ -24,31 +24,10 @@ func (m *mockNotificationProvider) Type() models.NotificationType {
 	return models.NotificationTypeEmail
 }
 
-// Mock notification repository for testing
-type mockNotificationRepository struct{}
-
-func (m *mockNotificationRepository) Create(notification *models.Notification) error {
-	return nil
-}
-
-func (m *mockNotificationRepository) GetScheduledReady() ([]*models.Notification, error) {
-	return nil, nil
-}
-
-func (m *mockNotificationRepository) UpdateStatus(id string, status models.NotificationStatus) error {
-	return nil
-}
-
-func (m *mockNotificationRepository) CancelByRelatedID(relatedID string) error {
-	return nil
-}
-
 // Create a mock notification service
 func createMockNotificationService() *notification.Service {
-	repo := &mockNotificationRepository{}
-	service := notification.NewService(repo)
-	provider := &mockNotificationProvider{}
-	service.RegisterProvider(provider)
+	service := notification.NewService()
+	service.RegisterProvider(&mockNotificationProvider{})
 	return service
 }
 
@@ -133,7 +112,6 @@ func (m *mockRepository) CreateSubmission(ctx context.Context, submission *model
 	m.submissions[submission.ID] = submission
 	return nil
 }
-
 
 func TestCheckCompletion(t *testing.T) {
 	tests := []struct {
@@ -315,13 +293,13 @@ func TestResendInvitation(t *testing.T) {
 			tt.setupFunc(repo)
 
 			service := NewService(repo, nil, nil)
-			
+
 			// Skip tests that require notification service for unit testing
 			// These should be covered by integration tests
 			if tt.name == "resend invitation requires notification service" {
 				t.Skip("Requires notification service - integration test needed")
 			}
-			
+
 			err := service.ResendInvitation(context.Background(), tt.submitterID)
 
 			if tt.wantErr {
@@ -443,30 +421,30 @@ func TestDecline(t *testing.T) {
 
 func TestService_Send_SequentialValidation(t *testing.T) {
 	tests := []struct {
-		name        string
-		signingMode models.SigningMode
+		name          string
+		signingMode   models.SigningMode
 		numSubmitters int
-		wantErr     bool
-		errContains string
+		wantErr       bool
+		errContains   string
 	}{
 		{
-			name:        "sequential mode with 1 submitter fails",
-			signingMode: models.SigningModeSequential,
+			name:          "sequential mode with 1 submitter fails",
+			signingMode:   models.SigningModeSequential,
 			numSubmitters: 1,
-			wantErr:     true,
-			errContains: "sequential signing mode requires at least 2 submitters",
+			wantErr:       true,
+			errContains:   "sequential signing mode requires at least 2 submitters",
 		},
 		{
-			name:        "sequential mode with 2 submitters succeeds",
-			signingMode: models.SigningModeSequential,
+			name:          "sequential mode with 2 submitters succeeds",
+			signingMode:   models.SigningModeSequential,
 			numSubmitters: 2,
-			wantErr:     false,
+			wantErr:       false,
 		},
 		{
-			name:        "parallel mode with 1 submitter succeeds",
-			signingMode: models.SigningModeParallel,
+			name:          "parallel mode with 1 submitter succeeds",
+			signingMode:   models.SigningModeParallel,
 			numSubmitters: 1,
-			wantErr:     false,
+			wantErr:       false,
 		},
 	}
 

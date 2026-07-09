@@ -52,4 +52,3 @@ func TestStatsHandler_Get(t *testing.T) {
 		})
 	}
 }
-

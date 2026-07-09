@@ -104,4 +104,3 @@ func TestMemberHandler_OrganizationMembersAndInvite(t *testing.T) {
 		}
 	})
 }
-

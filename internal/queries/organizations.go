@@ -116,7 +116,7 @@ func (q *OrganizationQueries) GetUserOrganizations(ctx context.Context, userID s
 	if err := rows.Err(); err != nil {
 		// Error returned to handler for logging with context
 		return nil, err
-		
+
 	}
 
 	return organizations, nil
@@ -134,7 +134,7 @@ func (q *OrganizationQueries) UpdateOrganization(ctx context.Context, id string,
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -151,7 +151,7 @@ func (q *OrganizationQueries) DeleteOrganization(ctx context.Context, id string)
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -184,7 +184,7 @@ func (q *OrganizationQueries) AddOrganizationMember(ctx context.Context, member 
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -213,7 +213,7 @@ func (q *OrganizationQueries) GetOrganizationMember(ctx context.Context, orgID, 
 		}
 		// Error returned to handler for logging with context
 		return nil, err
-		
+
 	}
 
 	return &member, nil
@@ -284,7 +284,7 @@ func (q *OrganizationQueries) UpdateOrganizationMember(ctx context.Context, orgI
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -300,7 +300,7 @@ func (q *OrganizationQueries) RemoveOrganizationMember(ctx context.Context, orgI
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -333,7 +333,7 @@ func (q *OrganizationQueries) CreateOrganizationInvitation(ctx context.Context, 
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }
@@ -366,7 +366,7 @@ func (q *OrganizationQueries) GetOrganizationInvitation(ctx context.Context, tok
 		}
 		// Error returned to handler for logging with context
 		return nil, err
-		
+
 	}
 
 	return &invitation, nil
@@ -394,7 +394,7 @@ func (q *OrganizationQueries) AcceptOrganizationInvitation(ctx context.Context, 
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 
 	// Add user as member
@@ -422,7 +422,7 @@ func (q *OrganizationQueries) GetOrganizationInvitations(ctx context.Context, or
 	if err != nil {
 		// Error returned to handler for logging with context
 		return nil, err
-		
+
 	}
 	defer rows.Close()
 
@@ -450,7 +450,7 @@ func (q *OrganizationQueries) GetOrganizationInvitations(ctx context.Context, or
 	if err := rows.Err(); err != nil {
 		// Error returned to handler for logging with context
 		return nil, err
-		
+
 	}
 
 	return invitations, nil
@@ -467,7 +467,7 @@ func (q *OrganizationQueries) DeleteOrganizationInvitation(ctx context.Context, 
 	if err != nil {
 		// Error returned to handler for logging with context
 		return err
-		
+
 	}
 	return nil
 }

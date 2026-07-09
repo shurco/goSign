@@ -132,9 +132,9 @@ func (h *SubmitterHandler) Decline(c fiber.Ctx) error {
 
 // CompleteRequest request body for completing signing
 type CompleteRequest struct {
-	SubmitterID string                 `json:"submitter_id" validate:"required"`
+	SubmitterID string         `json:"submitter_id" validate:"required"`
 	Fields      map[string]any `json:"fields" validate:"required"`
-	Signature   SignatureData          `json:"signature,omitempty"`
+	Signature   SignatureData  `json:"signature,omitempty"`
 }
 
 // SignatureData signature data
@@ -179,7 +179,7 @@ func (h *SubmitterHandler) Complete(c fiber.Ctx) error {
 	if submitter.Metadata == nil {
 		submitter.Metadata = make(map[string]any)
 	}
-	
+
 	// Store fields
 	if req.Fields != nil {
 		submitter.Metadata["fields"] = req.Fields
@@ -233,4 +233,3 @@ func (h *SubmitterHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/decline", h.Decline)
 	router.Post("/complete", h.Complete)
 }
-

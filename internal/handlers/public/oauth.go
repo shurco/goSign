@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/gosign/internal/queries"
+	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/storage/redis"
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -179,7 +180,7 @@ func GoogleCallback(c fiber.Ctx) error {
 	}
 
 	// Create JWT tokens
-	accessToken, refreshToken, err := createAuthTokens(ctx, user)
+	accessToken, refreshToken, err := services.IssueAuthTokens(user, "")
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
@@ -332,7 +333,7 @@ func GitHubCallback(c fiber.Ctx) error {
 	}
 
 	// Create JWT tokens
-	accessToken, refreshToken, err := createAuthTokens(ctx, user)
+	accessToken, refreshToken, err := services.IssueAuthTokens(user, "")
 	if err != nil {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
@@ -469,15 +470,8 @@ func generateStateToken() (string, error) {
 }
 
 func splitName(fullName string) []string {
-	// Simple name splitting - can be improved
-	parts := make([]string, 0, 2)
-	for _, part := range []rune(fullName) {
-		if part == ' ' {
-			break
-		}
-	}
-
 	// Basic split by first space
+	parts := make([]string, 0, 2)
 	for i, char := range fullName {
 		if char == ' ' {
 			parts = append(parts, fullName[:i])

@@ -1,15 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/gosign/internal/middleware"
-	"github.com/shurco/gosign/internal/models"
-	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/storage/redis"
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -26,38 +21,6 @@ func parseAndValidate(c fiber.Ctx, v any) error {
 	return nil
 }
 
-// createAuthTokens creates and stores access and refresh tokens
-func createAuthTokens(ctx context.Context, user *queries.UserRecord) (access, refresh string, err error) {
-	return createAuthTokensWithOrg(ctx, user, "")
-}
-
-// createAuthTokensWithOrg creates and stores access and refresh tokens with organization context
-func createAuthTokensWithOrg(ctx context.Context, user *queries.UserRecord, organizationID string) (access, refresh string, err error) {
-	modelUser := &models.User{
-		ID:    user.ID,
-		Name:  fmt.Sprintf("%s %s", user.FirstName, user.LastName),
-		Email: user.Email,
-	}
-
-	accessToken, err := middleware.CreateTokenWithOrg(modelUser, organizationID)
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshToken, err := middleware.CreateRefreshToken(user.ID)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Store refresh token in Redis
-	refreshKey := fmt.Sprintf("refresh_token:%s", refreshToken)
-	if err := redis.Conn.Set(refreshKey, user.ID, 7*24*time.Hour); err != nil {
-		logging.Log.Err(err).Msg("Failed to store refresh token")
-	}
-
-	return accessToken, refreshToken, nil
-}
-
 // invalidateRefreshToken removes refresh token from Redis
 func invalidateRefreshToken(refreshToken string) {
 	if refreshToken != "" {
@@ -67,4 +30,3 @@ func invalidateRefreshToken(refreshToken string) {
 		}
 	}
 }
-

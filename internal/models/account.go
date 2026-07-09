@@ -14,8 +14,8 @@ type AccountSettings struct {
 // GeolocationSettings geolocation configuration
 type GeolocationSettings struct {
 	MaxMindLicenseKey string `json:"maxmind_license_key,omitempty"` // MaxMind license key for automatic database download
-	DownloadURL       string `json:"download_url,omitempty"`         // Alternative: URL to download database archive
-	DownloadMethod   string `json:"download_method,omitempty"`      // "maxmind" or "url"
+	DownloadURL       string `json:"download_url,omitempty"`        // Alternative: URL to download database archive
+	DownloadMethod    string `json:"download_method,omitempty"`     // "maxmind" or "url"
 }
 
 // EmailSettings email configuration
@@ -47,37 +47,37 @@ type WebhookSettings struct {
 // BrandingSettings extended configuration
 type BrandingSettings struct {
 	// Basic
-	LogoURL         string `json:"logo_url,omitempty"`
-	FaviconURL      string `json:"favicon_url,omitempty"`
-	CompanyName     string `json:"company_name,omitempty"`
-	
+	LogoURL     string `json:"logo_url,omitempty"`
+	FaviconURL  string `json:"favicon_url,omitempty"`
+	CompanyName string `json:"company_name,omitempty"`
+
 	// Colors
 	PrimaryColor    string `json:"primary_color,omitempty"`    // #4F46E5
 	SecondaryColor  string `json:"secondary_color,omitempty"`  // #6366F1
 	AccentColor     string `json:"accent_color,omitempty"`     // #10B981
 	BackgroundColor string `json:"background_color,omitempty"` // #FFFFFF
 	TextColor       string `json:"text_color,omitempty"`       // #111827
-	
+
 	// Typography
-	FontFamily      string `json:"font_family,omitempty"` // 'Inter', 'Roboto', etc.
-	FontURL         string `json:"font_url,omitempty"`    // Google Fonts URL
-	
+	FontFamily string `json:"font_family,omitempty"` // 'Inter', 'Roboto', etc.
+	FontURL    string `json:"font_url,omitempty"`    // Google Fonts URL
+
 	// Signing Page
 	SigningPageTheme string `json:"signing_page_theme,omitempty"` // 'default', 'minimal', 'corporate'
 	ShowPoweredBy    bool   `json:"show_powered_by"`              // default: true
 	CustomCSS        string `json:"custom_css,omitempty"`         // Advanced customization
-	
+
 	// Email Templates
 	EmailHeaderURL  string `json:"email_header_url,omitempty"`
 	EmailFooterText string `json:"email_footer_text,omitempty"`
 	EmailTheme      string `json:"email_theme,omitempty"` // 'default', 'minimal', 'corporate'
-	
+
 	// Custom Domain
-	CustomDomain    string `json:"custom_domain,omitempty"`
-	
+	CustomDomain string `json:"custom_domain,omitempty"`
+
 	// Legal
-	TermsURL        string `json:"terms_url,omitempty"`
-	PrivacyURL      string `json:"privacy_url,omitempty"`
+	TermsURL   string `json:"terms_url,omitempty"`
+	PrivacyURL string `json:"privacy_url,omitempty"`
 }
 
 // BrandingAsset represents uploaded branding assets
@@ -145,29 +145,28 @@ type Organization struct {
 
 // OrganizationMember represents a member of an organization
 type OrganizationMember struct {
-	ID             string          `json:"id"`
-	OrganizationID string          `json:"organization_id"`
-	UserID         string          `json:"user_id"`
+	ID             string           `json:"id"`
+	OrganizationID string           `json:"organization_id"`
+	UserID         string           `json:"user_id"`
 	Role           OrganizationRole `json:"role"`
-	JoinedAt       time.Time       `json:"joined_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	JoinedAt       time.Time        `json:"joined_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 	// Extended fields (not in DB, populated from joins)
-	Email      string `json:"email,omitempty"`
-	FirstName  string `json:"first_name,omitempty"`
-	LastName   string `json:"last_name,omitempty"`
-	UserName   string `json:"user_name,omitempty"`
+	Email     string `json:"email,omitempty"`
+	FirstName string `json:"first_name,omitempty"`
+	LastName  string `json:"last_name,omitempty"`
+	UserName  string `json:"user_name,omitempty"`
 }
 
 // OrganizationInvitation represents an invitation to join an organization
 type OrganizationInvitation struct {
-	ID             string          `json:"id"`
-	OrganizationID string          `json:"organization_id"`
-	Email          string          `json:"email"`
+	ID             string           `json:"id"`
+	OrganizationID string           `json:"organization_id"`
+	Email          string           `json:"email"`
 	Role           OrganizationRole `json:"role"`
-	Token          string          `json:"token"`
-	ExpiresAt      time.Time       `json:"expires_at"`
-	InvitedByID    string          `json:"invited_by_id"`
-	CreatedAt      time.Time       `json:"created_at"`
-	AcceptedAt     *time.Time      `json:"accepted_at,omitempty"`
+	Token          string           `json:"token"`
+	ExpiresAt      time.Time        `json:"expires_at"`
+	InvitedByID    string           `json:"invited_by_id"`
+	CreatedAt      time.Time        `json:"created_at"`
+	AcceptedAt     *time.Time       `json:"accepted_at,omitempty"`
 }
-

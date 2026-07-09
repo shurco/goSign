@@ -36,4 +36,3 @@ func NewStorage(ctx context.Context, cfg Config) (BlobStorage, error) {
 		return nil, fmt.Errorf("unsupported storage provider: %s", cfg.Provider)
 	}
 }
-

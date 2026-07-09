@@ -196,7 +196,7 @@ func (h *SigningLinkHandler) Create(c fiber.Ctx) error {
 	}
 
 	// Record event for dashboard timeline (best-effort; in the same tx).
-	clientIP := GetClientIP(c)
+	clientIP := webutil.ClientIP(c)
 	_, _ = tx.Exec(ctx, `
 		INSERT INTO event (id, type, actor_id, resource_type, resource_id, metadata_json, ip, created_at)
 		VALUES (gen_random_uuid(), 'submission.created', $1, 'submission', $2, '{}'::jsonb, $3::inet, NOW())

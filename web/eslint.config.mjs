@@ -82,6 +82,7 @@ export default [
 
       // Find and remove unused ES6 module imports.
       'no-unused-vars': 'off', // Disable ESLint's 'no-unused-vars'
+      '@typescript-eslint/no-unused-vars': 'off', // Handled by unused-imports/no-unused-vars (with ^_ ignore pattern)
       'unused-imports/no-unused-imports': 'error', // Disallow unused imports
       'unused-imports/no-unused-vars': ['error', { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' }] // Disallow unused variables and arguments
     }
@@ -91,6 +92,14 @@ export default [
     files: ['src/components/field/Field.vue'],
     rules: {
       'vue/no-mutating-props': 'off'
+    }
+  },
+  {
+    // no-useless-assignment cannot see template usage in <script setup> SFCs,
+    // producing false positives for every template-referenced binding.
+    files: ['**/*.vue'],
+    rules: {
+      'no-useless-assignment': 'off'
     }
   }
 ];

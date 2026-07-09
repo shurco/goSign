@@ -314,30 +314,6 @@ function getEventIcon(type: string): string {
   return icons[type] || "•";
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) {
-    return t("time.justNow");
-  }
-  if (minutes < 60) {
-    return t("time.minutesAgo", { minutes });
-  }
-  if (hours < 24) {
-    return t("time.hoursAgo", { hours });
-  }
-  if (days < 7) {
-    return t("time.daysAgo", { days });
-  }
-
-  return date.toLocaleDateString();
-}
-
 function formatEventDate(value: unknown): string {
   const s = String(value || "");
   if (!s) {

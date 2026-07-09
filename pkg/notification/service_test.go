@@ -9,19 +9,19 @@ import (
 
 // MockProvider is a mock for notification provider
 type MockProvider struct {
-	SendCalled    bool
+	SendCalled       bool
 	LastNotification *models.Notification
-	ShouldFail    bool
+	ShouldFail       bool
 }
 
 func (m *MockProvider) Send(ctx context.Context, notification *models.Notification) error {
 	m.SendCalled = true
 	m.LastNotification = notification
-	
+
 	if m.ShouldFail {
 		return &mockError{message: "send failed"}
 	}
-	
+
 	return nil
 }
 
@@ -37,43 +37,8 @@ func (e *mockError) Error() string {
 	return e.message
 }
 
-// MockRepository is a mock for notification repository
-type MockRepository struct {
-	CreateCalled    bool
-	UpdateCalled    bool
-	CancelCalled    bool
-	Notifications   []*models.Notification
-}
-
-func (m *MockRepository) Create(notification *models.Notification) error {
-	m.CreateCalled = true
-	m.Notifications = append(m.Notifications, notification)
-	return nil
-}
-
-func (m *MockRepository) GetScheduledReady() ([]*models.Notification, error) {
-	return m.Notifications, nil
-}
-
-func (m *MockRepository) UpdateStatus(id string, status models.NotificationStatus) error {
-	m.UpdateCalled = true
-	for _, n := range m.Notifications {
-		if n.ID == id {
-			n.Status = status
-			break
-		}
-	}
-	return nil
-}
-
-func (m *MockRepository) CancelByRelatedID(relatedID string) error {
-	m.CancelCalled = true
-	return nil
-}
-
 func TestService_RegisterProvider(t *testing.T) {
-	repo := &MockRepository{}
-	service := NewService(repo)
+	service := NewService()
 	provider := &MockProvider{}
 
 	service.RegisterProvider(provider)
@@ -123,8 +88,7 @@ func TestService_Send(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &MockRepository{}
-			service := NewService(repo)
+			service := NewService()
 			provider := &MockProvider{ShouldFail: tt.providerFails}
 			service.RegisterProvider(provider)
 
@@ -141,90 +105,20 @@ func TestService_Send(t *testing.T) {
 			if provider.LastNotification.ID != tt.notification.ID {
 				t.Error("Expected notification to be passed to provider")
 			}
-		})
-	}
-}
 
-func TestService_Schedule(t *testing.T) {
-	tests := []struct {
-		name         string
-		notification *models.Notification
-		wantErr      bool
-	}{
-		{
-			name: "schedule notification",
-			notification: &models.Notification{
-				ID:        "notif-123",
-				Type:      models.NotificationTypeEmail,
-				Recipient: "test@example.com",
-				Status:    models.NotificationStatusPending,
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &MockRepository{}
-			service := NewService(repo)
-
-			err := service.Schedule(tt.notification)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Schedule() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if !repo.CreateCalled {
-				t.Error("Expected repository.Create to be called")
-			}
-
-			if tt.notification.Status != models.NotificationStatusPending {
-				t.Errorf("Expected status to be pending, got %s", tt.notification.Status)
+			if tt.notification.Status != tt.wantStatus {
+				t.Errorf("Expected status %s, got %s", tt.wantStatus, tt.notification.Status)
 			}
 		})
 	}
 }
 
-func TestService_GetScheduledReady(t *testing.T) {
-	repo := &MockRepository{
-		Notifications: []*models.Notification{
-			{
-				ID:     "notif-1",
-				Type:   models.NotificationTypeEmail,
-				Status: models.NotificationStatusPending,
-			},
-			{
-				ID:     "notif-2",
-				Type:   models.NotificationTypeEmail,
-				Status: models.NotificationStatusPending,
-			},
-		},
-	}
-	service := NewService(repo)
+func TestService_SendNoProvider(t *testing.T) {
+	service := NewService()
 
-	notifications, err := service.GetScheduledReady()
-
-	if err != nil {
-		t.Errorf("GetScheduledReady() error = %v", err)
-	}
-
-	if len(notifications) != 2 {
-		t.Errorf("Expected 2 notifications, got %d", len(notifications))
-	}
-}
-
-func TestService_CancelScheduled(t *testing.T) {
-	repo := &MockRepository{}
-	service := NewService(repo)
-
-	err := service.CancelScheduled("sub-123")
-
-	if err != nil {
-		t.Errorf("CancelScheduled() error = %v", err)
-	}
-
-	if !repo.CancelCalled {
-		t.Error("Expected repository.CancelByRelatedID to be called")
+	err := service.Send(&models.Notification{Type: models.NotificationTypeEmail})
+	if err == nil {
+		t.Error("Expected error when no provider is registered")
 	}
 }
 
@@ -251,8 +145,7 @@ func TestService_CanSend(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &MockRepository{}
-			service := NewService(repo)
+			service := NewService()
 
 			if tt.registerProvider {
 				provider := &MockProvider{}
@@ -267,4 +160,3 @@ func TestService_CanSend(t *testing.T) {
 		})
 	}
 }
-

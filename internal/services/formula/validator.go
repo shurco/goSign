@@ -31,7 +31,7 @@ func ValidateFormula(formula string, fields []models.Field) error {
 	// Rewrite formula: UUIDs contain hyphens and expr parses them as minus operator.
 	// Replace each UUID with a valid identifier (e.g. __f0__) before compiling.
 	rewritten, placeholderToID := rewriteFormulaWithPlaceholders(formula)
-	env := buildFormulaEnvWithPlaceholders(rewritten, placeholderToID, nil)
+	env := buildFormulaEnvWithPlaceholders(rewritten, placeholderToID)
 	_, err := expr.Compile(rewritten, expr.Env(env))
 	if err != nil {
 		return fmt.Errorf("invalid formula syntax: %w", err)
@@ -106,36 +106,18 @@ func rewriteFormulaWithPlaceholders(formula string) (string, map[string]string) 
 	return rewritten, placeholderToID
 }
 
-// buildFormulaEnvWithPlaceholders builds env for expr: placeholder -> value (or 0 if fieldValues nil).
-// rewritten is used when fieldValues is nil to add any remaining identifiers (e.g. field_1) so compile succeeds.
-func buildFormulaEnvWithPlaceholders(rewritten string, placeholderToID map[string]string, fieldValues map[string]any) map[string]any {
+// buildFormulaEnvWithPlaceholders builds env for expr with zero values so compile succeeds:
+// placeholders (rewritten UUIDs) and any remaining identifiers (e.g. field_1) map to 0.
+func buildFormulaEnvWithPlaceholders(rewritten string, placeholderToID map[string]string) map[string]any {
 	env := make(map[string]any)
-	for placeholder, fieldID := range placeholderToID {
-		if fieldValues != nil {
-			if v, ok := fieldValues[fieldID]; ok {
-				env[placeholder] = toFloat64(v)
-			} else {
-				env[placeholder] = float64(0)
-			}
-		} else {
-			env[placeholder] = float64(0)
-		}
+	for placeholder := range placeholderToID {
+		env[placeholder] = float64(0)
 	}
-	if fieldValues != nil {
-		for fieldID, v := range fieldValues {
-			if uuidPattern.MatchString(fieldID) {
-				continue
-			}
-			env[fieldID] = toFloat64(v)
+	for _, id := range extractIdentifiers(rewritten) {
+		if _, ok := env[id]; ok {
+			continue
 		}
-	} else {
-		// Validation: add any other identifiers in the formula so expr.Compile succeeds
-		for _, id := range extractIdentifiers(rewritten) {
-			if _, ok := env[id]; ok {
-				continue
-			}
-			env[id] = float64(0)
-		}
+		env[id] = float64(0)
 	}
 	addBuiltinFunctions(env)
 	return env
@@ -163,22 +145,6 @@ func extractIdentifiers(formula string) []string {
 		out = append(out, id)
 	}
 	return out
-}
-
-func toFloat64(v any) float64 {
-	switch x := v.(type) {
-	case float64:
-		return x
-	case int:
-		return float64(x)
-	case int64:
-		return float64(x)
-	case string:
-		if parsed, err := strconv.ParseFloat(x, 64); err == nil {
-			return parsed
-		}
-	}
-	return 0
 }
 
 func addBuiltinFunctions(env map[string]any) {
@@ -221,35 +187,6 @@ func addBuiltinFunctions(env map[string]any) {
 	}
 	env["ROUND"] = func(value float64, decimals int) float64 {
 		multiplier := math.Pow(10, float64(decimals))
-		return math.Round(value * multiplier) / multiplier
+		return math.Round(value*multiplier) / multiplier
 	}
-}
-
-// EvaluateFormula evaluates formula with field values
-func EvaluateFormula(formula string, fieldValues map[string]any, fields []models.Field) (float64, error) {
-	if formula == "" {
-		return 0, nil
-	}
-
-	rewritten, placeholderToID := rewriteFormulaWithPlaceholders(formula)
-	env := buildFormulaEnvWithPlaceholders(rewritten, placeholderToID, fieldValues)
-
-	program, err := expr.Compile(rewritten, expr.Env(env))
-	if err != nil {
-		return 0, fmt.Errorf("failed to compile formula: %w", err)
-	}
-
-	output, err := expr.Run(program, env)
-	if err != nil {
-		return 0, fmt.Errorf("failed to evaluate formula: %w", err)
-	}
-
-	result, ok := output.(float64)
-	if !ok {
-		if intResult, ok := output.(int); ok {
-			return float64(intResult), nil
-		}
-		return 0, fmt.Errorf("formula result is not a number: %v", output)
-	}
-	return result, nil
 }

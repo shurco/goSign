@@ -35,13 +35,13 @@ func (h *StatsHandler) Get(c fiber.Ctx) error {
 	}
 
 	var (
-		totalSubmissions     int
-		pendingSubmissions   int
+		totalSubmissions      int
+		pendingSubmissions    int
 		inProgressSubmissions int
-		completedSubmissions int
-		totalTemplates       int
-		activeTemplates      int
-		totalSubmitters      int
+		completedSubmissions  int
+		totalTemplates        int
+		activeTemplates       int
+		totalSubmitters       int
 	)
 
 	// KISS: derive submission status from submitter statuses.
@@ -109,4 +109,3 @@ func (h *StatsHandler) Get(c fiber.Ctx) error {
 func (h *StatsHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.Get)
 }
-

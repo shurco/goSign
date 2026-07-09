@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
@@ -10,7 +12,7 @@ import (
 
 // SubmitterRepository is an interface for submitter database operations
 type SubmitterRepository interface {
-	GetBySlug(slug string) (*models.Submitter, error)
+	GetSubmitterBySlug(ctx context.Context, slug string) (*models.Submitter, error)
 }
 
 // EmbedHandler handles requests for embedded signing interface
@@ -41,7 +43,7 @@ func (h *EmbedHandler) GetEmbedPage(c fiber.Ctx) error {
 	}
 
 	// Validate slug in database
-	submitter, err := h.submitterRepo.GetBySlug(slug)
+	submitter, err := h.submitterRepo.GetSubmitterBySlug(c.Context(), slug)
 	if err != nil || submitter == nil {
 		log.Warn().Str("slug", slug).Msg("Invalid slug")
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -85,7 +87,6 @@ func (h *EmbedHandler) GetEmbedPage(c fiber.Ctx) error {
         // Post message for communication with parent window
         window.addEventListener('message', function(event) {
             // Handle messages from parent window
-            console.log('Received message:', event.data);
         });
 
         // Send events to parent window
@@ -132,7 +133,7 @@ func (h *EmbedHandler) GetEmbedConfig(c fiber.Ctx) error {
 	}
 
 	// Validate slug in database
-	submitter, err := h.submitterRepo.GetBySlug(slug)
+	submitter, err := h.submitterRepo.GetSubmitterBySlug(c.Context(), slug)
 	if err != nil || submitter == nil {
 		log.Warn().Str("slug", slug).Msg("Invalid slug for config")
 		return webutil.Response(c, fiber.StatusNotFound, "Not found", nil)
@@ -166,4 +167,3 @@ func (h *EmbedHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/embed/:slug", h.GetEmbedPage)
 	router.Get("/embed/:slug/config", h.GetEmbedConfig)
 }
-

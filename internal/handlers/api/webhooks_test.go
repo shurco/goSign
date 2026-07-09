@@ -2,20 +2,77 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/testutil"
 )
 
-func TestWebhookHandler_CRUDViaResourceHandler(t *testing.T) {
-	repo := newMemRepo[models.Webhook]()
-	h := NewWebhookHandler(repo)
+// memWebhookStore is an in-memory WebhookStore for handler tests.
+type memWebhookStore struct {
+	items  map[string]models.Webhook
+	nextID int
+}
+
+func newMemWebhookStore() *memWebhookStore {
+	return &memWebhookStore{items: make(map[string]models.Webhook)}
+}
+
+func (s *memWebhookStore) ListWebhooks(_ context.Context, accountID string) ([]models.Webhook, error) {
+	var out []models.Webhook
+	for _, w := range s.items {
+		if w.AccountID == accountID {
+			out = append(out, w)
+		}
+	}
+	return out, nil
+}
+
+func (s *memWebhookStore) GetWebhook(_ context.Context, accountID, id string) (*models.Webhook, error) {
+	w, ok := s.items[id]
+	if !ok || w.AccountID != accountID {
+		return nil, pgx.ErrNoRows
+	}
+	return &w, nil
+}
+
+func (s *memWebhookStore) CreateWebhook(_ context.Context, webhook *models.Webhook) error {
+	s.nextID++
+	webhook.ID = fmt.Sprintf("wh-%d", s.nextID)
+	s.items[webhook.ID] = *webhook
+	return nil
+}
+
+func (s *memWebhookStore) UpdateWebhook(_ context.Context, webhook *models.Webhook) error {
+	existing, ok := s.items[webhook.ID]
+	if !ok || existing.AccountID != webhook.AccountID {
+		return pgx.ErrNoRows
+	}
+	s.items[webhook.ID] = *webhook
+	return nil
+}
+
+func (s *memWebhookStore) DeleteWebhook(_ context.Context, accountID, id string) error {
+	w, ok := s.items[id]
+	if !ok || w.AccountID != accountID {
+		return pgx.ErrNoRows
+	}
+	delete(s.items, id)
+	return nil
+}
+
+func TestWebhookHandler_CRUD(t *testing.T) {
+	store := newMemWebhookStore()
+	h := NewWebhookHandler(store)
 
 	tests := []struct {
 		name       string
@@ -56,13 +113,37 @@ func TestWebhookHandler_CRUDViaResourceHandler(t *testing.T) {
 			useAuth:    true,
 			method:     http.MethodPost,
 			path:       "/webhooks/",
-			body:       []byte(`{"url":"https://x","events":["submission.created"],"secret":"s","enabled":true}`),
+			body:       []byte(`{"url":"https://x","events":["submission.created"],"secret":"s"}`),
 			wantStatus: http.StatusCreated,
+			check: func(t *testing.T, body map[string]any) {
+				data := body["data"].(map[string]any)
+				if data["account_id"] != testutil.User1.AccountID {
+					t.Fatalf("account_id = %v, want %s", data["account_id"], testutil.User1.AccountID)
+				}
+				if data["enabled"] != true {
+					t.Fatalf("enabled = %v, want true by default", data["enabled"])
+				}
+			},
+		},
+		{
+			name:       "Create without events returns 400",
+			useAuth:    true,
+			method:     http.MethodPost,
+			path:       "/webhooks/",
+			body:       []byte(`{"url":"https://x"}`),
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "Get not found returns 404",
 			useAuth:    true,
 			method:     http.MethodGet,
+			path:       "/webhooks/bad-id",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "Delete not found returns 404",
+			useAuth:    true,
+			method:     http.MethodDelete,
 			path:       "/webhooks/bad-id",
 			wantStatus: http.StatusNotFound,
 		},
@@ -81,8 +162,8 @@ func TestWebhookHandler_CRUDViaResourceHandler(t *testing.T) {
 
 			var req *http.Request
 			switch tt.method {
-			case http.MethodGet:
-				req = httptest.NewRequest(http.MethodGet, tt.path, nil)
+			case http.MethodGet, http.MethodDelete:
+				req = httptest.NewRequest(tt.method, tt.path, nil)
 			case http.MethodPost:
 				req = httptest.NewRequest(http.MethodPost, tt.path, bytes.NewReader(tt.body))
 				req.Header.Set("Content-Type", "application/json")
@@ -111,3 +192,39 @@ func TestWebhookHandler_CRUDViaResourceHandler(t *testing.T) {
 	}
 }
 
+func TestWebhookHandler_AccountIsolation(t *testing.T) {
+	store := newMemWebhookStore()
+	h := NewWebhookHandler(store)
+
+	// Webhook belongs to User1's account.
+	owned := &models.Webhook{
+		AccountID: testutil.User1.AccountID,
+		URL:       "https://x",
+		Events:    []string{"submission.created"},
+		Enabled:   true,
+	}
+	if err := store.CreateWebhook(context.Background(), owned); err != nil {
+		t.Fatalf("seed webhook: %v", err)
+	}
+
+	app := fiber.New()
+	app.Use(testutil.AuthMiddleware(testutil.User2))
+	h.RegisterRoutes(app.Group("/webhooks"))
+
+	// User2 must not see or delete User1's webhook.
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/webhooks/"+owned.ID, nil))
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("get foreign webhook status = %d, want 404", resp.StatusCode)
+	}
+
+	resp, err = app.Test(httptest.NewRequest(http.MethodDelete, "/webhooks/"+owned.ID, nil))
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("delete foreign webhook status = %d, want 404", resp.StatusCode)
+	}
+}

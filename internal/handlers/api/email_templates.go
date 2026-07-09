@@ -255,8 +255,8 @@ func (h *EmailTemplateHandler) UpdateEmailTemplate(c fiber.Ctx) error {
 
 	// Update template (always use existing name and locale, ignore from request)
 	template := &models.EmailTemplate{
-		Name:    existing.Name,    // Always use existing name to prevent breaking email sending
-		Locale:  existing.Locale,  // Always use existing locale
+		Name:    existing.Name,   // Always use existing name to prevent breaking email sending
+		Locale:  existing.Locale, // Always use existing locale
 		Subject: req.Subject,
 		Content: req.Content,
 	}

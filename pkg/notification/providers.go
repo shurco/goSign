@@ -116,7 +116,7 @@ func NewSMSProvider(config TwilioConfig) *SMSProvider {
 func (p *SMSProvider) Send(ctx context.Context, notification *models.Notification) error {
 	// Check if Twilio is configured and enabled
 	if !p.config.Enabled || p.config.AccountSID == "" || p.config.AuthToken == "" {
-		return fmt.Errorf("Twilio SMS is not configured or disabled")
+		return fmt.Errorf("twilio SMS is not configured or disabled")
 	}
 
 	// Validate phone number
@@ -125,7 +125,7 @@ func (p *SMSProvider) Send(ctx context.Context, notification *models.Notificatio
 	}
 
 	if p.config.FromNumber == "" {
-		return fmt.Errorf("Twilio from number is required")
+		return fmt.Errorf("twilio from number is required")
 	}
 	if strings.TrimSpace(notification.Body) == "" {
 		return fmt.Errorf("SMS body is required")
@@ -167,4 +167,3 @@ func (p *SMSProvider) Type() models.NotificationType {
 func (p *SMSProvider) Enabled() bool {
 	return p.config.Enabled && p.config.AccountSID != "" && p.config.AuthToken != "" && p.config.FromNumber != ""
 }
-
