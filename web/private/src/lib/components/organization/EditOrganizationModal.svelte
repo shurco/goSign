@@ -88,7 +88,7 @@
     }
 
     try {
-      const response = await apiPut(`/api/v1/organizations/${organization.id}`, {
+      const response = await apiPut(`/company/${organization.id}`, {
         name: name,
         description: description
       });

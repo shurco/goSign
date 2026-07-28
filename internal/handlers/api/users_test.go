@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/testutil"

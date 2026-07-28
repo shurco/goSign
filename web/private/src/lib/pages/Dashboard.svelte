@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { goto } from "$app/navigation";
   import { t, te } from "@/i18n/index.svelte";
   import ResourceTable from "@/components/common/ResourceTable.svelte";
@@ -72,7 +73,7 @@
   async function loadStats(): Promise<void> {
     try {
       // Token check is redundant - fetchWithAuth handles authentication
-      const response = await fetchWithAuth("/api/v1/stats");
+      const response = await fetchWithAuth(apiUrl("/stats"));
       if (response.ok) {
         const data = await response.json();
         // Stats API returns: { message: "Stats retrieved", data: {...} }
@@ -96,7 +97,7 @@
   async function loadRecentSubmissions(): Promise<void> {
     try {
       // Token check is redundant - fetchWithAuth handles authentication
-      const response = await fetchWithAuth("/api/v1/signing-links?page=1&page_size=5");
+      const response = await fetchWithAuth(apiUrl("/signing-links?page=1&page_size=5"));
       if (response.ok) {
         const data = await response.json();
         const payload = data.data || data;
@@ -122,7 +123,7 @@
   async function loadRecentEvents(): Promise<void> {
     try {
       // Token check is redundant - fetchWithAuth handles authentication
-      const response = await fetchWithAuth("/api/v1/events?limit=6&sort=created_at:desc");
+      const response = await fetchWithAuth(apiUrl("/events?limit=6&sort=created_at:desc"));
       if (response.ok) {
         const data = await response.json();
         // API returns: { message: "...", data: { items: [], total: 0, ... } }
@@ -189,7 +190,7 @@
       return;
     }
     try {
-      const res = await fetchWithAuth(`/api/v1/signing-links/${encodeURIComponent(id)}/document`, { method: "GET" });
+      const res = await fetchWithAuth(apiUrl(`/signing-links/${encodeURIComponent(id)}/document`), { method: "GET" });
       if (res.status === 409) {
         alert("Document is not completed yet.");
         return;

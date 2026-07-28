@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/testutil"
 )
@@ -72,19 +73,6 @@ func TestSettingsHandler_ValidationAndAuth(t *testing.T) {
 			path:         "/settings/sms/test",
 			body:         `{}`,
 			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name: "update branding without user queries returns 500",
-			setupApp: func() *fiber.App {
-				app := fiber.New()
-				app.Use(testutil.AuthMiddleware(testutil.User1))
-				app.Put("/settings/branding", h.UpdateBranding)
-				return app
-			},
-			method:       http.MethodPut,
-			path:         "/settings/branding",
-			body:         `{"company_name":"Acme"}`,
-			expectedCode: http.StatusInternalServerError,
 		},
 	}
 

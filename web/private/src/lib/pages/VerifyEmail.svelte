@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { page } from "$app/state";
 
   let isLoading = $state(true);
@@ -16,7 +17,7 @@
     }
 
     try {
-      const response = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
+      const response = await fetch(apiUrl(`/auth/verify-email?token=${encodeURIComponent(token)}`), {
         method: "GET"
       });
 

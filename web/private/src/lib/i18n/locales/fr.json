@@ -28,7 +28,8 @@
     "optional": "Optionnel",
     "download": "Télécharger",
     "deleted": "Supprimé",
-    "reasonLabel": "Raison :"
+    "reasonLabel": "Raison :",
+    "continue": "Continuer"
   },
   "status": {
     "draft": "Brouillon",
@@ -130,7 +131,8 @@
       "functions": "Fonctions",
       "examples": "Exemples",
       "noFields": "Aucun champ nombre ou texte disponible."
-    }
+    },
+    "type_value": "Saisissez la valeur"
   },
   "signing": {
     "title": "Compléter le document",
@@ -182,7 +184,16 @@
     "setToday": "Aujourd'hui",
     "submissionNotFound": "Soumission introuvable",
     "submitFailed": "Échec de l'envoi",
-    "declineFailed": "Échec du refus"
+    "declineFailed": "Échec du refus",
+    "copyAllLinks": "Copier tous les liens",
+    "copyLink": "Copier le lien",
+    "invalidNumber": "Veuillez saisir un nombre valide",
+    "links": "Liens de signature",
+    "linksTitleWithTemplate": "Liens de signature — {template}",
+    "numberMax": "La valeur doit être au plus {max}",
+    "numberMin": "La valeur doit être au moins {min}",
+    "sendEachLinkHint": "Envoyez chaque lien au signataire correspondant par le canal de votre choix.",
+    "signing_date": "Date de signature"
   },
   "signingMode": {
     "title": "Mode de signature",
@@ -217,7 +228,19 @@
     "titleField": "Titre",
     "template": "Modèle",
     "selectTemplate": "Sélectionner un modèle",
-    "placeholder": "Contrat pour Jean Dupont"
+    "placeholder": "Contrat pour Jean Dupont",
+    "createDescription": "Choisissez un modèle et saisissez les informations des signataires pour créer des liens de signature.",
+    "createLinks": "Créer des liens",
+    "description": "Gérez et suivez toutes vos soumissions de documents",
+    "invalidTemplateSubmitters": "Les signataires du modèle ne sont pas configurés correctement",
+    "saveFailed": "Échec de l'enregistrement de la soumission",
+    "selectTemplateRequired": "Veuillez sélectionner un modèle",
+    "signerEmail": "E-mail",
+    "signerName": "Nom",
+    "signerPhone": "Téléphone",
+    "signers": "Signataires",
+    "signersHint": "Le nombre de signataires est déterminé par le modèle sélectionné.",
+    "signersOrderDragHint": "En mode séquentiel, vous pouvez faire glisser les cartes des signataires pour définir l'ordre de signature."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -373,7 +396,50 @@
     "sourceUrl": "URL",
     "unknownSource": "Inconnu",
     "savedKeyLabel": "Clé enregistrée",
-    "deleteKey": "Supprimer la clé"
+    "deleteKey": "Supprimer la clé",
+    "availableVariables": "Variables disponibles",
+    "confirmDeleteTemplate": "Voulez-vous vraiment supprimer ce modèle ?",
+    "createEmailTemplate": "Créer un modèle d'e-mail",
+    "default": "Par défaut",
+    "deleteError": "Échec de la suppression du modèle",
+    "downloadGeoLite2Database": "Télécharger la base GeoLite2",
+    "downloadGeoLite2DatabaseDescription": "Téléchargez la base GeoLite2 City pour activer la géolocalisation par IP. Choisissez l'une des options ci-dessous.",
+    "downloadMethodInfo": "Configurez les méthodes de téléchargement. La méthode MaxMind est prioritaire : si une clé de licence est enregistrée, elle sera utilisée pour les mises à jour automatiques. Sinon, la méthode URL servira de solution de repli.",
+    "editEmailTemplate": "Modifier le modèle d'e-mail",
+    "emailSubjectPlaceholder": "Objet de l'e-mail (facultatif)",
+    "emailTemplatePlaceholder": "Saisissez le contenu HTML du modèle...",
+    "emailTemplates": "Modèles d'e-mail",
+    "emailTemplatesDescription": "Gérez les modèles d'e-mail pour les invitations, rappels et notifications",
+    "failedToSaveGeolocationSettings": "Échec de l'enregistrement des paramètres de géolocalisation",
+    "failedToSaveLicenseKey": "Échec de l'enregistrement de la clé de licence",
+    "geolocationBaseDir": "Répertoire de base",
+    "geolocationBaseDirDescription": "Répertoire de stockage des fichiers de la base GeoLite2",
+    "geolocationBaseDirPlaceholder": "./base",
+    "geolocationDbPath": "Chemin de la base de données",
+    "geolocationDbPathDescription": "Chemin complet vers le fichier GeoLite2-City.mmdb",
+    "geolocationDbPathPlaceholder": "./base/GeoLite2-City.mmdb",
+    "geolocationSettingsSaved": "Paramètres de géolocalisation enregistrés",
+    "licenseKeyAlreadySet": "La clé de licence est déjà configurée (laissez vide pour conserver l'actuelle)",
+    "licenseKeyRequiredForMaxMind": "Clé de licence requise. Veuillez d'abord la configurer ci-dessus.",
+    "licenseKeySaved": "Clé de licence enregistrée",
+    "maxmindLicenseKeyDescription": "Obtenez votre clé de licence sur https://www.maxmind.com/en/accounts/current/license-key. Cette clé sera enregistrée dans la base de données et utilisée pour les téléchargements automatiques au démarrage.",
+    "noEmailTemplates": "Aucun modèle d'e-mail trouvé",
+    "saveError": "Échec de l'enregistrement du modèle",
+    "saving": "Enregistrement",
+    "subject": "Objet",
+    "systemTemplate": "Système",
+    "templateBase": "Modèle de base",
+    "templateCompleted": "Signé",
+    "templateContent": "Contenu du modèle",
+    "templateInvitation": "Invitation",
+    "templateName": "Nom du modèle",
+    "templateReminder": "Rappel",
+    "variableCustomMessage": "{{.CustomMessage}} - Message personnalisé",
+    "variableDocumentName": "{{.DocumentName}} - Nom du document",
+    "variableExpiresAt": "{{.ExpiresAt}} - Date d'expiration",
+    "variableRecipientName": "{{.RecipientName}} - Nom du destinataire",
+    "variableSenderName": "{{.SenderName}} - Nom de l'expéditeur",
+    "variableSigningLink": "{{.SigningLink}} - Lien pour signer le document"
   },
   "errors": {
     "generic": "Une erreur s'est produite",
@@ -457,7 +523,17 @@
     "uploadPdfToStartEditing": "Téléversez un PDF pour commencer à modifier",
     "uploadPdfToStartEditingHint": "Ce modèle n’a pas encore de documents. Déposez un PDF ici et il sera téléversé et appliqué automatiquement.",
     "selectPdfFile": "Veuillez sélectionner un fichier PDF",
-    "uploadError": "Impossible de téléverser le PDF. Veuillez réessayer."
+    "uploadError": "Impossible de téléverser le PDF. Veuillez réessayer.",
+    "clickToUpload": "Cliquez pour téléverser",
+    "create": "Créer",
+    "dragAndDrop": "ou glissez-déposez ici",
+    "enterTemplateName": "Saisissez le nom du modèle",
+    "invalidFileType": "Seuls les fichiers PDF sont pris en charge",
+    "optional": "facultatif",
+    "removeFile": "Supprimer le fichier",
+    "selectedFile": "Fichier sélectionné",
+    "uploadFromFile": "Téléverser depuis un fichier",
+    "uploadFromFileHint": "Les fichiers PDF sont pris en charge. Si aucun fichier n'est sélectionné, un modèle vide sera créé."
   },
   "organizations": {
     "title": "Organisations",
@@ -510,7 +586,7 @@
     "invitationSent": "Invitation envoyée avec succès!",
     "inviteError": "Erreur lors de l'envoi de l'invitation",
     "emailRequired": "L'e-mail est requis",
-    "emailPlaceholder": "member{'@'}example.com",
+    "emailPlaceholder": "member@example.com",
     "viewerDescription": "Peut voir les documents et les soumissions",
     "memberDescription": "Peut créer et modifier des documents",
     "adminDescription": "Peut gérer les membres et les paramètres de l'organisation"

@@ -46,7 +46,7 @@ type CertSubject struct {
 	CommonName   string `json:"common_name"`
 }
 
-// TrustList is ...
+// TrustCerts is ...
 type TrustCerts struct {
 	Certs []TrustCert `json:"trust_cert"`
 }

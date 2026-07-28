@@ -338,7 +338,7 @@ A: Yes, you can style the container via CSS. For deep customization, use the API
 A: Yes, iframe is fully responsive and supports touch events.
 
 **Q: Is authentication required?**
-A: No, embedded signing uses public slugs. Each slug is unique and one-time use.
+A: No, embedded signing uses public slugs. Each slug is unique per signer; the document can be signed only once, after which the link shows the completed result.
 
 **Q: Can progress be tracked?**
 A: Yes, use the `onFieldFilled` event to track each field being filled.

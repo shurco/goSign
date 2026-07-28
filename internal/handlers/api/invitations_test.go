@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
@@ -47,10 +48,10 @@ func TestInvitationHandler(t *testing.T) {
 	// Create invitation via MemberHandler (so we get a valid token in DB).
 	inviteApp := fiber.New()
 	inviteApp.Use(testutil.AuthMiddleware(testutil.User1))
-	inviteApp.Post("/organizations/:organization_id/members/invite", memberH.InviteMember)
+	inviteApp.Post("/company/:organization_id/members/invite", memberH.InviteMember)
 	inviteReq := httptest.NewRequest(
 		http.MethodPost,
-		"/organizations/"+orgID+"/members/invite",
+		"/company/"+orgID+"/members/invite",
 		bytes.NewReader([]byte(`{"email":"user2@gosign.local","role":"member"}`)),
 	)
 	inviteReq.Header.Set("Content-Type", "application/json")

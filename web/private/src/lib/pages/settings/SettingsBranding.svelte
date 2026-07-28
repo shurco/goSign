@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { t } from "@/i18n/index.svelte";
   import FormControl from "@/components/ui/FormControl.svelte";
   import Input from "@/components/ui/Input.svelte";
@@ -20,7 +21,7 @@
 
   async function loadBranding(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/branding");
+      const response = await fetchWithAuth(apiUrl("/settings/branding"));
       if (response.ok) {
         const data = await response.json();
         if (data.data && data.data.branding) {
@@ -41,7 +42,7 @@
 
   async function saveBranding(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/branding", {
+      const response = await fetchWithAuth(apiUrl("/settings/branding"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

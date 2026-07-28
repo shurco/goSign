@@ -26,7 +26,7 @@ export async function requireAdmin(fullPath: string): Promise<void> {
   const now = Date.now();
   if (!cachedAdminRole.role || now - cachedAdminRole.checkedAt > ADMIN_CACHE_TTL) {
     try {
-      const response = await apiGet("/api/v1/users/me");
+      const response = await apiGet("/users/me");
       cachedAdminRole = { role: response.data?.role ?? null, checkedAt: now };
     } catch (error) {
       console.error("Failed to check admin access:", error);

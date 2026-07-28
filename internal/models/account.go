@@ -80,29 +80,6 @@ type BrandingSettings struct {
 	PrivacyURL string `json:"privacy_url,omitempty"`
 }
 
-// BrandingAsset represents uploaded branding assets
-type BrandingAsset struct {
-	ID        string    `json:"id"`
-	AccountID string    `json:"account_id"`
-	Type      string    `json:"type"` // logo, favicon, email_header, watermark
-	FilePath  string    `json:"file_path"`
-	MimeType  string    `json:"mime_type"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// CustomDomain represents custom domain configuration
-type CustomDomain struct {
-	ID                string     `json:"id"`
-	AccountID         string     `json:"account_id"`
-	Domain            string     `json:"domain"`
-	Verified          bool       `json:"verified"`
-	VerificationToken string     `json:"verification_token"`
-	SSLEnabled        bool       `json:"ssl_enabled"`
-	CreatedAt         time.Time  `json:"created_at"`
-	VerifiedAt        *time.Time `json:"verified_at,omitempty"`
-}
-
 // AccountType represents the type of account
 type AccountType string
 

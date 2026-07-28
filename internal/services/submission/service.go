@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/notification"
 )
@@ -147,7 +148,7 @@ func (s *Service) Send(ctx context.Context, submissionID string) error {
 	case models.SigningModeParallel:
 		// Send invitations to all submitters simultaneously
 		for _, submitter := range submitters {
-			if err := s.sendInvitation(ctx, submission, submitter); err != nil {
+			if err := s.sendInvitation(ctx, submitter); err != nil {
 				log.Error().Err(err).Str("submitter_id", submitter.ID).Msg("Failed to send invitation")
 				// Continue with other submitters even if one fails
 			}
@@ -158,7 +159,7 @@ func (s *Service) Send(ctx context.Context, submissionID string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get first sequential submitter: %w", err)
 		}
-		if err := s.sendInvitation(ctx, submission, firstSubmitter); err != nil {
+		if err := s.sendInvitation(ctx, firstSubmitter); err != nil {
 			return fmt.Errorf("failed to send invitation: %w", err)
 		}
 	default:
@@ -292,12 +293,12 @@ func (s *Service) ResendInvitation(ctx context.Context, submitterID string) erro
 		return fmt.Errorf("failed to get submitter: %w", err)
 	}
 
-	submission, err := s.repo.GetSubmission(ctx, submitter.SubmissionID)
-	if err != nil {
+	// Ensure the parent submission still exists before resending.
+	if _, err := s.repo.GetSubmission(ctx, submitter.SubmissionID); err != nil {
 		return fmt.Errorf("failed to get submission: %w", err)
 	}
 
-	if err := s.sendInvitation(ctx, submission, submitter); err != nil {
+	if err := s.sendInvitation(ctx, submitter); err != nil {
 		return fmt.Errorf("failed to send invitation: %w", err)
 	}
 
@@ -311,7 +312,7 @@ func (s *Service) ResendInvitation(ctx context.Context, submitterID string) erro
 }
 
 // sendInvitation sends an invitation to a submitter
-func (s *Service) sendInvitation(ctx context.Context, submission *models.Submission, submitter *models.Submitter) error {
+func (s *Service) sendInvitation(ctx context.Context, submitter *models.Submitter) error {
 	now := time.Now()
 	notification := &models.Notification{
 		ID:        uuid.New().String(),
@@ -322,7 +323,7 @@ func (s *Service) sendInvitation(ctx context.Context, submission *models.Submiss
 		Context: map[string]any{
 			"submitter_name": submitter.Name,
 			"document_name":  "Document",
-			"signing_url":    fmt.Sprintf("/s/%s", submitter.Slug),
+			"signing_url":    config.Data().AppLink("/s/" + submitter.Slug),
 			"company_name":   "goSign",
 		},
 		Status:      models.NotificationStatusPending,
@@ -420,7 +421,7 @@ func (s *Service) handleSequentialCompletion(ctx context.Context, submitterID st
 
 	// Send invitation to the next submitter
 	nextSubmitter := nextSubmitters[0]
-	if err := s.sendInvitation(ctx, submission, nextSubmitter); err != nil {
+	if err := s.sendInvitation(ctx, nextSubmitter); err != nil {
 		return fmt.Errorf("failed to send invitation to next submitter: %w", err)
 	}
 

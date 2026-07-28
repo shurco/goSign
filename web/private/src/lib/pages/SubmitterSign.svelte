@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from "svelte";
+  import { apiUrl } from "@/services/api";
+  import { fileUrl } from "@/services/api-base";
   import { page } from "$app/state";
   import FieldFormDrawer from "@/components/signing/FieldFormDrawer.svelte";
   import SvgIcon from "@/components/SvgIcon.svelte";
@@ -636,7 +638,7 @@
 
     // Ensure preview images have a usable base URL (same convention as builder `Document.vue`).
     for (const doc of tpl.documents || []) {
-      const base = (doc.url || "/drive/pages").replace(/\/$/, "");
+      const base = fileUrl((doc.url || "/drive/pages").replace(/\/$/, ""));
       const docBase = `${base}/${doc.id}`;
       for (const img of doc.preview_images || []) {
         // In API, preview_images do not include url. We add it here.
@@ -666,7 +668,7 @@
   async function loadSubmission(): Promise<void> {
     try {
       isLoading = true;
-      const response = await fetch(`/public/sign/${slug}`);
+      const response = await fetch(apiUrl(`/public/sign/${slug}`));
 
       if (!response.ok) {
         throw new Error(t("signing.submissionNotFound"));
@@ -683,7 +685,7 @@
 
       // Mark as opened
       if (submitter?.status === "pending") {
-        await fetch(`/public/sign/${slug}/open`, {
+        await fetch(apiUrl(`/public/sign/${slug}/open`), {
           method: "POST"
         });
       }
@@ -963,7 +965,7 @@
           }
         }
       });
-      const response = await fetch(`/public/sign/${slug}/complete`, {
+      const response = await fetch(apiUrl(`/public/sign/${slug}/complete`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -1000,7 +1002,7 @@
     isSubmitting = true;
 
     try {
-      const response = await fetch(`/public/sign/${slug}/decline`, {
+      const response = await fetch(apiUrl(`/public/sign/${slug}/decline`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: declineReason.trim() || undefined })
@@ -1108,7 +1110,7 @@
     error = "";
 
     try {
-      const response = await fetch(`/public/sign/${slug}/update`, {
+      const response = await fetch(apiUrl(`/public/sign/${slug}/update`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

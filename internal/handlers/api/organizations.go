@@ -36,7 +36,7 @@ func NewOrganizationHandler(organizationQueries *queries.OrganizationQueries, us
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations [post]
+// @Router /v1/company [post]
 func (h *OrganizationHandler) CreateOrganization(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
@@ -102,7 +102,7 @@ func (h *OrganizationHandler) CreateOrganization(c fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations [get]
+// @Router /v1/company [get]
 func (h *OrganizationHandler) GetUserOrganizations(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {
@@ -132,7 +132,7 @@ func (h *OrganizationHandler) GetUserOrganizations(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id} [get]
+// @Router /v1/company/{organization_id} [get]
 func (h *OrganizationHandler) GetOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -183,7 +183,7 @@ func (h *OrganizationHandler) GetOrganization(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id} [put]
+// @Router /v1/company/{organization_id} [put]
 func (h *OrganizationHandler) UpdateOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -262,7 +262,7 @@ func (h *OrganizationHandler) UpdateOrganization(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id} [delete]
+// @Router /v1/company/{organization_id} [delete]
 func (h *OrganizationHandler) DeleteOrganization(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -309,7 +309,7 @@ func (h *OrganizationHandler) DeleteOrganization(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/switch [post]
+// @Router /v1/company/{organization_id}/switch [post]
 func (h *OrganizationHandler) SwitchOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {
@@ -380,7 +380,7 @@ func (h *OrganizationHandler) SwitchOrganization(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/switch [post]
+// @Router /v1/company/switch [post]
 func (h *OrganizationHandler) ExitOrganization(c fiber.Ctx) error {
 	userIDStr, err := GetUserID(c)
 	if err != nil {

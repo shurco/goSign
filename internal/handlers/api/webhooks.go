@@ -65,7 +65,7 @@ func (r *webhookRequest) enabledOrDefault() bool {
 // @Failure 401 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/webhooks [get]
+// @Router /v1/settings/webhooks [get]
 func (h *WebhookHandler) List(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -94,7 +94,7 @@ func (h *WebhookHandler) List(c fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/webhooks/{id} [get]
+// @Router /v1/settings/webhooks/{id} [get]
 func (h *WebhookHandler) Get(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -124,7 +124,7 @@ func (h *WebhookHandler) Get(c fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/webhooks [post]
+// @Router /v1/settings/webhooks [post]
 func (h *WebhookHandler) Create(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -167,7 +167,7 @@ func (h *WebhookHandler) Create(c fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/webhooks/{id} [put]
+// @Router /v1/settings/webhooks/{id} [put]
 func (h *WebhookHandler) Update(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -210,7 +210,7 @@ func (h *WebhookHandler) Update(c fiber.Ctx) error {
 // @Failure 404 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/webhooks/{id} [delete]
+// @Router /v1/settings/webhooks/{id} [delete]
 func (h *WebhookHandler) Delete(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {

@@ -1,6 +1,6 @@
 # Multilingual Support (i18n)
 
-**Last Updated**: 2026-01-21 00:00 UTC
+**Last Updated**: 2026-07-28
 
 ## Overview
 
@@ -48,35 +48,27 @@ Includes all UI languages plus:
 
 ### Changing Language
 
-**In UI:**
-```vue
-<LanguageSwitcher />
-```
+**In UI:** Settings -> General (persists the choice via `PUT /v1/settings/i18n/user/locale`).
 
 **Programmatically:**
 ```typescript
-import { useI18n } from 'vue-i18n'
+import { getLocale, setLocale } from "@/i18n/index.svelte";
 
-const { locale } = useI18n()
-locale.value = 'ru'
+setLocale("ru");
+getLocale(); // "ru"
 ```
 
 ### Using Translations
 
-**In Templates:**
-```vue
-<template>
-  <h1>{{ $t('dashboard.title') }}</h1>
-  <Button>{{ $t('common.save') }}</Button>
-</template>
-```
+```svelte
+<script lang="ts">
+  import { t, d, n } from "@/i18n/index.svelte";
+</script>
 
-**In Scripts:**
-```typescript
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
-const title = t('dashboard.title')
+<h1>{t("dashboard.title")}</h1>
+<Button>{t("common.save")}</Button>
+<span>{d(createdAt, "short")}</span>
+<span>{n(total, "currency")}</span>
 ```
 
 ### Field Labels
@@ -98,12 +90,12 @@ const field: Field = {
 
 ### Get Available Locales
 ```bash
-GET /api/v1/i18n/locales
+GET /v1/settings/i18n/locales
 ```
 
 ### Update User Locale
 ```bash
-PUT /api/v1/user/locale
+PUT /v1/settings/i18n/user/locale
 Content-Type: application/json
 
 {
@@ -113,7 +105,7 @@ Content-Type: application/json
 
 ### Update Account Locale
 ```bash
-PUT /api/v1/account/locale
+PUT /v1/settings/i18n/account/locale
 Content-Type: application/json
 
 {

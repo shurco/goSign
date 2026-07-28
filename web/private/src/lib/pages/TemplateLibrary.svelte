@@ -192,7 +192,7 @@
 
   const loadFolders = async () => {
     try {
-      const response = await apiGet("/api/v1/templates/folders");
+      const response = await apiGet("/templates/folders");
 
       if (response && response.data) {
         // API returns: { success: true, message: "folders", data: [...TemplateFolder] }
@@ -255,7 +255,7 @@
       params.append("offset", "0");
 
       const queryString = params.toString();
-      const endpoint = `/api/v1/templates/search${queryString ? `?${queryString}` : ""}`;
+      const endpoint = `/templates/search${queryString ? `?${queryString}` : ""}`;
 
       const response = await apiGet(endpoint);
 
@@ -327,7 +327,7 @@
         updateData.category = null;
       }
 
-      const response = await apiPut(`/api/v1/templates/${templateToEdit.id}`, updateData);
+      const response = await apiPut(`/templates/${templateToEdit.id}`, updateData);
       if (response && response.data) {
         showEditTemplateModal = false;
         templateToEdit = null;
@@ -411,7 +411,7 @@
           fileType = "docx";
         }
 
-        const response = await apiPost("/api/v1/templates/from-file", {
+        const response = await apiPost("/templates/from-file", {
           name: templateName,
           type: fileType,
           file_base64: base64String,
@@ -466,7 +466,7 @@
       } else {
         // Create empty template
         const category = formData.category as string;
-        const response = await apiPost("/api/v1/templates/empty", {
+        const response = await apiPost("/templates/empty", {
           name: templateName,
           category: category && category.trim() !== "" ? category.trim() : null
         });
@@ -540,7 +540,7 @@
     try {
       if (template.is_favorite) {
         // Remove from favorites
-        const response = await apiDelete(`/api/v1/templates/favorites/${template.id}`);
+        const response = await apiDelete(`/templates/favorites/${template.id}`);
         if (response && (response.data || response.message)) {
           template.is_favorite = false;
           // Update in templates array
@@ -551,7 +551,7 @@
         }
       } else {
         // Add to favorites
-        const response = await apiPost("/api/v1/templates/favorites", {
+        const response = await apiPost("/templates/favorites", {
           template_id: template.id
         });
         if (response && (response.data || response.message)) {
@@ -602,7 +602,7 @@
     }
 
     try {
-      const response = await apiPost("/api/v1/templates/folders", { name });
+      const response = await apiPost("/templates/folders", { name });
       // Backend returns {success: bool, message: string, data: any}
       // For 201 Created, success might be false (because code != 200), but data will be present
       if (response && (response.data || response.message)) {
@@ -635,7 +635,7 @@
     }
 
     try {
-      const response = await apiPut(`/api/v1/templates/folders/${folderToRename.id}`, {
+      const response = await apiPut(`/templates/folders/${folderToRename.id}`, {
         name: name.trim()
       });
       if (response && response.data) {
@@ -654,7 +654,7 @@
     }
 
     try {
-      const response = await apiDelete(`/api/v1/templates/folders/${folder.id}`);
+      const response = await apiDelete(`/templates/folders/${folder.id}`);
       if (response && response.data) {
         await loadFolders();
         // If deleted folder was selected, reset selection
@@ -686,7 +686,7 @@
 
     try {
       // Send empty string for root (null), or folder ID
-      const response = await apiPut(`/api/v1/templates/${templateToMove.id}/move`, {
+      const response = await apiPut(`/templates/${templateToMove.id}/move`, {
         folder_id: folderId
       });
       // Check success or data presence

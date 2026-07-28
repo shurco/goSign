@@ -17,7 +17,7 @@
 
     // Update user preference on backend (non-blocking)
     try {
-      await apiPut("/api/v1/i18n/user/locale", { locale: newLocale });
+      await apiPut("/settings/i18n/user/locale", { locale: newLocale });
     } catch (error) {
       // Silently fail - locale is already updated in frontend
       // User can still use the app even if backend update fails

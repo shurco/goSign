@@ -296,7 +296,7 @@ func (context *SignContext) replaceSignature() error {
 	if _, err := context.OutputBuffer.Write(file_content[:(context.ByteRangeValues[0] + context.ByteRangeValues[1] + 1)]); err != nil {
 		return err
 	}
-	if _, err := context.OutputBuffer.Write([]byte(dst)); err != nil {
+	if _, err := context.OutputBuffer.Write(dst); err != nil {
 		return err
 	}
 	if _, err := context.OutputBuffer.Write(file_content[(context.ByteRangeValues[0]+context.ByteRangeValues[1]+1)+int64(len(dst)):]); err != nil {

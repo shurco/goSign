@@ -1,4 +1,3 @@
-import type { IncomingMessage } from "node:http";
 import "vitest/config";
 import type { UserConfig } from "vite";
 import path from "node:path";
@@ -14,63 +13,17 @@ type AppConfig = UserConfig & {
 const config: AppConfig = {
   server: {
     proxy: {
-      "/api": {
+      // The whole backend API lives under /v1 (SPA routes never start with /v1),
+      // so no method-based bypass hacks are needed.
+      "/v1": {
         target: "http://localhost:8088/"
       },
-      "/verify": {
-        target: "http://localhost:8088/",
-        // Keep /verify as a frontend SPA route (GET), but proxy verification API calls (POST).
-        bypass(req: IncomingMessage) {
-          const method = req.method || "";
-          if (method === "GET") {
-            return req.url; // Bypass proxy, SvelteKit will serve the SPA route
-          }
-          return null; // Proxy non-GET requests (e.g. POST /verify/pdf)
-        }
-      },
-      // Proxy auth API endpoints - only POST/PUT/DELETE requests, not GET (except OAuth callbacks)
-      "/auth": {
-        target: "http://localhost:8088/",
-        bypass(req: IncomingMessage) {
-          const method = req.method || "";
-          const reqPath = req.url || "";
-
-          // Allow OAuth callbacks (GET requests to /auth/oauth/*/callback)
-          if (method === "GET" && reqPath.includes("/oauth/") && reqPath.includes("/callback")) {
-            return null; // Proxy this request
-          }
-
-          // Allow GET /auth/verify-email (backend endpoint)
-          if (method === "GET" && reqPath.includes("/verify-email")) {
-            return null; // Proxy this request
-          }
-
-          // Block GET requests to /auth/* (except OAuth callbacks and verify-email):
-          // let SvelteKit handle them as SPA routes.
-          if (method === "GET") {
-            return req.url;
-          }
-
-          // Proxy all POST, PUT, DELETE requests
-          return null;
-        }
-      },
-      "/sign": {
-        target: "http://localhost:8088/",
-        // /sign is not a frontend route; keep SPA 404 for GET,
-        // but proxy signing API calls (POST /sign).
-        bypass(req: IncomingMessage) {
-          const method = req.method || "";
-          if (method === "GET") {
-            return req.url;
-          }
-          return null;
-        }
-      },
+      // Uploaded/generated files served by the backend.
       "/drive": {
         target: "http://localhost:8088/"
       },
-      "/public": {
+      // Embedded signing iframe page (backend-rendered).
+      "/embed": {
         target: "http://localhost:8088/"
       }
     }

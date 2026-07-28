@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/digitorus/pdf"
+
 	"github.com/shurco/gosign/pkg/pdf/revocation"
 	"github.com/shurco/gosign/pkg/pdf/verify"
 )
@@ -141,8 +142,6 @@ func TestSignPDF(t *testing.T) {
 	certificate_chains := make([][]*x509.Certificate, 0)
 
 	for _, f := range files {
-		f := f
-
 		ext := filepath.Ext(f.Name())
 		if ext != ".pdf" {
 			continue

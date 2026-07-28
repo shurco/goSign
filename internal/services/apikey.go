@@ -40,7 +40,7 @@ func (s *APIKeyService) UpdateLastUsed(keyID string) error {
 	return s.repo.UpdateLastUsed(keyID, time.Now())
 }
 
-// GenerateKey generates new random API key (32 bytes = 43 chars base64)
+// GenerateAPIKey generates new random API key (32 bytes = 43 chars base64)
 func GenerateAPIKey() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

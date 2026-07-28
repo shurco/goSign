@@ -6,20 +6,20 @@ import (
 )
 
 const (
-	DefaultIdLength   = 25
-	DefaultIdAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	DefaultIDLength   = 25
+	DefaultIDAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
 func RandomString() string {
-	b := make([]byte, DefaultIdLength)
-	max := big.NewInt(int64(len(DefaultIdAlphabet)))
+	b := make([]byte, DefaultIDLength)
+	max := big.NewInt(int64(len(DefaultIDAlphabet)))
 
 	for i := range b {
 		n, err := rand.Int(rand.Reader, max)
 		if err != nil {
 			panic(err)
 		}
-		b[i] = DefaultIdAlphabet[n.Int64()]
+		b[i] = DefaultIDAlphabet[n.Int64()]
 	}
 
 	return string(b)

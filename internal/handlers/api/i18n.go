@@ -34,7 +34,7 @@ type AvailableLocales struct {
 // @Tags i18n
 // @Produce json
 // @Success 200 {object} AvailableLocales
-// @Router /api/v1/i18n/locales [get]
+// @Router /v1/settings/i18n/locales [get]
 func (h *I18nHandler) GetLocales(c fiber.Ctx) error {
 	uiLocales := map[string]string{
 		"en": "English",
@@ -85,7 +85,7 @@ type UpdateUserLocaleRequest struct {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/user/locale [put]
+// @Router /v1/settings/i18n/user/locale [put]
 func (h *I18nHandler) UpdateUserLocale(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -133,7 +133,7 @@ type UpdateAccountLocaleRequest struct {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/account/locale [put]
+// @Router /v1/settings/i18n/account/locale [put]
 func (h *I18nHandler) UpdateAccountLocale(c fiber.Ctx) error {
 	accountID, err := ResolveAccountID(c, h.userQueries)
 	if err != nil {

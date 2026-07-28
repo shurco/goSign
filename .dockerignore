@@ -5,11 +5,7 @@ node_modules
 web/private/node_modules
 web/private/dist
 web/private/.output
-web/site_old/node_modules
-web/site_old/dist
-web/site_old/.output
 docs
-migrations
 fixtures
 scripts
 

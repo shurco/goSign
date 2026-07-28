@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "@/components/ui/Button.svelte";
+  import { apiUrl } from "@/services/api";
   // import { goto } from "$app/navigation";
 
   let formData = $state({
@@ -32,7 +33,7 @@
     isLoading = true;
 
     try {
-      const response = await fetch("/auth/signup", {
+      const response = await fetch(apiUrl("/auth/signup"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -69,11 +70,11 @@
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = "/auth/oauth/google";
+    window.location.href = apiUrl("/auth/oauth/google");
   };
 
   const handleGitHubSignIn = () => {
-    window.location.href = "/auth/oauth/github";
+    window.location.href = apiUrl("/auth/oauth/github");
   };
 </script>
 

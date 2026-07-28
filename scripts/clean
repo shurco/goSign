@@ -35,9 +35,9 @@ done
 declare -A arr_folders=(
   ["./web/private/dist"]="${ROOT_PATH}/web/private/dist"
   ["./bin/*"]="${ROOT_PATH}/bin/*"
-  ["./lc_signed"]="${ROOT_PATH}/cmd/goSign/lc_signed"
-  ["./lc_tmp"]="${ROOT_PATH}/cmd/goSign/lc_tmp"
-  ["./lc_uploads"]="${ROOT_PATH}/cmd/goSign/lc_uploads"
+  ["./lc_signed"]="${ROOT_PATH}/cmd/server/lc_signed"
+  ["./lc_tmp"]="${ROOT_PATH}/cmd/server/lc_tmp"
+  ["./lc_uploads"]="${ROOT_PATH}/cmd/server/lc_uploads"
 )
 
 for folder in "${!arr_folders[@]}"; do

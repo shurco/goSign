@@ -13,7 +13,7 @@ Both methods are protected by rate limiting to prevent abuse.
 ### User Registration
 
 ```bash
-POST /auth/signup
+POST /v1/auth/signup
 Content-Type: application/json
 
 {
@@ -38,7 +38,7 @@ Content-Type: application/json
 ### Getting a Token
 
 ```bash
-POST /auth/signin
+POST /v1/auth/signin
 Content-Type: application/json
 
 {
@@ -63,7 +63,7 @@ Content-Type: application/json
 ### Refreshing a Token
 
 ```bash
-POST /auth/refresh
+POST /v1/auth/refresh
 Content-Type: application/json
 
 {
@@ -90,9 +90,9 @@ Authorization: Bearer <jwt_token>
 ```
 
 ### Characteristics
-- **Access Token Lifetime**: 10 minutes
+- **Access Token Lifetime**: 15 minutes
 - **Refresh Token Lifetime**: 7 days
-- **Token Refresh**: Automatic refresh via `/auth/refresh` endpoint
+- **Token Refresh**: Automatic refresh via `/v1/auth/refresh` endpoint
 - **Contains**: user_id, email, name, organization_id (if in organization context)
 
 ### Organization Context
@@ -108,9 +108,9 @@ When a user switches to an organization context, the JWT token includes an `orga
 }
 ```
 
-To switch organization context:
+To switch organization context (organization administrators only):
 ```bash
-POST /api/v1/organizations/{organization_id}/switch
+POST /v1/company/{organization_id}/switch
 Authorization: Bearer <jwt_token>
 ```
 
@@ -121,7 +121,7 @@ This updates your JWT token to include the organization_id for subsequent reques
 ### Creating an API Key
 
 ```bash
-POST /api/v1/apikeys
+POST /v1/settings/api
 Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
@@ -159,25 +159,22 @@ X-API-Key: abc123...xyz
 
 #### List Keys
 ```bash
-GET /api/v1/apikeys
+GET /v1/settings/api
 Authorization: Bearer <jwt_token>
 ```
 
-#### Disable Key
+#### Enable / Disable Key
 ```bash
-PUT /api/v1/apikeys/{id}/disable
+PATCH /v1/settings/api/{id}
 Authorization: Bearer <jwt_token>
-```
+Content-Type: application/json
 
-#### Enable Key
-```bash
-PUT /api/v1/apikeys/{id}/enable
-Authorization: Bearer <jwt_token>
+{"enabled": false}
 ```
 
 #### Delete Key
 ```bash
-DELETE /api/v1/apikeys/{id}
+DELETE /v1/settings/api/{id}
 Authorization: Bearer <jwt_token>
 ```
 
@@ -210,13 +207,13 @@ Authorization: Bearer <jwt_token>
 #### With JWT Token
 ```bash
 curl -H "Authorization: Bearer <token>" \
-     https://api.example.com/api/v1/submissions
+     https://api.example.com/v1/submissions
 ```
 
 #### With API Key
 ```bash
 curl -H "X-API-Key: abc123...xyz" \
-     https://api.example.com/api/v1/submissions
+     https://api.example.com/v1/submissions
 ```
 
 ## Security Best Practices
@@ -230,9 +227,9 @@ curl -H "X-API-Key: abc123...xyz" \
 
 ### JWT Tokens
 1. **HTTPS only** - never transmit over unencrypted connections
-2. **Short-lived** - current lifetime is 10 minutes
+2. **Short-lived** - current lifetime is 15 minutes
 3. **Secure storage** - use httpOnly cookies in production
-4. **Refresh strategy** - refresh tokens implementation planned
+4. **Refresh strategy** - rotate tokens via `POST /v1/auth/refresh`
 
 ## Technical Details
 
@@ -246,7 +243,7 @@ curl -H "X-API-Key: abc123...xyz" \
 - Engine: Fiber built-in middleware
 - Storage: In-memory (Redis planned for clusters)
 - Key format:
-  - `apikey:{key_id}` for API keys
+  - `apikey:{account_id}` for API keys
   - `user:{user_id}` for JWT
   - IP address for unauthenticated users
 
@@ -288,7 +285,7 @@ type AuthContext struct {
 ### Forgot Password
 
 ```bash
-POST /auth/password/forgot
+POST /v1/auth/password/forgot
 Content-Type: application/json
 
 {
@@ -301,7 +298,7 @@ Content-Type: application/json
 ### Reset Password
 
 ```bash
-POST /auth/password/reset
+POST /v1/auth/password/reset
 Content-Type: application/json
 
 {
@@ -315,7 +312,7 @@ Content-Type: application/json
 ### Verify Email
 
 ```bash
-GET /auth/verify-email?token=<verification-token>
+GET /v1/auth/verify-email?token=<verification-token>
 ```
 
 **Response:**
@@ -331,8 +328,13 @@ GET /auth/verify-email?token=<verification-token>
 ### Enable 2FA
 
 ```bash
-POST /auth/2fa/enable
+POST /v1/auth/2fa/enable
 Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "password": "current-password"
+}
 ```
 
 **Response:**
@@ -341,33 +343,36 @@ Authorization: Bearer <jwt_token>
   "success": true,
   "data": {
     "qr_code": "data:image/png;base64,...",
-    "secret": "JBSWY3DPEHPK3PXP",
-    "backup_codes": ["123456", "234567", ...]
+    "secret": "JBSWY3DPEHPK3PXP"
   }
 }
 ```
 
 ### Verify 2FA
 
+Confirms setup with a TOTP code and activates 2FA:
+
 ```bash
-POST /auth/2fa/verify
+POST /v1/auth/2fa/verify
 Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
 {
-  "code": "123456"
+  "code": "123456",
+  "secret": "JBSWY3DPEHPK3PXP"
 }
 ```
 
 ### Disable 2FA
 
 ```bash
-POST /auth/2fa/disable
+POST /v1/auth/2fa/disable
 Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
 {
-  "password": "current-password"
+  "password": "current-password",
+  "code": "123456"
 }
 ```
 
@@ -377,24 +382,24 @@ Content-Type: application/json
 
 1. **Initiate OAuth:**
 ```bash
-GET /auth/oauth/google
+GET /v1/auth/oauth/google
 ```
 
 2. **OAuth Callback:**
 ```bash
-GET /auth/oauth/google/callback?code=<auth-code>&state=<state>
+GET /v1/auth/oauth/google/callback?code=<auth-code>&state=<state>
 ```
 
 ### GitHub OAuth
 
 1. **Initiate OAuth:**
 ```bash
-GET /auth/oauth/github
+GET /v1/auth/oauth/github
 ```
 
 2. **OAuth Callback:**
 ```bash
-GET /auth/oauth/github/callback?code=<auth-code>&state=<state>
+GET /v1/auth/oauth/github/callback?code=<auth-code>&state=<state>
 ```
 
 **Note:** OAuth providers must be configured in the application settings with client ID and secret.
@@ -402,7 +407,7 @@ GET /auth/oauth/github/callback?code=<auth-code>&state=<state>
 ## Sign Out
 
 ```bash
-POST /auth/signout
+POST /v1/auth/signout
 Authorization: Bearer <jwt_token>
 ```
 

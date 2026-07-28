@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -39,7 +40,7 @@ type EventItem struct {
 // @Param sort query string false "Sort" default(created_at:desc)
 // @Produce json
 // @Success 200 {object} map[string]any
-// @Router /api/v1/events [get]
+// @Router /v1/events [get]
 func (h *EventHandler) List(c fiber.Ctx) error {
 	// Get pagination parameters
 	limit := 10

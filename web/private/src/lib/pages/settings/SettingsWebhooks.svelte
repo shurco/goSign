@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { onMount, getContext } from "svelte";
   import { t } from "@/i18n/index.svelte";
   import ResourceTable from "@/components/common/ResourceTable.svelte";
@@ -56,7 +57,7 @@
 
   async function loadWebhooks(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/webhooks");
+      const response = await fetchWithAuth(apiUrl("/settings/webhooks"));
       if (response.ok) {
         const data = await response.json();
         if (data.data && data.data.items) {
@@ -76,7 +77,7 @@
 
   async function saveWebhook(formData: Record<string, unknown>): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/webhooks", {
+      const response = await fetchWithAuth(apiUrl("/settings/webhooks"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -103,7 +104,7 @@
     }
 
     try {
-      const response = await fetchWithAuth(`/api/v1/webhooks/${webhook.id}`, {
+      const response = await fetchWithAuth(apiUrl(`/settings/webhooks/${webhook.id}`), {
         method: "DELETE"
       });
 

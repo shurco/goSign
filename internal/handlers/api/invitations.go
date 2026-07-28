@@ -33,7 +33,7 @@ func NewInvitationHandler(organizationQueries *queries.OrganizationQueries) *Inv
 // @Failure 404 {object} map[string]any
 // @Failure 409 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/invitations/{token}/accept [post]
+// @Router /v1/invitations/{token}/accept [post]
 func (h *InvitationHandler) AcceptInvitation(c fiber.Ctx) error {
 	token := c.Params("token")
 	if token == "" {
@@ -109,7 +109,7 @@ func (h *InvitationHandler) AcceptInvitation(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/invitations/{token} [get]
+// @Router /v1/invitations/{token} [get]
 func (h *InvitationHandler) GetInvitationDetails(c fiber.Ctx) error {
 	token := c.Params("token")
 	if token == "" {

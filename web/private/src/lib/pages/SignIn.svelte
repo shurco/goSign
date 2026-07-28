@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import { apiUrl } from "@/services/api";
   import { goto } from "$app/navigation";
   import { t } from "@/i18n/index.svelte";
   import Button from "@/components/ui/Button.svelte";
@@ -20,7 +21,7 @@
     isLoading = true;
 
     try {
-      const response = await fetch("/auth/signin", {
+      const response = await fetch(apiUrl("/auth/signin"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -63,11 +64,11 @@
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = "/auth/oauth/google";
+    window.location.href = apiUrl("/auth/oauth/google");
   };
 
   const handleGitHubSignIn = () => {
-    window.location.href = "/auth/oauth/github";
+    window.location.href = apiUrl("/auth/oauth/github");
   };
 </script>
 

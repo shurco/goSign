@@ -428,7 +428,7 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 	}
 
 	// Track user_id parameter index - will be set when we add user filter
-	var userIDParamIndex int = 0 // Initialize to 0 (will be set if userID is provided)
+	userIDParamIndex := 0 // Initialize to 0 (will be set if userID is provided)
 	var joinClause string
 
 	// User filter - show templates from user's folders OR templates without folder_id (in root)
@@ -460,7 +460,6 @@ func (q *TemplateQueries) SearchTemplates(ctx context.Context, req TemplateSearc
 			)
 		)`)
 		args = append(args, userIDParam)
-		argIndex++
 	}
 
 	// Favorites filter (after user filter, reuses the same userID parameter if exists)

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Contenteditable from "@/components/field/Contenteditable.svelte";
+  import { fileUrl } from "@/services/api-base";
 
   interface Props {
     item: Record<string, unknown> & { name: string };
@@ -35,7 +36,7 @@
 
   /** API returns preview_images without url; build base like Document.svelte does. */
   const previewBaseUrl = $derived.by(() => {
-    const base = (document.url || "/drive/pages").replace(/\/$/, "");
+    const base = fileUrl((document.url || "/drive/pages").replace(/\/$/, ""));
     return document.id ? `${base}/${document.id}` : base;
   });
 

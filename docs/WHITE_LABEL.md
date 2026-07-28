@@ -1,110 +1,79 @@
 # White-Label Branding
 
-**Last Updated**: 2026-01-21 00:00 UTC
+**Last Updated**: 2026-07-28 00:00 UTC
 
 ## Overview
 
-Customize the appearance of goSign with your company branding, including logos, colors, fonts, and custom domains.
+Account-level branding configuration for goSign. Branding settings are stored
+per account in the `account.settings` JSONB column (under the `branding` key)
+and can be managed via the API or the settings UI (**Settings → Branding**).
+
+## Implementation Status
+
+| Capability | Status |
+|------------|--------|
+| Branding settings storage (get/update via API) | Implemented |
+| Company name, logo, colors in settings UI | Implemented (logo is stored as a data URL) |
+| Applying branding to the signing page / emails | Planned |
+| Asset upload endpoint (logo/favicon files) | Planned |
+| Custom domains | Planned |
 
 ## Branding Settings
 
-### Basic Branding
-- **Company Name** - Display name throughout the platform
-- **Logo** - Company logo (PNG, JPEG, SVG)
-- **Favicon** - Browser tab icon
+All fields are optional; omitted keys keep their stored values.
 
-### Colors
-- **Primary Color** - Main brand color (#4F46E5)
-- **Secondary Color** - Secondary brand color (#6366F1)
-- **Accent Color** - Accent color for highlights (#10B981)
-- **Background Color** - Page background (#FFFFFF)
-- **Text Color** - Primary text color (#111827)
-
-### Typography
-- **Font Family** - Custom font (e.g., 'Inter', 'Roboto')
-- **Font URL** - Google Fonts or custom font URL
-
-### Signing Page Themes
-- **default** - Standard signing page layout
-- **minimal** - Minimal design with less visual elements
-- **corporate** - Corporate theme with prominent branding
-
-### Email Templates
-- **Email Header** - Custom header image for emails
-- **Email Footer** - Custom footer text
-- **Email Theme** - Email template style
-
-### Advanced
-- **Custom CSS** - Advanced styling with custom CSS
-- **Hide "Powered by"** - Remove goSign branding (Pro feature)
-- **Custom Domain** - Use your own domain (Enterprise feature)
+- **Basic**: `company_name`, `logo_url`, `favicon_url`
+- **Colors**: `primary_color`, `secondary_color`, `accent_color`, `background_color`, `text_color`
+- **Typography**: `font_family`, `font_url`
+- **Signing page**: `signing_page_theme` (`default`, `minimal`, `corporate`), `show_powered_by`, `custom_css`
+- **Email templates**: `email_header_url`, `email_footer_text`, `email_theme`
+- **Legal**: `terms_url`, `privacy_url`
 
 ## API Endpoints
 
 ### Get Branding
 ```bash
-GET /api/v1/branding
+GET /v1/settings/branding
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "branding": {
+      "company_name": "Acme Corp",
+      "primary_color": "#4F46E5",
+      "show_powered_by": true
+    }
+  }
+}
 ```
 
 ### Update Branding
+
+Provided keys are merged into the stored settings; keys that are not sent
+remain unchanged.
+
 ```bash
-PUT /api/v1/branding
+PUT /v1/settings/branding
+Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
 {
   "branding": {
     "company_name": "Acme Corp",
     "primary_color": "#4F46E5",
-    "logo_url": "https://example.com/logo.png",
-    "signing_page_theme": "corporate",
-    "show_powered_by": false
+    "logo_url": "https://example.com/logo.png"
   }
 }
 ```
-
-### Upload Asset
-```bash
-POST /api/v1/branding/assets
-Content-Type: multipart/form-data
-
-type=logo
-file=<image file>
-```
-
-## Custom Domain
-
-### Setup Process
-1. Add custom domain via API
-2. Receive verification token
-3. Add DNS TXT record with token
-4. System verifies domain
-5. SSL certificate automatically provisioned
-
-### API
-```bash
-POST /api/v1/branding/domain
-Content-Type: application/json
-
-{
-  "domain": "sign.example.com"
-}
-```
-
-## CSS Variables
-
-Branding colors are applied as CSS variables:
-- `--color-primary`
-- `--color-secondary`
-- `--color-accent`
-- `--color-background`
-- `--color-text`
-- `--font-family`
 
 ## Best Practices
 
 - Use high-quality logo images (SVG preferred)
 - Ensure color contrast meets accessibility standards
-- Test branding on different devices
 - Keep custom CSS minimal and maintainable
 - Use web-safe fonts or provide fallbacks
 - Optimize image file sizes

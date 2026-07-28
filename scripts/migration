@@ -27,8 +27,8 @@ POSTGRES_SSLMODE=${POSTGRES_SSLMODE:-disable}
 MIGRATION_DIR="${ROOT_PATH}/migrations"
 MIGRATION_DIR_TMP="$(mktemp -d)"
 
-# App data dirs: cmd/goSign for IDE/debug, bin/ for `go build -o bin/goSign ./cmd/goSign && ./bin/goSign serve`.
-DATA_DIRS=("${ROOT_PATH}/cmd/goSign")
+# App data dirs: cmd/server for IDE/debug, bin/ for `go build -o bin/gosign-server ./cmd/server && ./bin/gosign-server`.
+DATA_DIRS=("${ROOT_PATH}/cmd/server")
 if [ -d "${ROOT_PATH}/bin" ]; then
   DATA_DIRS+=("${ROOT_PATH}/bin")
 fi

@@ -112,7 +112,7 @@ The system validates:
 
 ### Validate Formula
 ```bash
-POST /api/v1/templates/formulas/validate
+POST /v1/templates/formulas/validate
 Content-Type: application/json
 
 {
@@ -124,7 +124,7 @@ Content-Type: application/json
 ## Technical Notes
 
 - **Field IDs**: Templates may use UUIDs for field IDs. The backend rewrites UUIDs to safe identifiers before compiling/evaluating so that the expression parser does not treat hyphens as minus operators.
-- **Validation**: `POST /api/v1/templates/formulas/validate` checks syntax and that all referenced fields exist; non-UUID identifiers (e.g. `field_1`) and full UUIDs are both supported.
+- **Validation**: `POST /v1/templates/formulas/validate` checks syntax and that all referenced fields exist; non-UUID identifiers (e.g. `field_1`) and full UUIDs are both supported.
 
 ## Best Practices
 

@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/pkg/security/password"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Test Story: Authentication Flow

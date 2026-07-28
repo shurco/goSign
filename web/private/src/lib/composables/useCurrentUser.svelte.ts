@@ -58,7 +58,7 @@ export function useCurrentUser() {
       // Restore from cache immediately so UI does not flicker on remount
       hydrateFromCache();
 
-      const response = await apiGet("/api/v1/users/me");
+      const response = await apiGet("/users/me");
       if (response?.data) {
         const data = response.data as CurrentUserData;
         state.userData = data;

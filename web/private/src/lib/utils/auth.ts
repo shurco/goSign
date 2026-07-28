@@ -1,3 +1,5 @@
+import { apiUrl, requiresAuth } from "@/services/api-base";
+
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 let navigateFn: ((path: string) => void | Promise<void>) | null = null;
@@ -64,7 +66,7 @@ export async function logout(): Promise<void> {
 
   // Try to invalidate refresh token on server (optional, don't wait for response)
   if (refreshToken) {
-    fetch("/auth/signout", {
+    fetch(apiUrl("/auth/signout"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken })
@@ -91,7 +93,7 @@ async function refreshAccessToken(): Promise<string | null> {
         return null;
       }
 
-      const response = await fetch("/auth/refresh", {
+      const response = await fetch(apiUrl("/auth/refresh"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -206,28 +208,16 @@ function createUnauthorizedResponse(): Response {
  * Fetch with automatic token refresh on 401
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  // Determine whether this request requires auth.
-  // NOTE: `url` can be relative ("/api/v1/...") or absolute ("http(s)://host/api/v1/...").
-  let pathForAuthCheck = url;
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    try {
-      pathForAuthCheck = new URL(url).pathname;
-    } catch {
-      // If parsing fails, fall back to the original string.
-      pathForAuthCheck = url;
-    }
-  }
+  // Protected API paths need a Bearer token; public API paths
+  // (auth, public signing, verify, invitations) pass through.
+  const needsAuth = requiresAuth(url);
 
-  const isAPIv1 = pathForAuthCheck.startsWith("/api/v1");
-  const isLegacyAPI = pathForAuthCheck.startsWith("/api/") && !pathForAuthCheck.startsWith("/api/v1");
-  const requiresAuth = isAPIv1 || isLegacyAPI;
-
-  if (requiresAuth && isAuthPage()) {
+  if (needsAuth && isAuthPage()) {
     return createUnauthorizedResponse();
   }
 
   // Get or refresh token if auth is required
-  if (requiresAuth) {
+  if (needsAuth) {
     let token = localStorage.getItem("access_token");
 
     if (!token) {
@@ -260,7 +250,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
   const response = await fetch(url, options);
 
   // Handle 401 with token refresh
-  if (response.status === 401 && requiresAuth) {
+  if (response.status === 401 && needsAuth) {
     // Don't refresh if already on auth page
     if (isAuthPage()) {
       return createUnauthorizedResponse();

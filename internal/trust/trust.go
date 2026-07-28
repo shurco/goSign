@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -29,18 +28,18 @@ import (
 var TrustList = map[string]TrustEntry{
 	"eutl12": {
 		Name: "Europe",
-		Url:  "https://trustlist.adobe.com/eutl12.acrobatsecuritysettings",
+		URL:  "https://trustlist.adobe.com/eutl12.acrobatsecuritysettings",
 	},
 	"tl12": {
 		Name: "Adobe",
-		Url:  "https://trustlist.adobe.com/tl12.acrobatsecuritysettings",
+		URL:  "https://trustlist.adobe.com/tl12.acrobatsecuritysettings",
 	},
 }
 
 // TrustEntry ...
 type TrustEntry struct {
 	Name string
-	Url  string
+	URL  string
 }
 
 // DefaultTrustList and DefaultUpdateDays are hardcoded; not configurable via env.
@@ -83,7 +82,7 @@ func Update() error {
 		if !found {
 			return errors.New("not found trust list")
 		}
-		err := parseTL(v, trust.Url)
+		err := parseTL(v, trust.URL)
 		if err != nil {
 			return err
 		}
@@ -109,10 +108,8 @@ func parseTL(list, url string) error {
 		return err
 	}
 
-	securityFile := "SecuritySettings.xml"
-
 	// Extract embedded file using digitorus/pdf
-	fileContents, err := extractEmbeddedFile(bytes.NewReader(data), int64(len(data)), securityFile)
+	fileContents, err := extractEmbeddedFile(bytes.NewReader(data), int64(len(data)), "SecuritySettings.xml")
 	if err != nil {
 		return fmt.Errorf("error extracting attachments: %w", err)
 	}
@@ -125,11 +122,6 @@ func parseTL(list, url string) error {
 	// Check if data starts with XML declaration or root element
 	if !bytes.HasPrefix(fileContents, []byte("<?xml")) && !bytes.HasPrefix(fileContents, []byte("<")) {
 		return fmt.Errorf("extracted file does not appear to be XML (starts with: %q)", string(fileContents[:min(50, len(fileContents))]))
-	}
-
-	// Save to file
-	if err := os.WriteFile("./"+securityFile, fileContents, 0644); err != nil {
-		return errors.New("error writing file")
 	}
 
 	var securitySettings SecuritySettings
@@ -147,12 +139,7 @@ func parseTL(list, url string) error {
 
 		cert, err := x509.ParseCertificate(decodedData)
 		if err != nil {
-			//if err.Error() == "x509: unsupported elliptic curve" {
-			//	fmt.Printf("elliptic\n")
-			//	continue
-			//}
-			//fmt.Printf("error parsing certificate: %s\n", err)
-			//log.Warn().Err(err).Send()
+			// Skip unparsable certificates (e.g. unsupported elliptic curves).
 			continue
 		}
 
@@ -161,7 +148,7 @@ func parseTL(list, url string) error {
 			List: list,
 			Name: cert.Subject.CommonName,
 			AKI:  strings.ToUpper(hex.EncodeToString(akiHash[:])),
-			SKI:  strings.ToUpper(hex.EncodeToString(cert.SubjectKeyId[:])),
+			SKI:  strings.ToUpper(hex.EncodeToString(cert.SubjectKeyId)),
 		}
 
 		trustList.Certs = append(trustList.Certs, trustCert)
@@ -175,9 +162,6 @@ func parseTL(list, url string) error {
 		return err
 	}
 
-	if err := os.Remove("./" + securityFile); err != nil {
-		return errors.New("error removing file")
-	}
 	return nil
 }
 

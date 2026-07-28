@@ -51,27 +51,27 @@ func (r *rdb) Close() error {
 }
 
 // Ping provides a way to ping a Redis server.
-func (c rdb) Ping() error {
-	_, err := c.client.Ping(c.ctx).Result()
+func (r *rdb) Ping() error {
+	_, err := r.client.Ping(r.ctx).Result()
 	return err
 }
 
 // Set is provides a way to set values in Redis.
-func (c rdb) Set(key string, value any, expiration time.Duration) error {
-	return c.client.Set(c.ctx, key, value, expiration).Err()
+func (r *rdb) Set(key string, value any, expiration time.Duration) error {
+	return r.client.Set(r.ctx, key, value, expiration).Err()
 }
 
 // Get is provides a way to retrieve values from Redis.
-func (c rdb) Get(key string) *redis.StringCmd {
-	return c.client.Get(c.ctx, key)
+func (r *rdb) Get(key string) *redis.StringCmd {
+	return r.client.Get(r.ctx, key)
 }
 
 // Delete is provides a way to delete values from Redis.
-func (c rdb) Delete(key string) (int64, error) {
-	return c.client.Del(c.ctx, key).Result()
+func (r *rdb) Delete(key string) (int64, error) {
+	return r.client.Del(r.ctx, key).Result()
 }
 
 // Client is provides a way to obtain a Redis client.
-func (c rdb) Client() *redis.Client {
-	return c.client
+func (r *rdb) Client() *redis.Client {
+	return r.client
 }

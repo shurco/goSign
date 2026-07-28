@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
@@ -43,8 +44,8 @@ func TestMemberHandler_OrganizationMembersAndInvite(t *testing.T) {
 	}
 
 	appRoute := func(app *fiber.App) {
-		app.Get("/organizations/:organization_id/members", h.GetOrganizationMembers)
-		app.Post("/organizations/:organization_id/members/invite", h.InviteMember)
+		app.Get("/company/:organization_id/members", h.GetOrganizationMembers)
+		app.Post("/company/:organization_id/members/invite", h.InviteMember)
 	}
 
 	t.Run("no auth GetOrganizationMembers returns 401", func(t *testing.T) {
@@ -52,7 +53,7 @@ func TestMemberHandler_OrganizationMembersAndInvite(t *testing.T) {
 		app.Use(middleware.Protected())
 		appRoute(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/organizations/"+orgID+"/members", nil)
+		req := httptest.NewRequest(http.MethodGet, "/company/"+orgID+"/members", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -69,7 +70,7 @@ func TestMemberHandler_OrganizationMembersAndInvite(t *testing.T) {
 
 		req := httptest.NewRequest(
 			http.MethodPost,
-			"/organizations/"+orgID+"/members/invite",
+			"/company/"+orgID+"/members/invite",
 			bytes.NewReader([]byte(`{}`)),
 		)
 		req.Header.Set("Content-Type", "application/json")
@@ -90,7 +91,7 @@ func TestMemberHandler_OrganizationMembersAndInvite(t *testing.T) {
 
 		req := httptest.NewRequest(
 			http.MethodPost,
-			"/organizations/"+orgID+"/members/invite",
+			"/company/"+orgID+"/members/invite",
 			bytes.NewReader([]byte(`{"email":"x@x.com","role":"member"}`)),
 		)
 		req.Header.Set("Content-Type", "application/json")

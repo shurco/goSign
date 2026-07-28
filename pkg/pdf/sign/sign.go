@@ -12,6 +12,7 @@ import (
 
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pkcs7"
+
 	"github.com/shurco/gosign/pkg/pdf/revocation"
 )
 

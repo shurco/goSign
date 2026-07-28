@@ -1,5 +1,6 @@
 <script lang="ts">
   import SvgIcon from "@/components/SvgIcon.svelte";
+  import { apiUrl } from "@/services/api";
   import { toDate } from "@/utils/time";
   import type { Signer } from "@/models/index";
 
@@ -39,7 +40,7 @@
 
     try {
       status = true;
-      const response = await fetch("/verify/pdf", {
+      const response = await fetch(apiUrl("/verify/pdf"), {
         method: "POST",
         body: formData
       });

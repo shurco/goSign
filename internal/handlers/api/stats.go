@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
@@ -22,7 +23,7 @@ func NewStatsHandler(pool *pgxpool.Pool) *StatsHandler {
 // @Tags stats
 // @Produce json
 // @Success 200 {object} map[string]any
-// @Router /api/v1/stats [get]
+// @Router /v1/stats [get]
 func (h *StatsHandler) Get(c fiber.Ctx) error {
 	// Get user ID from auth context
 	userID, err := GetUserID(c)

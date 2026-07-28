@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# goSign API server (cmd/server)
 
 ### Build stage
 FROM golang:1.26-alpine AS builder
@@ -12,13 +13,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-COPY cmd ./cmd
+COPY cmd/server ./cmd/server
 COPY internal ./internal
 COPY pkg ./pkg
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/gosign ./cmd/goSign
+    CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/gosign-server ./cmd/server
 
 ### Runtime stage
 FROM alpine:3.21
@@ -28,7 +29,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 
 WORKDIR /app
 
-COPY --from=builder /out/gosign /app/gosign
+COPY --from=builder /out/gosign-server /app/gosign-server
 
 RUN chown -R gosign:gosign /app
 
@@ -36,5 +37,4 @@ USER gosign
 
 EXPOSE 8088
 
-ENTRYPOINT ["/app/gosign"]
-CMD ["serve"]
+ENTRYPOINT ["/app/gosign-server"]

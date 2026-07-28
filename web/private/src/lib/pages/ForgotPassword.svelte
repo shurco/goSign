@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "@/components/ui/Button.svelte";
+  import { apiUrl } from "@/services/api";
 
   let email = $state("");
   let isLoading = $state(false);
@@ -13,7 +14,7 @@
     isLoading = true;
 
     try {
-      const response = await fetch("/auth/password/forgot", {
+      const response = await fetch(apiUrl("/auth/password/forgot"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

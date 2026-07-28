@@ -71,11 +71,11 @@ func TestRandomString(t *testing.T) {
 	seen := make(map[string]struct{}, 64)
 	for i := 0; i < 64; i++ {
 		s := RandomString()
-		if len(s) != DefaultIdLength {
-			t.Fatalf("expected length %d, got %d", DefaultIdLength, len(s))
+		if len(s) != DefaultIDLength {
+			t.Fatalf("expected length %d, got %d", DefaultIDLength, len(s))
 		}
 		for _, c := range s {
-			if !strings.ContainsRune(DefaultIdAlphabet, c) {
+			if !strings.ContainsRune(DefaultIDAlphabet, c) {
 				t.Fatalf("character %q is not in the allowed alphabet", c)
 			}
 		}

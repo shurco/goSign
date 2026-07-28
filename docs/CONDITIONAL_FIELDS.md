@@ -121,7 +121,7 @@ The system validates:
 
 ### Validate Conditions
 ```bash
-POST /api/v1/templates/:id/conditions/validate
+POST /v1/templates/:id/conditions/validate
 Content-Type: application/json
 
 {

@@ -17,8 +17,9 @@ import (
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
-	"github.com/shurco/gosign/pkg/pdf/revocation"
 	"golang.org/x/crypto/ocsp"
+
+	"github.com/shurco/gosign/pkg/pdf/revocation"
 )
 
 var (

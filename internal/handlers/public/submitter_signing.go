@@ -73,7 +73,7 @@ type getBySlugResponse struct {
 // @Param slug path string true "Submitter slug"
 // @Success 200 {object} map[string]any
 // @Failure 404 {object} map[string]any
-// @Router /public/sign/{slug} [get]
+// @Router /v1/public/sign/{slug} [get]
 func (h *PublicSigningHandler) GetBySlug(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
@@ -229,7 +229,7 @@ type completeRequest struct {
 // @Tags public-signing
 // @Param slug path string true "Submitter slug"
 // @Success 200 {object} map[string]any
-// @Router /public/sign/{slug}/open [post]
+// @Router /v1/public/sign/{slug}/open [post]
 func (h *PublicSigningHandler) Open(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
@@ -272,7 +272,7 @@ type updateSubmitterRequest struct {
 // @Param body body updateSubmitterRequest true "Update payload"
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
-// @Router /public/sign/{slug}/update [post]
+// @Router /v1/public/sign/{slug}/update [post]
 func (h *PublicSigningHandler) UpdateSubmitter(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
@@ -361,7 +361,7 @@ func (h *PublicSigningHandler) UpdateSubmitter(c fiber.Ctx) error {
 // @Param body body completeRequest true "Fields payload"
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
-// @Router /public/sign/{slug}/complete [post]
+// @Router /v1/public/sign/{slug}/complete [post]
 func (h *PublicSigningHandler) Complete(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {
@@ -464,7 +464,7 @@ type declineRequest struct {
 // @Param body body declineRequest false "Decline payload"
 // @Success 200 {object} map[string]any
 // @Failure 404 {object} map[string]any
-// @Router /public/sign/{slug}/decline [post]
+// @Router /v1/public/sign/{slug}/decline [post]
 func (h *PublicSigningHandler) Decline(c fiber.Ctx) error {
 	slug := c.Params("slug")
 	if slug == "" {

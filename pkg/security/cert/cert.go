@@ -32,8 +32,8 @@ type Certificate struct {
 	ParentPrivateKey any
 	KeyUsage         x509.KeyUsage
 	ExtentedKeyUsage []x509.ExtKeyUsage
-	SubjectKeyId     []byte
-	AuthorityKeyId   []byte
+	SubjectKeyId     []byte //nolint:revive // mirrors x509.Certificate field name
+	AuthorityKeyId   []byte //nolint:revive // mirrors x509.Certificate field name
 }
 
 // Result hold created certificate in []byte format
@@ -135,13 +135,13 @@ func CertInfo(cert *x509.Certificate) string {
 	buf.WriteString(fmt.Sprintf("%8sSerial Number:\n%12s%v\n", "", "", formatKeyIDWithColon(cert.SerialNumber.Bytes())))
 	buf.WriteString(fmt.Sprintf("%8sSignature Algorithm: %v\n", "", cert.SignatureAlgorithm))
 
-	buf.WriteString(fmt.Sprintf("%8sIssuer: %v\n", "", strings.Replace(cert.Issuer.String(), ",", ", ", -1)))
+	buf.WriteString(fmt.Sprintf("%8sIssuer: %v\n", "", strings.ReplaceAll(cert.Issuer.String(), ",", ", ")))
 
 	buf.WriteString(fmt.Sprintf("%8sValidity:\n", ""))
 	buf.WriteString(fmt.Sprintf("%12sNotBefore: %v\n", "", cert.NotBefore.Format("Jan 2 15:04:05 2006 GMT")))
 	buf.WriteString(fmt.Sprintf("%12sNotAfter : %v\n", "", cert.NotAfter.Format("Jan 2 15:04:05 2006 GMT")))
 
-	buf.WriteString(fmt.Sprintf("%8sSubject: %v\n", "", strings.Replace(cert.Subject.String(), ",", ", ", -1)))
+	buf.WriteString(fmt.Sprintf("%8sSubject: %v\n", "", strings.ReplaceAll(cert.Subject.String(), ",", ", ")))
 
 	buf.WriteString(fmt.Sprintf("%8sSubject Public Key Info:\n", ""))
 	buf.WriteString(fmt.Sprintf("%12sPublic Key Algorithm: %v\n", "", cert.PublicKeyAlgorithm))

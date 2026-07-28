@@ -156,7 +156,7 @@ func main() {
 
 	var shiftSignerBlock float64
 	for _, signer := range signers {
-		shiftSignerBlock = shiftSignerBlock + 98
+		shiftSignerBlock += 98
 
 		pdf.SetLineWidth(0.5)
 		pdf.SetLineType("solid")

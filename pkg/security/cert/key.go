@@ -45,7 +45,7 @@ func (p *PrivateKey) String() string {
 	return w.String()
 }
 
-// ParsePrivatekey parse given []byte private key to struct *ecdsa.PrivateKey
+// ParsePrivateKey parses given []byte private key to struct *ecdsa.PrivateKey
 func ParsePrivateKey(pkey []byte) (*ecdsa.PrivateKey, error) {
 	b, _ := pem.Decode(pkey)
 	if b == nil {

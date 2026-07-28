@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, tick, setContext } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { page } from "$app/state";
   import { beforeNavigate } from "$app/navigation";
   import { t } from "@/i18n/index.svelte";
@@ -160,7 +161,7 @@
         throw new Error("Failed to read file");
       }
 
-      const res = await apiPost(`/api/v1/templates/${templateId}/from-file`, {
+      const res = await apiPost(`/templates/${templateId}/from-file`, {
         type: "pdf",
         file_base64: base64,
         append
@@ -197,7 +198,7 @@
       }
 
       // Load specific template by ID
-      const res = await apiGet<Template>(`/api/v1/templates/${templateId}`);
+      const res = await apiGet<Template>(`/templates/${templateId}`);
       // API v1 returns: { message: "template", data: Template }
       if (res && res.data) {
         applyLoadedTemplate(res.data);
@@ -260,7 +261,7 @@
       return;
     }
 
-    const res = await fetchWithAuth(`/api/v1/templates/${id}`, {
+    const res = await fetchWithAuth(apiUrl(`/templates/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -745,13 +746,8 @@
   }
 
   function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
-    // Normalize path: replace /api/ with /api/v1/ if needed
-    let normalizedPath = path;
-    if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
-      normalizedPath = path.replace("/api/", "/api/v1/");
-    }
     // Use fetchWithAuth to ensure token is included in headers
-    return fetchWithAuth(normalizedPath, {
+    return fetchWithAuth(apiUrl(path), {
       ...options,
       headers: { ...fetchOptions.headers, ...options.headers }
     });

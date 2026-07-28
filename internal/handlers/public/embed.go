@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
@@ -59,8 +60,8 @@ func (h *EmbedHandler) GetEmbedPage(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusGone, "Document declined", nil)
 	}
 
-	// Render Vue app with required route
-	// In production this will proxy to existing Sign UI
+	// Minimal wrapper page: iframes the signing portal (/s/:slug) and
+	// relays its postMessage events to the customer's parent window.
 	html := `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,7 +83,7 @@ func (h *EmbedHandler) GetEmbedPage(c fiber.Ctx) error {
     </style>
 </head>
 <body>
-    <iframe src="/s/` + slug + `" allow="camera;microphone"></iframe>
+    <iframe src="` + config.Data().AppLink("/s/"+slug) + `" allow="camera;microphone"></iframe>
     <script>
         // Post message for communication with parent window
         window.addEventListener('message', function(event) {
@@ -147,7 +148,7 @@ func (h *EmbedHandler) GetEmbedConfig(c fiber.Ctx) error {
 	config := map[string]any{
 		"slug":       slug,
 		"embed_url":  "/embed/" + slug,
-		"direct_url": "/s/" + slug,
+		"direct_url": config.Data().AppLink("/s/" + slug),
 		"status":     string(submitter.Status),
 		"events": []string{
 			"ready",

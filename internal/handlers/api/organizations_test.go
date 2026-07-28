@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/testutil"
@@ -22,11 +23,11 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 	nonExistingOrgID := "11111111-1111-1111-1111-111111111111"
 
 	routes := func(app *fiber.App) {
-		app.Post("/organizations", h.CreateOrganization)
-		app.Get("/organizations", h.GetUserOrganizations)
-		app.Get("/organizations/:organization_id", h.GetOrganization)
-		app.Put("/organizations/:organization_id", h.UpdateOrganization)
-		app.Delete("/organizations/:organization_id", h.DeleteOrganization)
+		app.Post("/company", h.CreateOrganization)
+		app.Get("/company", h.GetUserOrganizations)
+		app.Get("/company/:organization_id", h.GetOrganization)
+		app.Put("/company/:organization_id", h.UpdateOrganization)
+		app.Delete("/company/:organization_id", h.DeleteOrganization)
 	}
 
 	t.Run("CreateOrganization no auth returns 401", func(t *testing.T) {
@@ -34,7 +35,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(middleware.Protected())
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodPost, "/organizations", bytes.NewReader([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/company", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		if err != nil {
@@ -50,7 +51,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodPost, "/organizations", bytes.NewReader([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/company", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		if err != nil {
@@ -66,7 +67,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodPost, "/organizations", bytes.NewReader([]byte(`{"name":"Test Org"}`)))
+		req := httptest.NewRequest(http.MethodPost, "/company", bytes.NewReader([]byte(`{"name":"Test Org"}`)))
 		req.Header.Set("Content-Type", "application/json")
 		createResp, err := app.Test(req)
 		if err != nil {
@@ -93,7 +94,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 			t.Fatalf("org[\"id\"] is not string: %v", org["id"])
 		}
 
-		getReq := httptest.NewRequest(http.MethodGet, "/organizations/"+orgID, nil)
+		getReq := httptest.NewRequest(http.MethodGet, "/company/"+orgID, nil)
 		getResp, err := app.Test(getReq)
 		if err != nil {
 			t.Fatalf("get app.Test: %v", err)
@@ -108,7 +109,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(middleware.Protected())
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/organizations", nil)
+		req := httptest.NewRequest(http.MethodGet, "/company", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -123,7 +124,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/organizations", nil)
+		req := httptest.NewRequest(http.MethodGet, "/company", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -138,7 +139,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/organizations/"+nonExistingOrgID, nil)
+		req := httptest.NewRequest(http.MethodGet, "/company/"+nonExistingOrgID, nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -153,7 +154,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodPut, "/organizations/"+nonExistingOrgID, bytes.NewReader([]byte(`{"name":"x"}`)))
+		req := httptest.NewRequest(http.MethodPut, "/company/"+nonExistingOrgID, bytes.NewReader([]byte(`{"name":"x"}`)))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		if err != nil {
@@ -169,7 +170,7 @@ func TestOrganizationHandler_CRUD(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodDelete, "/organizations/"+nonExistingOrgID, nil)
+		req := httptest.NewRequest(http.MethodDelete, "/company/"+nonExistingOrgID, nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)

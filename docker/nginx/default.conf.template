@@ -1,0 +1,96 @@
+# Edge proxy: routes by domain.
+#   ${API_DOMAIN} -> backend API (gosign:8088)
+#   ${APP_DOMAIN} -> web app SPA (frontend:8080)
+# Rendered by the nginx image entrypoint (envsubst on /etc/nginx/templates).
+
+upstream gosign_backend {
+    server gosign:8088;
+    keepalive 32;
+}
+
+upstream gosign_frontend {
+    server frontend:8080;
+    keepalive 16;
+}
+
+# ---------------------------------------------------------------------------
+# API: ${API_DOMAIN}
+# ---------------------------------------------------------------------------
+server {
+    listen 80;
+    server_name ${API_DOMAIN};
+
+    client_max_body_size 50m;
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+    gzip_min_length 1024;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Connection        "";
+    proxy_connect_timeout 10s;
+    proxy_read_timeout    120s;
+    proxy_send_timeout    120s;
+
+    # No X-Frame-Options here: /embed/{slug} pages must be frameable
+    # by customer sites (slug acts as the access token).
+    add_header X-Content-Type-Options "nosniff"                         always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+
+    location / { proxy_pass http://gosign_backend; }
+}
+
+# ---------------------------------------------------------------------------
+# Web app: ${APP_DOMAIN}
+# ---------------------------------------------------------------------------
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+    gzip_min_length 1024;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Connection        "";
+
+    add_header X-Frame-Options        "SAMEORIGIN"                      always;
+    add_header X-Content-Type-Options "nosniff"                         always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy     "camera=(), microphone=(), geolocation=()" always;
+
+    # Signing portal: rendered inside the /embed iframe on the API domain,
+    # so it must stay frameable (own add_header set drops X-Frame-Options).
+    location /s/ {
+        add_header X-Content-Type-Options "nosniff"                         always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        proxy_pass http://gosign_frontend;
+    }
+
+    location / { proxy_pass http://gosign_frontend; }
+}
+
+# ---------------------------------------------------------------------------
+# Default: unknown hosts get nothing (healthcheck endpoint only).
+# ---------------------------------------------------------------------------
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location = /healthz { return 200 "ok"; }
+    location / { return 444; }
+}

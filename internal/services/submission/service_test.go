@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shurco/gosign/internal/models"
-	"github.com/shurco/gosign/pkg/notification"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/shurco/gosign/internal/models"
+	"github.com/shurco/gosign/pkg/notification"
 )
 
 // Mock notification provider for testing

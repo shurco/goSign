@@ -1,5 +1,1 @@
-<script lang="ts">
-  import Home from "@/pages/Home.svelte";
-</script>
-
-<Home />
+<!-- Redirect-only route (see +page.ts) -->

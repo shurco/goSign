@@ -1,5 +1,6 @@
 <script lang="ts">
   import Page from "@/components/template/Page.svelte";
+  import { fileUrl } from "@/services/api-base";
   import type { Document as DocumentModel, PreviewImages } from "@/models/index";
   import type { Area, Field } from "@/models/template";
 
@@ -50,7 +51,7 @@
       return {} as Record<number, PageImage>;
     }
     return document.preview_images.reduce<Record<number, PageImage>>((acc, e) => {
-      const entry = { ...e, url: `${document.url}/${document.id}` };
+      const entry = { ...e, url: fileUrl(`${document.url}/${document.id}`) };
       acc[parseInt(e.filename, 10)] = entry;
       return acc;
     }, {});
@@ -66,7 +67,7 @@
         previewImagesIndex[i] || {
           metadata: lazyloadMetadata,
           id: Math.random().toString(),
-          url: `${document.url}/${document.id}`,
+          url: fileUrl(`${document.url}/${document.id}`),
           filename: document.preview_images[i].filename
         }
       );

@@ -48,7 +48,7 @@ type CRL []asn1.RawValue
 // x/crypto/ocsp.ParseResponse
 type OCSP []asn1.RawValue
 
-// ANS.1 Object OtherRevInfo
+// Other is the ASN.1 object OtherRevInfo
 type Other struct {
 	Type  asn1.ObjectIdentifier
 	Value []byte

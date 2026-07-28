@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/testutil"
@@ -22,10 +23,10 @@ func TestEmailTemplateHandler(t *testing.T) {
 	h := NewEmailTemplateHandler(emailQ, userQ)
 
 	routes := func(app *fiber.App) {
-		app.Get("/email-templates", h.GetAllEmailTemplates)
-		app.Get("/email-templates/:name", h.GetEmailTemplate)
-		app.Post("/email-templates", h.CreateEmailTemplate)
-		app.Delete("/email-templates/:id", h.DeleteEmailTemplate)
+		app.Get("/settings/email/templates", h.GetAllEmailTemplates)
+		app.Get("/settings/email/templates/:name", h.GetEmailTemplate)
+		app.Post("/settings/email/templates", h.CreateEmailTemplate)
+		app.Delete("/settings/email/templates/:id", h.DeleteEmailTemplate)
 	}
 
 	tplName := fmt.Sprintf("test-template-%d", time.Now().UnixNano())
@@ -35,7 +36,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 		app.Use(middleware.Protected())
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/email-templates", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/email/templates", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -50,7 +51,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/email-templates", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/email/templates", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -65,7 +66,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodPost, "/email-templates", bytes.NewReader([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/settings/email/templates", bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := app.Test(req)
 		if err != nil {
@@ -90,7 +91,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 			t.Fatalf("marshal body: %v", err)
 		}
 
-		req := httptest.NewRequest(http.MethodPost, "/email-templates", bytes.NewReader(b))
+		req := httptest.NewRequest(http.MethodPost, "/settings/email/templates", bytes.NewReader(b))
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := app.Test(req)
@@ -107,7 +108,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/email-templates/"+tplName+"-missing", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/email/templates/"+tplName+"-missing", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -122,7 +123,7 @@ func TestEmailTemplateHandler(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodDelete, "/email-templates/11111111-1111-1111-1111-111111111111", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/settings/email/templates/11111111-1111-1111-1111-111111111111", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)

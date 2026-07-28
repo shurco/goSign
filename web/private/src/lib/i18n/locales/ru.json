@@ -131,7 +131,8 @@
       "functions": "Функции",
       "examples": "Примеры",
       "noFields": "Нет доступных полей типа число или текст."
-    }
+    },
+    "type_value": "Введите значение"
   },
   "signing": {
     "title": "Завершить документ",
@@ -188,7 +189,11 @@
     "linksTitleWithTemplate": "Ссылки на подписание — {template}",
     "copyLink": "Скопировать ссылку",
     "copyAllLinks": "Скопировать все ссылки",
-    "sendEachLinkHint": "Отправьте каждую ссылку соответствующему подписанту любым удобным способом."
+    "sendEachLinkHint": "Отправьте каждую ссылку соответствующему подписанту любым удобным способом.",
+    "invalidNumber": "Введите корректное число",
+    "numberMax": "Значение должно быть не больше {max}",
+    "numberMin": "Значение должно быть не меньше {min}",
+    "signing_date": "Дата подписания"
   },
   "signingMode": {
     "title": "Режим подписания",
@@ -394,12 +399,12 @@
     "emailSubjectPlaceholder": "Тема письма (необязательно)",
     "emailTemplatePlaceholder": "Введите HTML содержимое шаблона...",
     "availableVariables": "Доступные переменные",
-    "variableRecipientName": "{'{{'}.RecipientName{'}}'} - Имя получателя",
-    "variableDocumentName": "{'{{'}.DocumentName{'}}'} - Название документа",
-    "variableSigningLink": "{'{{'}.SigningLink{'}}'} - Ссылка для подписания документа",
-    "variableExpiresAt": "{'{{'}.ExpiresAt{'}}'} - Дата истечения",
-    "variableSenderName": "{'{{'}.SenderName{'}}'} - Имя отправителя",
-    "variableCustomMessage": "{'{{'}.CustomMessage{'}}'} - Пользовательское сообщение",
+    "variableRecipientName": "{{.RecipientName}} - Имя получателя",
+    "variableDocumentName": "{{.DocumentName}} - Название документа",
+    "variableSigningLink": "{{.SigningLink}} - Ссылка для подписания документа",
+    "variableExpiresAt": "{{.ExpiresAt}} - Дата истечения",
+    "variableSenderName": "{{.SenderName}} - Имя отправителя",
+    "variableCustomMessage": "{{.CustomMessage}} - Пользовательское сообщение",
     "systemTemplate": "Системный",
     "lastUpdated": "Последнее обновление",
     "notUpdatedYet": "Ещё не обновлялось",
@@ -416,7 +421,25 @@
     "sourceUrl": "Ссылка",
     "unknownSource": "Неизвестно",
     "savedKeyLabel": "Сохранённый ключ",
-    "deleteKey": "Удалить ключ"
+    "deleteKey": "Удалить ключ",
+    "default": "По умолчанию",
+    "downloadGeoLite2Database": "Скачать базу GeoLite2",
+    "downloadGeoLite2DatabaseDescription": "Скачайте базу GeoLite2 City, чтобы включить геолокацию по IP. Выберите один из вариантов ниже.",
+    "downloadMethodInfo": "Настройте способы загрузки. Метод MaxMind имеет приоритет: если сохранён лицензионный ключ, он будет использоваться для автоматических обновлений. Иначе резервно используется метод URL.",
+    "failedToSaveGeolocationSettings": "Не удалось сохранить настройки геолокации",
+    "failedToSaveLicenseKey": "Не удалось сохранить лицензионный ключ",
+    "geolocationBaseDir": "Базовая директория",
+    "geolocationBaseDirDescription": "Директория для хранения файлов базы GeoLite2",
+    "geolocationBaseDirPlaceholder": "./base",
+    "geolocationDbPath": "Путь к базе данных",
+    "geolocationDbPathDescription": "Полный путь к файлу GeoLite2-City.mmdb",
+    "geolocationDbPathPlaceholder": "./base/GeoLite2-City.mmdb",
+    "geolocationSettingsSaved": "Настройки геолокации сохранены",
+    "licenseKeyAlreadySet": "Лицензионный ключ уже настроен (оставьте пустым, чтобы сохранить текущий)",
+    "licenseKeyRequiredForMaxMind": "Требуется лицензионный ключ. Сначала настройте его выше.",
+    "licenseKeySaved": "Лицензионный ключ сохранён",
+    "maxmindLicenseKeyDescription": "Получите лицензионный ключ на https://www.maxmind.com/en/accounts/current/license-key. Ключ будет сохранён в базе данных и использоваться для автоматических загрузок при запуске.",
+    "saving": "Сохранение"
   },
   "errors": {
     "generic": "Произошла ошибка",
@@ -548,7 +571,7 @@
     "role": "Роль",
     "joined": "Присоединился",
     "email": "Email",
-    "emailPlaceholder": "member{'@'}example.com",
+    "emailPlaceholder": "member@example.com",
     "expires": "Истекает",
     "expiresAt": "Истекает",
     "pendingInvitations": "Ожидающие приглашения",

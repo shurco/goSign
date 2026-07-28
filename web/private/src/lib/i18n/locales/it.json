@@ -28,7 +28,8 @@
     "optional": "Opzionale",
     "download": "Scarica",
     "deleted": "Eliminato",
-    "reasonLabel": "Motivo:"
+    "reasonLabel": "Motivo:",
+    "continue": "Continua"
   },
   "status": {
     "draft": "Bozza",
@@ -130,7 +131,8 @@
       "functions": "Funzioni",
       "examples": "Esempi",
       "noFields": "Nessun campo numero o testo disponibile."
-    }
+    },
+    "type_value": "Inserisci il valore"
   },
   "signing": {
     "title": "Completa documento",
@@ -182,7 +184,16 @@
     "setToday": "Oggi",
     "submissionNotFound": "Invio non trovato",
     "submitFailed": "Invio non riuscito",
-    "declineFailed": "Rifiuto non riuscito"
+    "declineFailed": "Rifiuto non riuscito",
+    "copyAllLinks": "Copia tutti i link",
+    "copyLink": "Copia link",
+    "invalidNumber": "Inserisci un numero valido",
+    "links": "Link di firma",
+    "linksTitleWithTemplate": "Link di firma — {template}",
+    "numberMax": "Il valore deve essere al massimo {max}",
+    "numberMin": "Il valore deve essere almeno {min}",
+    "sendEachLinkHint": "Invia ogni link al firmatario corrispondente tramite qualsiasi canale.",
+    "signing_date": "Data di firma"
   },
   "signingMode": {
     "title": "Modalità di firma",
@@ -218,7 +229,18 @@
     "titleField": "Titolo",
     "template": "Modello",
     "selectTemplate": "Seleziona un modello",
-    "placeholder": "Contratto per Mario Rossi"
+    "placeholder": "Contratto per Mario Rossi",
+    "createDescription": "Scegli un modello e inserisci i dati dei firmatari per creare i link di firma.",
+    "createLinks": "Crea link",
+    "invalidTemplateSubmitters": "I firmatari del modello non sono configurati correttamente",
+    "saveFailed": "Impossibile salvare l'invio",
+    "selectTemplateRequired": "Seleziona un modello",
+    "signerEmail": "Email",
+    "signerName": "Nome",
+    "signerPhone": "Telefono",
+    "signers": "Firmatari",
+    "signersHint": "Il numero di firmatari è determinato dal modello selezionato.",
+    "signersOrderDragHint": "In modalità sequenziale puoi trascinare le schede dei firmatari per impostare l'ordine di firma."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -374,7 +396,50 @@
     "sourceUrl": "URL",
     "unknownSource": "Sconosciuto",
     "savedKeyLabel": "Chiave salvata",
-    "deleteKey": "Elimina chiave"
+    "deleteKey": "Elimina chiave",
+    "availableVariables": "Variabili disponibili",
+    "confirmDeleteTemplate": "Sei sicuro di voler eliminare questo modello?",
+    "createEmailTemplate": "Crea modello email",
+    "default": "Predefinito",
+    "deleteError": "Impossibile eliminare il modello",
+    "downloadGeoLite2Database": "Scarica database GeoLite2",
+    "downloadGeoLite2DatabaseDescription": "Scarica il database GeoLite2 City per abilitare la geolocalizzazione IP. Scegli una delle opzioni seguenti.",
+    "downloadMethodInfo": "Configura i metodi di download. Il metodo MaxMind ha la priorità: se è salvata una chiave di licenza, verrà usata per gli aggiornamenti automatici. In caso contrario, verrà usato il metodo URL come alternativa.",
+    "editEmailTemplate": "Modifica modello email",
+    "emailSubjectPlaceholder": "Oggetto dell'email (facoltativo)",
+    "emailTemplatePlaceholder": "Inserisci il contenuto HTML del modello...",
+    "emailTemplates": "Modelli email",
+    "emailTemplatesDescription": "Gestisci i modelli email per inviti, promemoria e notifiche",
+    "failedToSaveGeolocationSettings": "Impossibile salvare le impostazioni di geolocalizzazione",
+    "failedToSaveLicenseKey": "Impossibile salvare la chiave di licenza",
+    "geolocationBaseDir": "Directory di base",
+    "geolocationBaseDirDescription": "Directory per l'archiviazione dei file del database GeoLite2",
+    "geolocationBaseDirPlaceholder": "./base",
+    "geolocationDbPath": "Percorso del database",
+    "geolocationDbPathDescription": "Percorso completo del file GeoLite2-City.mmdb",
+    "geolocationDbPathPlaceholder": "./base/GeoLite2-City.mmdb",
+    "geolocationSettingsSaved": "Impostazioni di geolocalizzazione salvate correttamente",
+    "licenseKeyAlreadySet": "La chiave di licenza è già configurata (lascia vuoto per mantenere quella attuale)",
+    "licenseKeyRequiredForMaxMind": "Chiave di licenza richiesta. Configurala prima qui sopra.",
+    "licenseKeySaved": "Chiave di licenza salvata correttamente",
+    "maxmindLicenseKeyDescription": "Ottieni la tua chiave di licenza su https://www.maxmind.com/en/accounts/current/license-key. La chiave verrà salvata nel database e usata per i download automatici all'avvio.",
+    "noEmailTemplates": "Nessun modello email trovato",
+    "saveError": "Impossibile salvare il modello",
+    "saving": "Salvataggio",
+    "subject": "Oggetto",
+    "systemTemplate": "Sistema",
+    "templateBase": "Modello base",
+    "templateCompleted": "Firmato",
+    "templateContent": "Contenuto del modello",
+    "templateInvitation": "Invito",
+    "templateName": "Nome del modello",
+    "templateReminder": "Promemoria",
+    "variableCustomMessage": "{{.CustomMessage}} - Messaggio personalizzato",
+    "variableDocumentName": "{{.DocumentName}} - Nome del documento",
+    "variableExpiresAt": "{{.ExpiresAt}} - Data di scadenza",
+    "variableRecipientName": "{{.RecipientName}} - Nome del destinatario",
+    "variableSenderName": "{{.SenderName}} - Nome del mittente",
+    "variableSigningLink": "{{.SigningLink}} - Link per firmare il documento"
   },
   "errors": {
     "generic": "Si è verificato un errore",
@@ -458,7 +523,17 @@
     "uploadPdfToStartEditing": "Carica un PDF per iniziare a modificare",
     "uploadPdfToStartEditingHint": "Questo modello non ha ancora documenti. Trascina qui un PDF e verrà caricato e applicato automaticamente.",
     "selectPdfFile": "Seleziona un file PDF",
-    "uploadError": "Impossibile caricare il PDF. Riprova."
+    "uploadError": "Impossibile caricare il PDF. Riprova.",
+    "clickToUpload": "Clicca per caricare",
+    "create": "Crea",
+    "dragAndDrop": "o trascina e rilascia qui",
+    "enterTemplateName": "Inserisci il nome del modello",
+    "invalidFileType": "Sono supportati solo file PDF",
+    "optional": "facoltativo",
+    "removeFile": "Rimuovi file",
+    "selectedFile": "File selezionato",
+    "uploadFromFile": "Carica da file",
+    "uploadFromFileHint": "Sono supportati file PDF. Se non viene selezionato alcun file, verrà creato un modello vuoto."
   },
   "organizations": {
     "title": "Organizzazioni",
@@ -511,7 +586,7 @@
     "invitationSent": "Invito inviato con successo!",
     "inviteError": "Errore durante l'invio dell'invito",
     "emailRequired": "L'email è obbligatoria",
-    "emailPlaceholder": "member{'@'}example.com",
+    "emailPlaceholder": "member@example.com",
     "viewerDescription": "Può visualizzare documenti e invii",
     "memberDescription": "Può creare e modificare documenti",
     "adminDescription": "Può gestire membri e impostazioni dell'organizzazione"

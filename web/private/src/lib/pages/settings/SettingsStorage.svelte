@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { t } from "@/i18n/index.svelte";
   import FormControl from "@/components/ui/FormControl.svelte";
   import Input from "@/components/ui/Input.svelte";
@@ -21,7 +22,7 @@
 
   async function loadSettings(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/settings");
+      const response = await fetchWithAuth(apiUrl("/settings"));
       if (response.ok) {
         const data = await response.json();
         const settings = data.data || data;
@@ -44,7 +45,7 @@
 
   async function saveStorage(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/settings/storage", {
+      const response = await fetchWithAuth(apiUrl("/settings/storage"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(storageSettings)

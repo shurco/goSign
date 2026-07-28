@@ -20,6 +20,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
+	"github.com/signintech/gopdf"
+
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services/field"
@@ -27,7 +29,6 @@ import (
 	"github.com/shurco/gosign/pkg/appdir"
 	"github.com/shurco/gosign/pkg/pdf"
 	"github.com/shurco/gosign/pkg/utils/webutil"
-	"github.com/signintech/gopdf"
 )
 
 // TemplateHandler handles requests to templates
@@ -224,8 +225,6 @@ func (h *TemplateHandler) AttachFileToTemplate(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusNotFound, "Template not found", nil)
 	}
 
-	organizationID := GetOrganizationIDFromLocals(c)
-
 	// Determine base schema (append mode keeps existing pages)
 	var baseSchema []models.Schema
 	if req.Append {
@@ -234,7 +233,7 @@ func (h *TemplateHandler) AttachFileToTemplate(c fiber.Ctx) error {
 	}
 
 	// Save PDF pages + previews and update schema
-	if err := h.savePDFToStorageWithBaseSchema(c.Context(), templateID, existing.Name, fileData, organizationID, baseSchema); err != nil {
+	if err := h.savePDFToStorageWithBaseSchema(c.Context(), templateID, fileData, baseSchema); err != nil {
 		log.Error().Err(err).Str("template_id", templateID).Msg("Failed to attach PDF to template")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to attach file to template", map[string]any{
 			"error": err.Error(),
@@ -300,7 +299,7 @@ func (h *TemplateHandler) CreateFromType(c fiber.Ctx) error {
 	switch req.Type {
 	case "pdf":
 		pdfFileData = fileData // Save file data for later
-		template, err = h.processPDF(c.Context(), req.Name, req.Description, fileData, req.Settings, organizationID, req.Category)
+		template, err = h.processPDF(req.Name, req.Description, fileData, req.Settings, organizationID, req.Category)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to process PDF")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to process PDF", map[string]any{
@@ -321,7 +320,7 @@ func (h *TemplateHandler) CreateFromType(c fiber.Ctx) error {
 
 	// Save PDF file to storage and create database records (now that we have template ID)
 	if req.Type == "pdf" && len(pdfFileData) > 0 {
-		if err := h.savePDFToStorage(c.Context(), template.ID, req.Name, pdfFileData, organizationID); err != nil {
+		if err := h.savePDFToStorage(c.Context(), template.ID, pdfFileData); err != nil {
 			log.Error().Err(err).Str("template_id", template.ID).Msg("Failed to save PDF to storage")
 			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save PDF to storage", map[string]any{
 				"error": err.Error(),
@@ -336,7 +335,7 @@ func (h *TemplateHandler) CreateFromType(c fiber.Ctx) error {
 // It extracts form fields from the PDF, converts them to template fields,
 // and creates a template structure. The actual file storage and page extraction
 // are handled separately in savePDFToStorage after the template is created.
-func (h *TemplateHandler) processPDF(ctx context.Context, name, description string, fileData []byte, settings map[string]any, organizationID string, category *string) (*models.Template, error) {
+func (h *TemplateHandler) processPDF(name, description string, fileData []byte, settings map[string]any, organizationID string, category *string) (*models.Template, error) {
 	// Save PDF to temporary location
 	tmpDir := os.TempDir()
 	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("template_%d.pdf", time.Now().UnixNano()))
@@ -374,8 +373,6 @@ func (h *TemplateHandler) processPDF(ctx context.Context, name, description stri
 				fieldType = models.FieldTypeRadio
 			case "select":
 				fieldType = models.FieldTypeSelect
-			default:
-				fieldType = models.FieldTypeText
 			}
 
 			field := models.Field{
@@ -436,20 +433,19 @@ func (h *TemplateHandler) processPDF(ctx context.Context, name, description stri
 // - lc_pages/{attachment_id}/0.jpg - the full preview image
 // - lc_pages/{attachment_id}/p/0.jpg - the thumbnail preview image
 // It also creates storage_attachment and storage_blob records in the database.
-func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID, name string, fileData []byte, organizationID string) error {
-	return h.savePDFToStorageWithBaseSchema(ctx, templateID, name, fileData, organizationID, nil)
+func (h *TemplateHandler) savePDFToStorage(ctx context.Context, templateID string, fileData []byte) error {
+	return h.savePDFToStorageWithBaseSchema(ctx, templateID, fileData, nil)
 }
 
 // savePDFToStorageWithBaseSchema stores pages and sets schema to baseSchema + newPagesSchema.
 // If baseSchema is empty/nil, it behaves like "replace schema" for initial upload.
 func (h *TemplateHandler) savePDFToStorageWithBaseSchema(
 	ctx context.Context,
-	templateID, name string,
+	templateID string,
 	fileData []byte,
-	organizationID string,
 	baseSchema []models.Schema,
 ) error {
-	newSchemaItems, err := h.storePDFPagesToStorage(ctx, templateID, name, fileData, organizationID)
+	newSchemaItems, err := h.storePDFPagesToStorage(ctx, templateID, fileData)
 	if err != nil {
 		return err
 	}
@@ -466,7 +462,7 @@ func (h *TemplateHandler) savePDFToStorageWithBaseSchema(
 
 // storePDFPagesToStorage splits the PDF into pages, writes them to lc_pages, creates storage records,
 // and returns schema items for the newly-added pages (does NOT update template.schema).
-func (h *TemplateHandler) storePDFPagesToStorage(ctx context.Context, templateID, name string, fileData []byte, organizationID string) ([]models.Schema, error) {
+func (h *TemplateHandler) storePDFPagesToStorage(ctx context.Context, templateID string, fileData []byte) ([]models.Schema, error) {
 	// Save PDF to temporary location
 	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("template_%s_%d.pdf", templateID, time.Now().UnixNano()))
 	defer os.Remove(tmpFile)
@@ -789,7 +785,7 @@ func createThumbnail(imageData []byte) ([]byte, error) {
 // @Success 200 {object} queries.TemplateSearchResult
 // @Failure 400 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/templates/search [get]
+// @Router /v1/templates/search [get]
 func (h *TemplateHandler) SearchTemplates(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -859,7 +855,7 @@ func (h *TemplateHandler) SearchTemplates(c fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/templates/favorites [get]
+// @Router /v1/templates/favorites [get]
 func (h *TemplateHandler) GetUserFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -909,7 +905,7 @@ func (h *TemplateHandler) GetUserFavorites(c fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 409 {object} map[string]any
-// @Router /api/v1/templates/favorites [post]
+// @Router /v1/templates/favorites [post]
 func (h *TemplateHandler) AddToFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -950,7 +946,7 @@ func (h *TemplateHandler) AddToFavorites(c fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/templates/favorites/{template_id} [delete]
+// @Router /v1/templates/favorites/{template_id} [delete]
 func (h *TemplateHandler) RemoveFromFavorites(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -986,7 +982,7 @@ func (h *TemplateHandler) RemoveFromFavorites(c fiber.Ctx) error {
 // @Success 201 {object} models.TemplateFolder
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
-// @Router /api/v1/templates/folders [post]
+// @Router /v1/templates/folders [post]
 func (h *TemplateHandler) CreateFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -1033,7 +1029,7 @@ func (h *TemplateHandler) CreateFolder(c fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
-// @Router /api/v1/templates/folders [get]
+// @Router /v1/templates/folders [get]
 func (h *TemplateHandler) GetFolders(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -1062,7 +1058,7 @@ func (h *TemplateHandler) GetFolders(c fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
-// @Router /api/v1/templates/folders/{folder_id} [put]
+// @Router /v1/templates/folders/{folder_id} [put]
 func (h *TemplateHandler) UpdateFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -1107,7 +1103,7 @@ func (h *TemplateHandler) UpdateFolder(c fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
-// @Router /api/v1/templates/folders/{folder_id} [delete]
+// @Router /v1/templates/folders/{folder_id} [delete]
 func (h *TemplateHandler) DeleteFolder(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -1142,7 +1138,7 @@ func (h *TemplateHandler) DeleteFolder(c fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
-// @Router /api/v1/templates/{template_id}/move [put]
+// @Router /v1/templates/{template_id}/move [put]
 func (h *TemplateHandler) MoveTemplate(c fiber.Ctx) error {
 	// Get user ID from context
 	userID, err := GetUserID(c)
@@ -1189,7 +1185,7 @@ type ValidateConditionsRequest struct {
 // @Param body body ValidateConditionsRequest true "Fields with conditions"
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
-// @Router /api/v1/templates/:id/conditions/validate [post]
+// @Router /v1/templates/:id/conditions/validate [post]
 func (h *TemplateHandler) ValidateConditions(c fiber.Ctx) error {
 	var req ValidateConditionsRequest
 	if err := c.Bind().JSON(&req); err != nil {
@@ -1218,7 +1214,7 @@ type ValidateFormulaRequest struct {
 // @Param body body ValidateFormulaRequest true "Formula validation request"
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]any
-// @Router /api/v1/formulas/validate [post]
+// @Router /v1/formulas/validate [post]
 func (h *TemplateHandler) ValidateFormula(c fiber.Ctx) error {
 	var req ValidateFormulaRequest
 	if err := c.Bind().JSON(&req); err != nil {

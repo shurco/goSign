@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { apiUrl, apiPatch } from "@/services/api";
   import { onMount, getContext } from "svelte";
   import { t } from "@/i18n/index.svelte";
   import ResourceTable from "@/components/common/ResourceTable.svelte";
@@ -59,7 +60,7 @@
 
   async function loadAPIKeys(): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/apikeys");
+      const response = await fetchWithAuth(apiUrl("/settings/api"));
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data.data)) {
@@ -77,7 +78,7 @@
 
   async function saveAPIKey(formData: Record<string, unknown>): Promise<void> {
     try {
-      const response = await fetchWithAuth("/api/v1/apikeys", {
+      const response = await fetchWithAuth(apiUrl("/settings/api"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -108,7 +109,7 @@
     }
 
     try {
-      const response = await fetchWithAuth(`/api/v1/apikeys/${apiKey.id}`, {
+      const response = await fetchWithAuth(apiUrl(`/settings/api/${apiKey.id}`), {
         method: "DELETE"
       });
 
@@ -124,18 +125,12 @@
   }
 
   async function toggleAPIKey(apiKey: APIKey): Promise<void> {
-    const action = apiKey.enabled ? "disable" : "enable";
+    const enabled = !apiKey.enabled;
+    const action = enabled ? "enable" : "disable";
 
     try {
-      const response = await fetchWithAuth(`/api/v1/apikeys/${apiKey.id}/${action}`, {
-        method: "PUT"
-      });
-
-      if (response.ok) {
-        await loadAPIKeys();
-      } else {
-        alert(t(`apikeys.${action}Error`));
-      }
+      await apiPatch(`/settings/api/${apiKey.id}`, { enabled });
+      await loadAPIKeys();
     } catch (error) {
       console.error(`Failed to ${action} API key:`, error);
       alert(t(`apikeys.${action}Error`));

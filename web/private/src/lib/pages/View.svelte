@@ -4,7 +4,7 @@
   import Document from "@/components/template/Document.svelte";
   import Fields from "@/components/field/List.svelte";
   import type { Template } from "@/models";
-  import { apiGet } from "@/services/api";
+  import { apiGet, apiUrl } from "@/services/api";
   import { fetchWithAuth } from "@/utils/auth";
   import { v4 } from "uuid";
 
@@ -437,13 +437,8 @@
   }
 
   function baseFetch(path: string, options: RequestInit = {}): Promise<Response> {
-    // Normalize path: replace /api/ with /api/v1/ if needed
-    let normalizedPath = path;
-    if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
-      normalizedPath = path.replace("/api/", "/api/v1/");
-    }
     // Use fetchWithAuth to ensure token is included in headers
-    return fetchWithAuth(normalizedPath, {
+    return fetchWithAuth(apiUrl(path), {
       ...options,
       headers: { ...fetchOptions.headers, ...options.headers }
     });
@@ -466,7 +461,7 @@
 
     pushUndo();
 
-    await baseFetch(`/api/templates/${template.id}`, {
+    await baseFetch(`/templates/${template.id}`, {
       method: "PUT",
       body: JSON.stringify({
         template: {
@@ -494,7 +489,7 @@
     error = null;
     try {
       // Load specific template by ID (same approach as Edit page)
-      const res: any = await apiGet<Template>(`/api/v1/templates/${templateId}`);
+      const res: any = await apiGet<Template>(`/templates/${templateId}`);
       if (res && res.data) {
         template = res.data as Template;
 

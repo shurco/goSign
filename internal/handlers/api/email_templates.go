@@ -76,7 +76,7 @@ func (h *EmailTemplateHandler) getEmailTemplateScope(c fiber.Ctx) (accountIDPtr 
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/email-templates [get]
+// @Router /v1/settings/email/templates [get]
 func (h *EmailTemplateHandler) GetAllEmailTemplates(c fiber.Ctx) error {
 	accountIDPtr, organizationIDPtr, err := h.getEmailTemplateScope(c)
 	if err != nil {
@@ -114,7 +114,7 @@ func (h *EmailTemplateHandler) GetAllEmailTemplates(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/email-templates/{name} [get]
+// @Router /v1/settings/email/templates/{name} [get]
 func (h *EmailTemplateHandler) GetEmailTemplate(c fiber.Ctx) error {
 	templateName := c.Params("name")
 	if templateName == "" {
@@ -149,7 +149,7 @@ func (h *EmailTemplateHandler) GetEmailTemplate(c fiber.Ctx) error {
 // @Failure 400 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/email-templates [post]
+// @Router /v1/settings/email/templates [post]
 func (h *EmailTemplateHandler) CreateEmailTemplate(c fiber.Ctx) error {
 	accountIDPtr, organizationIDPtr, err := h.getEmailTemplateScope(c)
 	if err != nil {
@@ -211,7 +211,7 @@ func (h *EmailTemplateHandler) CreateEmailTemplate(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/email-templates/{id} [put]
+// @Router /v1/settings/email/templates/{id} [put]
 func (h *EmailTemplateHandler) UpdateEmailTemplate(c fiber.Ctx) error {
 	templateID := c.Params("id")
 	if templateID == "" {
@@ -288,7 +288,7 @@ func (h *EmailTemplateHandler) UpdateEmailTemplate(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/email-templates/{id} [delete]
+// @Router /v1/settings/email/templates/{id} [delete]
 func (h *EmailTemplateHandler) DeleteEmailTemplate(c fiber.Ctx) error {
 	templateID := c.Params("id")
 	if templateID == "" {

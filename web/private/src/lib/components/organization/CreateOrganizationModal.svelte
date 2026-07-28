@@ -33,7 +33,7 @@
     }
 
     try {
-      const response = await apiPost("/api/v1/organizations", {
+      const response = await apiPost("/company", {
         name: name,
         description: (formData.description as string)?.trim() || ""
       });

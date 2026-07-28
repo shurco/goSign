@@ -23,6 +23,18 @@ linters:
     - copyloopvar
 
   settings:
+    errcheck:
+      exclude-functions:
+        # Idiomatic deferred cleanup / best-effort calls.
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*compress/gzip.Reader).Close
+        - (net/http.ResponseWriter).Write
+        - os.Remove
+        - os.RemoveAll
+        - (github.com/jackc/pgx/v5.Tx).Rollback
+        - (github.com/jackc/pgx/v5.BatchResults).Close
+        - (github.com/shurco/gosign/pkg/storage/redis.Handler).Close
     revive:
       rules:
         - name: var-naming
@@ -39,21 +51,32 @@ linters:
     staticcheck:
       checks:
         - all
+        - '-ST1000' # package comments: not enforced
         - '-ST1003' # underscores in names (ok for test fixtures)
         - '-ST1005' # upper-case error messages (legacy spots)
+        - '-QF*' # quickfix style suggestions: advisory only
 
   exclusions:
+    paths:
+      - web/ # node_modules may contain third-party Go files
     rules:
       - path: _test\.go
         linters:
           - unparam
           - gocritic
           - errcheck
+          - bodyclose
+      # gopdf drawing calls conventionally ignore errors.
       - path: pkg/pdf/
         linters:
           - gocritic
           - revive
           - unparam
+          - errcheck
+      # Experiments: gopdf drawing calls conventionally ignore errors.
+      - path: exp/
+        linters:
+          - errcheck
 
 issues:
   max-issues-per-linter: 0
@@ -67,3 +90,6 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/shurco/gosign
+  exclusions:
+    paths:
+      - web/

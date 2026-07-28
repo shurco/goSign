@@ -30,10 +30,15 @@ type APIHandlers struct {
 	Embed          *public.EmbedHandler
 }
 
-// ApiRoutes configures all API routes
-func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
+// APIRoutes configures all API routes.
+// The whole HTTP API lives under the /v1 prefix so it can be served
+// on a dedicated domain (api.example.com/v1/...). Only infrastructure
+// endpoints (/health) and the /embed iframe page stay at the root.
+func APIRoutes(c *fiber.App, handlers *APIHandlers) {
+	v1 := c.Group("/v1")
+
 	// Auth group (public routes)
-	auth := c.Group("/auth")
+	auth := v1.Group("/auth")
 
 	// Basic authentication
 	auth.Post("/signup", public.SignUp)
@@ -63,41 +68,45 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 	oauth.Get("/github/callback", public.GitHubCallback)
 
 	// Public signing/verification (no authentication)
-	verify := c.Group("/verify")
+	verify := v1.Group("/verify")
 	verify.Post("/pdf", public.VerifyPDF)
-
-	sign := c.Group("/sign")
-	sign.Post("/", public.SignPDF)
 
 	// Public signer-facing API (no authentication)
 	if handlers.PublicSigning != nil {
-		publicAPI := c.Group("/public")
+		publicAPI := v1.Group("/public")
 		handlers.PublicSigning.RegisterRoutes(publicAPI)
 	}
 
-	// Embedded signing iframe (no authentication)
+	// Embedded signing iframe (no authentication, root path:
+	// customer-facing page, not a versioned API endpoint)
 	if handlers.Embed != nil {
 		handlers.Embed.RegisterRoutes(c)
 	}
 
-	// API v1 (protected routes with rate limiting)
-	apiV1 := c.Group("/api/v1", middleware.Protected(), middleware.APIRateLimiter())
-
 	// Invitations (public routes for accepting invitations)
 	if handlers.Invitations != nil {
-		invitations := c.Group("/api/v1/invitations")
+		invitations := v1.Group("/invitations")
 		handlers.Invitations.RegisterRoutes(invitations)
+	}
+
+	// Protected resource groups. Middleware is attached per group prefix
+	// (Group middleware in Fiber is a prefix-scoped Use), so public /v1
+	// routes above stay open.
+	protected := func(prefix string) fiber.Router {
+		return v1.Group(prefix, middleware.Protected(), middleware.APIRateLimiter())
+	}
+	strict := func(prefix string) fiber.Router {
+		return v1.Group(prefix, middleware.Protected(), middleware.StrictRateLimiter())
 	}
 
 	// Submissions API
 	if handlers.Submissions != nil {
-		submissions := apiV1.Group("/submissions")
-		handlers.Submissions.RegisterRoutes(submissions)
+		handlers.Submissions.RegisterRoutes(protected("/submissions"))
 	}
 
 	// Direct signing links (protected; creates submission without email sending)
 	if handlers.SigningLinks != nil {
-		signingLinks := apiV1.Group("/signing-links")
+		signingLinks := protected("/signing-links")
 		signingLinks.Get("/", handlers.SigningLinks.List)
 		signingLinks.Get("/:submission_id/document", handlers.SigningLinks.DownloadCompletedDocument)
 		signingLinks.Get("/:submission_id", handlers.SigningLinks.Get)
@@ -106,82 +115,60 @@ func ApiRoutes(c *fiber.App, handlers *APIHandlers) {
 
 	// Submitters API
 	if handlers.Submitters != nil {
-		submitters := apiV1.Group("/submitters")
-		handlers.Submitters.RegisterRoutes(submitters)
+		handlers.Submitters.RegisterRoutes(protected("/submitters"))
 	}
 
 	// Templates API
 	if handlers.Templates != nil {
-		templates := apiV1.Group("/templates")
-		handlers.Templates.RegisterRoutes(templates)
+		handlers.Templates.RegisterRoutes(protected("/templates"))
 	}
 
-	// Organizations API
+	// Company API (formerly organizations)
 	if handlers.Organizations != nil {
-		organizations := apiV1.Group("/organizations")
+		company := protected("/company")
 
-		// Members API (organization members and invitations)
+		// Members API (company members and invitations)
 		// Register members routes FIRST to avoid route conflicts
-		// More specific routes should be registered before less specific ones
 		if handlers.Members != nil {
-			handlers.Members.RegisterRoutes(organizations)
+			handlers.Members.RegisterRoutes(company)
 		}
 
-		// Then register organization routes
-		handlers.Organizations.RegisterRoutes(organizations)
-	}
-
-	// Webhooks API
-	if handlers.Webhooks != nil {
-		webhooks := apiV1.Group("/webhooks")
-		handlers.Webhooks.RegisterRoutes(webhooks)
+		handlers.Organizations.RegisterRoutes(company)
 	}
 
 	// Settings API (with stricter rate limiting)
+	settings := strict("/settings")
 	if handlers.Settings != nil {
-		settings := apiV1.Group("/settings", middleware.StrictRateLimiter())
 		handlers.Settings.RegisterRoutes(settings)
 	}
-
-	// API Keys management
 	if handlers.APIKeys != nil {
-		apikeys := apiV1.Group("/apikeys", middleware.StrictRateLimiter())
-		handlers.APIKeys.RegisterRoutes(apikeys)
+		handlers.APIKeys.RegisterRoutes(settings.Group("/api"))
+	}
+	if handlers.Webhooks != nil {
+		handlers.Webhooks.RegisterRoutes(settings.Group("/webhooks"))
+	}
+	if handlers.I18n != nil {
+		handlers.I18n.RegisterRoutes(settings.Group("/i18n"))
+	}
+	if handlers.Branding != nil {
+		handlers.Branding.RegisterRoutes(settings.Group("/branding"))
+	}
+	if handlers.EmailTemplates != nil {
+		handlers.EmailTemplates.RegisterRoutes(settings.Group("/email/templates"))
 	}
 
 	// Stats API
 	if handlers.Stats != nil {
-		stats := apiV1.Group("/stats")
-		handlers.Stats.RegisterRoutes(stats)
+		handlers.Stats.RegisterRoutes(protected("/stats"))
 	}
 
 	// Events API
 	if handlers.Events != nil {
-		events := apiV1.Group("/events")
-		handlers.Events.RegisterRoutes(events)
+		handlers.Events.RegisterRoutes(protected("/events"))
 	}
 
 	// Users API
 	if handlers.Users != nil {
-		users := apiV1.Group("/users")
-		handlers.Users.RegisterRoutes(users)
-	}
-
-	// I18n API
-	if handlers.I18n != nil {
-		i18n := apiV1.Group("/i18n")
-		handlers.I18n.RegisterRoutes(i18n)
-	}
-
-	// Branding API
-	if handlers.Branding != nil {
-		branding := apiV1.Group("/branding")
-		handlers.Branding.RegisterRoutes(branding)
-	}
-
-	// Email Templates API
-	if handlers.EmailTemplates != nil {
-		emailTemplates := apiV1.Group("/email-templates", middleware.StrictRateLimiter())
-		handlers.EmailTemplates.RegisterRoutes(emailTemplates)
+		handlers.Users.RegisterRoutes(protected("/users"))
 	}
 }

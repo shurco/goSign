@@ -54,7 +54,7 @@
           return;
         }
 
-        const response = await apiGet("/api/v1/organizations");
+        const response = await apiGet("/company");
 
         // Check again after request if redirect happened
         if (window.location.pathname.includes("/auth/") || window.location.pathname.includes("/signin")) {
@@ -102,7 +102,7 @@
 
   const selectOrganization = async (org: Organization) => {
     try {
-      const response = await apiPost(`/api/v1/organizations/${org.id}/switch`);
+      const response = await apiPost(`/company/${org.id}/switch`);
 
       // Store new tokens
       localStorage.setItem("access_token", response.data.access_token);
@@ -126,7 +126,7 @@
 
   const exitOrganization = async () => {
     try {
-      const response = await apiPost("/api/v1/organizations/switch");
+      const response = await apiPost("/company/switch");
 
       // Store new tokens
       localStorage.setItem("access_token", response.data.access_token);

@@ -98,7 +98,7 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 			if geolocMap, ok := globalSettings["geolocation"]; ok {
 				safSettings["geolocation"] = map[string]any{
 					"base_dir":                appdir.Base(),
-					"db_path":                 filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+					"db_path":                 appdir.GeoLite2(),
 					"maxmind_license_key_set": utils.GetStringFromMap(geolocMap, "maxmind_license_key", "") != "",
 					"download_url":            utils.GetStringFromMap(geolocMap, "download_url", ""),
 					"download_method":         utils.GetStringFromMap(geolocMap, "download_method", ""),
@@ -134,7 +134,7 @@ func (h *SettingsHandler) Get(c fiber.Ctx) error {
 		if _, ok := safSettings["geolocation"]; !ok {
 			safSettings["geolocation"] = map[string]any{
 				"base_dir":     appdir.Base(),
-				"db_path":      filepath.Join(appdir.Base(), "GeoLite2-City.mmdb"),
+				"db_path":      appdir.GeoLite2(),
 				"download_url": "", "download_method": "",
 			}
 		}
@@ -463,81 +463,6 @@ func (h *SettingsHandler) UpdateStorage(c fiber.Ctx) error {
 	})
 }
 
-// UpdateBrandingRequest request body for updating branding settings
-type UpdateBrandingRequest struct {
-	CompanyName    string `json:"company_name"`
-	LogoURL        string `json:"logo_url"`
-	PrimaryColor   string `json:"primary_color"`
-	SecondaryColor string `json:"secondary_color"`
-}
-
-// UpdateBranding updates branding settings (organization settings in account.settings)
-// @Summary Update branding settings
-// @Description Updates company branding configuration (organization-level settings)
-// @Tags settings
-// @Accept json
-// @Produce json
-// @Param body body UpdateBrandingRequest true "Branding settings"
-// @Success 200 {object} map[string]any
-// @Router /api/settings/branding [put]
-func (h *SettingsHandler) UpdateBranding(c fiber.Ctx) error {
-	accountID, err := ResolveAccountID(c, h.userQueries)
-	if err != nil {
-		return err
-	}
-	if accountID == "" {
-		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
-
-	var req UpdateBrandingRequest
-	if err := c.Bind().JSON(&req); err != nil {
-		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
-	}
-
-	if h.accountQueries == nil {
-		return webutil.Response(c, fiber.StatusInternalServerError, "Account queries not initialized", nil)
-	}
-
-	// Get current account settings
-	currentSettings, err := h.accountQueries.GetAccountSettings(c.Context(), accountID)
-	if err != nil {
-		currentSettings = make(map[string]any)
-	}
-
-	// Update branding settings
-	branding, ok := currentSettings["branding"].(map[string]any)
-	if !ok {
-		branding = make(map[string]any)
-	}
-
-	if req.CompanyName != "" {
-		branding["company_name"] = req.CompanyName
-	}
-	if req.LogoURL != "" {
-		branding["logo_url"] = req.LogoURL
-	}
-	if req.PrimaryColor != "" {
-		branding["primary_color"] = req.PrimaryColor
-	}
-	if req.SecondaryColor != "" {
-		branding["secondary_color"] = req.SecondaryColor
-	}
-
-	currentSettings["branding"] = branding
-
-	// Save to account.settings
-	if err := h.accountQueries.UpdateAccountSettings(c.Context(), accountID, currentSettings); err != nil {
-		log.Error().Err(err).Msg("Failed to update branding settings in database")
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save settings", nil)
-	}
-
-	log.Info().Str("account_id", accountID).Msg("Branding settings updated in database")
-
-	return webutil.Response(c, fiber.StatusOK, "branding_settings", map[string]any{
-		"status": "updated",
-	})
-}
-
 // TestEmailRequest request body for testing email
 type TestEmailRequest struct {
 	Provider  string `json:"provider"`
@@ -738,8 +663,7 @@ func (h *SettingsHandler) TestStorage(c fiber.Ctx) error {
 	})
 }
 
-// RegisterRoutes registers all routes for settings
-// UpdateGeolocationRequest request body for updating geolocation settings
+// UpdateGeolocationRequest is the request body for updating geolocation settings.
 type UpdateGeolocationRequest struct {
 	MaxMindLicenseKey string `json:"maxmind_license_key,omitempty"` // Optional: MaxMind license key
 	DownloadURL       string `json:"download_url,omitempty"`        // Optional: Download URL
@@ -890,23 +814,28 @@ func downloadToTempAndExtractTarGz(url, tmpDBPath string) error {
 	return geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath)
 }
 
-// DownloadGeoLite2FromURLRequest request body for downloading GeoLite2 from URL
-type DownloadGeoLite2FromURLRequest struct {
-	URL   string `json:"url" validate:"required,url"`
-	Force bool   `json:"force,omitempty"`
+// DownloadGeoLite2Request request body for downloading the GeoLite2 database.
+// Method selects the source: "url" (direct or archive URL) or "maxmind"
+// (official MaxMind API, license key from request or saved settings).
+// When omitted, "url" is assumed if url is set, otherwise "maxmind".
+type DownloadGeoLite2Request struct {
+	Method     string `json:"method,omitempty" validate:"omitempty,oneof=url maxmind"`
+	URL        string `json:"url,omitempty" validate:"omitempty,url"`
+	LicenseKey string `json:"license_key,omitempty"`
+	Force      bool   `json:"force,omitempty"`
 }
 
-// DownloadGeoLite2FromURL downloads GeoLite2 database from URL
-// @Summary Download GeoLite2 database from URL
-// @Description Downloads GeoLite2-City.mmdb from provided URL
+// DownloadGeoLite2 downloads the GeoLite2 database from a URL or MaxMind
+// @Summary Download GeoLite2 database
+// @Description Downloads GeoLite2-City.mmdb from a URL (method=url) or from MaxMind (method=maxmind)
 // @Tags settings
 // @Accept json
 // @Produce json
-// @Param body body DownloadGeoLite2FromURLRequest true "Download request"
+// @Param body body DownloadGeoLite2Request true "Download request"
 // @Success 200 {object} map[string]any
-// @Router /api/settings/geolocation/download [post]
-func (h *SettingsHandler) DownloadGeoLite2FromURL(c fiber.Ctx) error {
-	var req DownloadGeoLite2FromURLRequest
+// @Router /v1/settings/geolocation/download [post]
+func (h *SettingsHandler) DownloadGeoLite2(c fiber.Ctx) error {
+	var req DownloadGeoLite2Request
 	if err := c.Bind().JSON(&req); err != nil {
 		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
 	}
@@ -914,6 +843,26 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
+	method := req.Method
+	if method == "" {
+		if req.URL != "" {
+			method = "url"
+		} else {
+			method = "maxmind"
+		}
+	}
+
+	if method == "url" {
+		if req.URL == "" {
+			return webutil.Response(c, fiber.StatusBadRequest, "Field 'url' is required for method 'url'", nil)
+		}
+		return h.downloadGeoLite2FromURL(c, req)
+	}
+	return h.downloadGeoLite2FromMaxMind(c, req)
+}
+
+// downloadGeoLite2FromURL downloads the GeoLite2 database from a direct URL.
+func (h *SettingsHandler) downloadGeoLite2FromURL(c fiber.Ctx, req DownloadGeoLite2Request) error {
 	dbPath, tmpDBPath, err := h.prepareGeoLite2Download(c, req.Force)
 	if err != nil {
 		return err
@@ -999,25 +948,9 @@ func (h *SettingsHandler) DownloadGeoLite2FromURL(c fiber.Ctx) error {
 	})
 }
 
-// DownloadGeoLite2FromMaxMindRequest request body for downloading GeoLite2 from MaxMind
-type DownloadGeoLite2FromMaxMindRequest struct {
-	LicenseKey string `json:"license_key,omitempty"`
-	Force      bool   `json:"force,omitempty"`
-}
-
-// DownloadGeoLite2FromMaxMind downloads GeoLite2 database from MaxMind API
-// @Summary Download GeoLite2 database from MaxMind
-// @Description Downloads GeoLite2-City.mmdb from MaxMind using license key from database or request
-// @Tags settings
-// @Accept json
-// @Produce json
-// @Param body body DownloadGeoLite2FromMaxMindRequest false "Download request (license_key optional, uses saved key if not provided)"
-// @Success 200 {object} map[string]any
-// @Router /api/settings/geolocation/download-maxmind [post]
-func (h *SettingsHandler) DownloadGeoLite2FromMaxMind(c fiber.Ctx) error {
-	var req DownloadGeoLite2FromMaxMindRequest
-	_ = c.Bind().JSON(&req)
-
+// downloadGeoLite2FromMaxMind downloads the GeoLite2 database from the
+// MaxMind API using the license key from the request or saved settings.
+func (h *SettingsHandler) downloadGeoLite2FromMaxMind(c fiber.Ctx, req DownloadGeoLite2Request) error {
 	licenseKey := strings.TrimSpace(req.LicenseKey)
 	if licenseKey == "" {
 		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && h.accountQueries != nil && accountID != "" {
@@ -1076,12 +1009,10 @@ func (h *SettingsHandler) RegisterRoutes(router fiber.Router) {
 	router.Put("/email", h.UpdateEmail)
 	router.Put("/sms", h.UpdateSMS)
 	router.Put("/storage", h.UpdateStorage)
-	router.Put("/branding", h.UpdateBranding)
 	router.Put("/geolocation", h.UpdateGeolocation)
 	router.Delete("/geolocation/maxmind-key", h.DeleteGeolocationMaxMindKey)
 	router.Post("/email/test", h.TestEmail)
 	router.Post("/sms/test", h.TestSMS)
 	router.Post("/storage/test", h.TestStorage)
-	router.Post("/geolocation/download", h.DownloadGeoLite2FromURL)
-	router.Post("/geolocation/download-maxmind", h.DownloadGeoLite2FromMaxMind)
+	router.Post("/geolocation/download", h.DownloadGeoLite2)
 }

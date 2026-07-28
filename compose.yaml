@@ -122,11 +122,32 @@ services:
     networks:
       - private
 
+  # Self-contained migration image (goose + SQL migrations baked in).
+  # Manual usage:
+  #   docker compose run --rm migrate
+  #   GOOSE_COMMAND=status docker compose run --rm migrate
+  #   GOOSE_COMMAND=down docker compose run --rm migrate
+  migrate:
+    image: ghcr.io/shurco/gosign-migrate:latest
+    container_name: service.migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: "host=postgres port=5432 user=${POSTGRES_USER:-goSign} password=${POSTGRES_PASSWORD:-postgresPassword} dbname=${POSTGRES_DB:-goSign} sslmode=disable"
+      GOOSE_TABLE: migrate_db_version
+      GOOSE_COMMAND: ${GOOSE_COMMAND:-up}
+    deploy:
+      resources: *res-xsmall
+    networks:
+      - private
+    logging: *default-logging
+
+  # API server (api.<domain>).
   gosign:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
-    image: gosign:latest
+    image: ghcr.io/shurco/gosign-server:latest
     container_name: service.gosign
     restart: always
     depends_on:
@@ -136,12 +157,18 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       GOSIGN_HTTP_ADDR: "0.0.0.0:8088"
       GOSIGN_DEV_MODE: "false"
+      GOSIGN_JWT_SECRET: "${GOSIGN_JWT_SECRET:?set GOSIGN_JWT_SECRET in .env}"
       GOSIGN_POSTGRES_URL: "postgres://${POSTGRES_USER:-goSign}:${POSTGRES_PASSWORD:-postgresPassword}@postgres:5432/${POSTGRES_DB:-goSign}?pool_max_conns=10"
       GOSIGN_REDIS_ADDRESS: "redis:6379"
       GOSIGN_REDIS_PASSWORD: "${REDIS_PASSWORD:-redisPassword}"
+      # Public URL of the web app: used in signing links, OAuth redirects, /embed iframe.
+      GOSIGN_APP_URL: "${PUBLIC_SCHEME:-http}://${APP_DOMAIN:-app.localhost}"
+      GOSIGN_CORS_ALLOWED_ORIGINS: "${PUBLIC_SCHEME:-http}://${APP_DOMAIN:-app.localhost}"
     volumes:
       - gosign_lc_pages:/app/lc_pages
       - gosign_lc_signed:/app/lc_signed
@@ -161,18 +188,39 @@ services:
       - private
     logging: *default-logging
 
+  # Background worker: Adobe trust lists + GeoLite2 updates.
+  # Shares the base volume with the API so the server picks up fresh GeoLite2 files.
+  worker:
+    image: ghcr.io/shurco/gosign-worker:latest
+    container_name: service.worker
+    restart: always
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      GOSIGN_JWT_SECRET: "${GOSIGN_JWT_SECRET:?set GOSIGN_JWT_SECRET in .env}"
+      GOSIGN_POSTGRES_URL: "postgres://${POSTGRES_USER:-goSign}:${POSTGRES_PASSWORD:-postgresPassword}@postgres:5432/${POSTGRES_DB:-goSign}?pool_max_conns=4"
+    volumes:
+      - gosign_base:/app/base
+    deploy:
+      resources: *res-small
+    networks:
+      - private
+    logging: *default-logging
+
+  # Web app SPA (app.<domain>).
   frontend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.frontend
-    image: gosign-frontend:latest
+    image: ghcr.io/shurco/gosign-frontend:latest
     container_name: service.frontend
     restart: always
     depends_on:
       gosign:
         condition: service_started
+    environment:
+      # Runtime API base URL (regenerates config.js at container start).
+      GOSIGN_API_URL: "${PUBLIC_SCHEME:-http}://${API_DOMAIN:-api.localhost}/v1"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -183,6 +231,7 @@ services:
       - private
     logging: *default-logging
 
+  # Edge proxy: api.<domain> -> gosign, app.<domain> -> frontend.
   nginx:
     image: nginx:alpine
     container_name: service.nginx
@@ -194,10 +243,13 @@ services:
         condition: service_healthy
     ports:
       - 80:80
+    environment:
+      API_DOMAIN: "${API_DOMAIN:-api.localhost}"
+      APP_DOMAIN: "${APP_DOMAIN:-app.localhost}"
     volumes:
-      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3

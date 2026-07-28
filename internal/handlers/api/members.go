@@ -38,7 +38,7 @@ func NewMemberHandler(organizationQueries *queries.OrganizationQueries, userQuer
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/members [get]
+// @Router /v1/company/{organization_id}/members [get]
 func (h *MemberHandler) GetOrganizationMembers(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -72,7 +72,7 @@ func (h *MemberHandler) GetOrganizationMembers(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/members/{member_id}/role [put]
+// @Router /v1/company/{organization_id}/members/{member_id}/role [put]
 func (h *MemberHandler) UpdateMemberRole(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	memberID := c.Params("member_id")
@@ -186,7 +186,7 @@ func (h *MemberHandler) UpdateMemberRole(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/members/{member_id} [delete]
+// @Router /v1/company/{organization_id}/members/{member_id} [delete]
 func (h *MemberHandler) RemoveOrganizationMember(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	memberID := c.Params("member_id")
@@ -278,7 +278,7 @@ func (h *MemberHandler) RemoveOrganizationMember(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/members/invite [post]
+// @Router /v1/company/{organization_id}/members/invite [post]
 func (h *MemberHandler) InviteMember(c fiber.Ctx) error {
 	// Get organization details for email template
 	orgID := c.Params("organization_id")
@@ -439,7 +439,7 @@ func (h *MemberHandler) InviteMember(c fiber.Ctx) error {
 // @Failure 401 {object} map[string]any
 // @Failure 403 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/invitations [get]
+// @Router /v1/company/{organization_id}/invitations [get]
 func (h *MemberHandler) GetOrganizationInvitations(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	if orgID == "" {
@@ -470,7 +470,7 @@ func (h *MemberHandler) GetOrganizationInvitations(c fiber.Ctx) error {
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/organizations/{organization_id}/invitations/{invitation_id} [delete]
+// @Router /v1/company/{organization_id}/invitations/{invitation_id} [delete]
 func (h *MemberHandler) RevokeInvitation(c fiber.Ctx) error {
 	orgID := c.Params("organization_id")
 	invitationID := c.Params("invitation_id")

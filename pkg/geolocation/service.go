@@ -3,8 +3,10 @@ package geolocation
 import (
 	"fmt"
 	"net/netip"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/oschwald/geoip2-golang/v2"
 )
@@ -18,9 +20,10 @@ type Location struct {
 
 // Service provides geolocation lookup functionality using GeoLite2 database
 type Service struct {
-	db   *geoip2.Reader
-	mu   sync.RWMutex
-	path string
+	db      *geoip2.Reader
+	mu      sync.RWMutex
+	path    string
+	modTime time.Time
 }
 
 // NewService creates a new geolocation service
@@ -43,13 +46,22 @@ func NewService(dbPath string) (*Service, error) {
 	}
 
 	s.db = db
+	s.modTime = fileModTime(dbPath)
 	return s, nil
+}
+
+func fileModTime(path string) time.Time {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}
+	}
+	return info.ModTime()
 }
 
 // GetLocation returns location data for the given IP address
 // Returns nil if location cannot be determined
 func (s *Service) GetLocation(ipStr string) *Location {
-	if s.db == nil || ipStr == "" {
+	if ipStr == "" {
 		return nil
 	}
 
@@ -60,6 +72,10 @@ func (s *Service) GetLocation(ipStr string) *Location {
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
+	if s.db == nil {
+		return nil
+	}
 
 	record, err := s.db.City(addr)
 	if err != nil {
@@ -170,9 +186,33 @@ func (s *Service) Reload() error {
 
 	old := s.db
 	s.db = db
+	s.modTime = fileModTime(s.path)
 
 	if old != nil {
 		_ = old.Close()
 	}
 	return nil
+}
+
+// ReloadIfChanged reloads the database only when the file on disk has a
+// different modification time than the currently loaded one. It is a no-op
+// when the path is not configured or the file does not exist.
+func (s *Service) ReloadIfChanged() error {
+	if s.path == "" {
+		return nil
+	}
+
+	info, err := os.Stat(s.path)
+	if err != nil {
+		return nil //nolint:nilerr // no-op when the file is absent (not downloaded yet)
+	}
+
+	s.mu.RLock()
+	unchanged := s.db != nil && info.ModTime().Equal(s.modTime)
+	s.mu.RUnlock()
+
+	if unchanged {
+		return nil
+	}
+	return s.Reload()
 }

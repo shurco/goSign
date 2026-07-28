@@ -28,7 +28,8 @@
     "optional": "Opcional",
     "download": "Descargar",
     "deleted": "Eliminado",
-    "reasonLabel": "Motivo:"
+    "reasonLabel": "Motivo:",
+    "continue": "Continuar"
   },
   "status": {
     "draft": "Borrador",
@@ -130,7 +131,8 @@
       "functions": "Funciones",
       "examples": "Ejemplos",
       "noFields": "No hay campos numéricos o de texto disponibles."
-    }
+    },
+    "type_value": "Escriba el valor"
   },
   "signing": {
     "title": "Completar documento",
@@ -187,7 +189,11 @@
     "linksTitleWithTemplate": "Enlaces de firma — {template}",
     "copyLink": "Copiar enlace",
     "copyAllLinks": "Copiar todos los enlaces",
-    "sendEachLinkHint": "Envíe cada enlace al firmante correspondiente por cualquier canal."
+    "sendEachLinkHint": "Envíe cada enlace al firmante correspondiente por cualquier canal.",
+    "invalidNumber": "Introduzca un número válido",
+    "numberMax": "El valor debe ser como máximo {max}",
+    "numberMin": "El valor debe ser al menos {min}",
+    "signing_date": "Fecha de firma"
   },
   "signingMode": {
     "title": "Modo de firma",
@@ -223,7 +229,18 @@
     "titleField": "Título",
     "template": "Plantilla",
     "selectTemplate": "Seleccionar una plantilla",
-    "placeholder": "Contrato para Juan Pérez"
+    "placeholder": "Contrato para Juan Pérez",
+    "createDescription": "Elija una plantilla e introduzca los datos de los firmantes para crear enlaces de firma.",
+    "createLinks": "Crear enlaces",
+    "invalidTemplateSubmitters": "Los firmantes de la plantilla no están configurados correctamente",
+    "saveFailed": "No se pudo guardar el envío",
+    "selectTemplateRequired": "Seleccione una plantilla",
+    "signerEmail": "Correo electrónico",
+    "signerName": "Nombre",
+    "signerPhone": "Teléfono",
+    "signers": "Firmantes",
+    "signersHint": "El número de firmantes lo determina la plantilla seleccionada.",
+    "signersOrderDragHint": "En el modo secuencial puede arrastrar las tarjetas de los firmantes para establecer el orden de firma."
   },
   "dashboard": {
     "title": "Panel de control",
@@ -379,7 +396,50 @@
     "sourceUrl": "URL",
     "unknownSource": "Desconocido",
     "savedKeyLabel": "Clave guardada",
-    "deleteKey": "Eliminar clave"
+    "deleteKey": "Eliminar clave",
+    "availableVariables": "Variables disponibles",
+    "confirmDeleteTemplate": "¿Está seguro de que desea eliminar esta plantilla?",
+    "createEmailTemplate": "Crear plantilla de correo",
+    "default": "Predeterminado",
+    "deleteError": "No se pudo eliminar la plantilla",
+    "downloadGeoLite2Database": "Descargar base de datos GeoLite2",
+    "downloadGeoLite2DatabaseDescription": "Descargue la base de datos GeoLite2 City para habilitar la geolocalización por IP. Elija una de las opciones siguientes.",
+    "downloadMethodInfo": "Configure los métodos de descarga. El método MaxMind tiene prioridad: si hay una clave de licencia guardada, se usará para las actualizaciones automáticas. De lo contrario, se usará el método URL como alternativa.",
+    "editEmailTemplate": "Editar plantilla de correo",
+    "emailSubjectPlaceholder": "Asunto del correo (opcional)",
+    "emailTemplatePlaceholder": "Introduzca el contenido HTML de la plantilla...",
+    "emailTemplates": "Plantillas de correo",
+    "emailTemplatesDescription": "Gestione las plantillas de correo para invitaciones, recordatorios y notificaciones",
+    "failedToSaveGeolocationSettings": "No se pudieron guardar los ajustes de geolocalización",
+    "failedToSaveLicenseKey": "No se pudo guardar la clave de licencia",
+    "geolocationBaseDir": "Directorio base",
+    "geolocationBaseDirDescription": "Directorio para almacenar los archivos de la base de datos GeoLite2",
+    "geolocationBaseDirPlaceholder": "./base",
+    "geolocationDbPath": "Ruta de la base de datos",
+    "geolocationDbPathDescription": "Ruta completa al archivo GeoLite2-City.mmdb",
+    "geolocationDbPathPlaceholder": "./base/GeoLite2-City.mmdb",
+    "geolocationSettingsSaved": "Ajustes de geolocalización guardados correctamente",
+    "licenseKeyAlreadySet": "La clave de licencia ya está configurada (déjela vacía para mantener la actual)",
+    "licenseKeyRequiredForMaxMind": "Se requiere una clave de licencia. Configúrela primero arriba.",
+    "licenseKeySaved": "Clave de licencia guardada correctamente",
+    "maxmindLicenseKeyDescription": "Obtenga su clave de licencia en https://www.maxmind.com/en/accounts/current/license-key. Esta clave se guardará en la base de datos y se usará para descargas automáticas al iniciar.",
+    "noEmailTemplates": "No se encontraron plantillas de correo",
+    "saveError": "No se pudo guardar la plantilla",
+    "saving": "Guardando",
+    "subject": "Asunto",
+    "systemTemplate": "Sistema",
+    "templateBase": "Plantilla base",
+    "templateCompleted": "Firmado",
+    "templateContent": "Contenido de la plantilla",
+    "templateInvitation": "Invitación",
+    "templateName": "Nombre de la plantilla",
+    "templateReminder": "Recordatorio",
+    "variableCustomMessage": "{{.CustomMessage}} - Mensaje personalizado",
+    "variableDocumentName": "{{.DocumentName}} - Nombre del documento",
+    "variableExpiresAt": "{{.ExpiresAt}} - Fecha de expiración",
+    "variableRecipientName": "{{.RecipientName}} - Nombre del destinatario",
+    "variableSenderName": "{{.SenderName}} - Nombre del remitente",
+    "variableSigningLink": "{{.SigningLink}} - Enlace para firmar el documento"
   },
   "errors": {
     "generic": "Ocurrió un error",
@@ -463,7 +523,17 @@
     "uploadPdfToStartEditing": "Sube un PDF para empezar a editar",
     "uploadPdfToStartEditingHint": "Esta plantilla aún no tiene documentos. Suelta un PDF aquí y se subirá y aplicará automáticamente.",
     "selectPdfFile": "Por favor, seleccione un archivo PDF",
-    "uploadError": "No se pudo subir el PDF. Por favor, inténtelo de nuevo."
+    "uploadError": "No se pudo subir el PDF. Por favor, inténtelo de nuevo.",
+    "clickToUpload": "Haga clic para subir",
+    "create": "Crear",
+    "dragAndDrop": "o arrastre y suelte aquí",
+    "enterTemplateName": "Introduzca el nombre de la plantilla",
+    "invalidFileType": "Solo se admiten archivos PDF",
+    "optional": "opcional",
+    "removeFile": "Eliminar archivo",
+    "selectedFile": "Archivo seleccionado",
+    "uploadFromFile": "Subir desde archivo",
+    "uploadFromFileHint": "Se admiten archivos PDF. Si no se selecciona ningún archivo, se creará una plantilla vacía."
   },
   "organizations": {
     "title": "Organizaciones",
@@ -516,7 +586,7 @@
     "invitationSent": "¡Invitación enviada con éxito!",
     "inviteError": "Error al enviar invitación",
     "emailRequired": "El correo electrónico es obligatorio",
-    "emailPlaceholder": "member{'@'}example.com",
+    "emailPlaceholder": "member@example.com",
     "viewerDescription": "Puede ver documentos y envíos",
     "memberDescription": "Puede crear y editar documentos",
     "adminDescription": "Puede gestionar miembros y configuraciones de la organización"

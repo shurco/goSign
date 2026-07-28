@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { onMount, tick } from "svelte";
   import { t, getLocale, SUPPORTED_LOCALES } from "@/i18n/index.svelte";
   import { apiGet } from "@/services/api";
@@ -45,7 +46,7 @@
 
   async function loadTemplates(): Promise<void> {
     try {
-      const url = `/api/v1/email-templates?locale=${selectedLocale}`;
+      const url = `/settings/email/templates?locale=${selectedLocale}`;
       const response = await apiGet<{ templates?: EmailTemplate[] }>(url);
       const raw = response?.data;
       if (raw && typeof raw === "object" && "templates" in raw && Array.isArray(raw.templates)) {
@@ -118,7 +119,7 @@
     };
 
     try {
-      const url = `/api/v1/email-templates/${templateName}?locale=${newLocale}`;
+      const url = `/settings/email/templates/${templateName}?locale=${newLocale}`;
       const response = await fetchWithAuth(url);
 
       if (response.ok) {
@@ -160,7 +161,7 @@
 
       if (!templateId) {
         // Check if template exists for this locale
-        const checkUrl = `/api/v1/email-templates/${templateName}?locale=${locale}`;
+        const checkUrl = `/settings/email/templates/${templateName}?locale=${locale}`;
         const checkResponse = await fetchWithAuth(checkUrl);
 
         if (checkResponse.ok) {
@@ -172,7 +173,7 @@
         }
       }
 
-      const url = templateId ? `/api/v1/email-templates/${templateId}` : "/api/v1/email-templates";
+      const url = templateId ? `/settings/email/templates/${templateId}` : "/settings/email/templates";
       const method = templateId ? "PUT" : "POST";
 
       const response = await fetchWithAuth(url, {
@@ -204,7 +205,7 @@
     }
 
     try {
-      const response = await fetchWithAuth(`/api/v1/email-templates/${template.id}`, {
+      const response = await fetchWithAuth(apiUrl(`/settings/email/templates/${template.id}`), {
         method: "DELETE"
       });
 

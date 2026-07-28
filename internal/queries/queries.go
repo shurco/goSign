@@ -2,12 +2,9 @@ package queries
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
-
-	"github.com/shurco/gosign/migrations"
 )
 
 var DB *Base
@@ -22,7 +19,7 @@ type Base struct {
 }
 
 // New creates the global DB instance with all query structs.
-func New(pool *pgxpool.Pool) error {
+func New(pool *pgxpool.Pool) {
 	DB = &Base{
 		SystemQueries:        SystemQueries{pool},
 		TrustQueries:         TrustQueries{pool},
@@ -30,30 +27,21 @@ func New(pool *pgxpool.Pool) error {
 		UserQueries:          UserQueries{pool},
 		EmailTemplateQueries: EmailTemplateQueries{pool},
 	}
-
-	return nil
 }
 
-// Init initializes the database connection and runs pending migrations.
-func Init(pool *pgxpool.Pool) error {
-	New(pool)
-
+// CheckSchema verifies that database migrations have been applied.
+// Migrations are managed externally: `./scripts/migration up` locally
+// or the `migrate` compose service in Docker.
+func CheckSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	var exists bool
-	err := pool.QueryRow(context.Background(),
+	err := pool.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'migrate_db_version')`,
 	).Scan(&exists)
-	if err != nil || !exists {
-		goose.SetBaseFS(migrations.Embed())
-		goose.SetTableName("migrate_db_version")
-		if err := goose.SetDialect("pgx"); err != nil {
-			return err
-		}
-
-		db := stdlib.OpenDBFromPool(pool)
-		if err := goose.Up(db, "."); err != nil {
-			return err
-		}
+	if err != nil {
+		return fmt.Errorf("queries: check schema: %w", err)
 	}
-
+	if !exists {
+		return fmt.Errorf("queries: database schema is not initialized, apply migrations first")
+	}
 	return nil
 }

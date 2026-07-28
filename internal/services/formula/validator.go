@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/expr-lang/expr"
+
 	"github.com/shurco/gosign/internal/models"
 )
 

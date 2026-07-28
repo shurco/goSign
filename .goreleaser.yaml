@@ -2,11 +2,10 @@ before:
   hooks:
     - go mod tidy
     - go mod download
-    - yarn --cwd web --force install
-    - yarn --cwd web run build
 
 builds:
-  - env:
+  - id: server
+    env:
       - CGO_ENABLED=0
       - GO111MODULE=on
     goos:
@@ -21,8 +20,26 @@ builds:
       - -X "main.version=v{{.Version}}"
       - -X "main.gitCommit={{.ShortCommit}}"
       - -X "main.buildDate={{.Now.Format "2006-01-02"}}"
-    main: ./cmd/main.go
-    binary: gosign
+    main: ./cmd/server
+    binary: gosign-server
+  - id: worker
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X "main.version=v{{.Version}}"
+      - -X "main.gitCommit={{.ShortCommit}}"
+      - -X "main.buildDate={{.Now.Format "2006-01-02"}}"
+    main: ./cmd/worker
+    binary: gosign-worker
 
 archives:
   - format: tar.gz
@@ -93,68 +110,8 @@ changelog:
     - title: Other work
       order: 9999
 
-dockers:
-  - image_templates:
-      - 'shurco/gosign:v{{ .Version }}-amd64'
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-amd64'
-    dockerfile: Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - '--pull'
-      - '--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/shurco/gosign/main/README.md'
-      - '--label=io.artifacthub.package.maintainers=[{"name":"Dmitry Shurco"}]'
-      - '--label=io.artifacthub.package.license=MIT'
-      - '--label=org.opencontainers.image.description=✍️ Sign documents without stress'
-      - '--label=org.opencontainers.image.created={{.Date}}'
-      - '--label=org.opencontainers.image.name={{.ProjectName}}'
-      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
-      - '--label=org.opencontainers.image.version={{.Version}}'
-      - '--label=org.opencontainers.image.source={{.GitURL}}'
-      - '--platform=linux/amd64'
-    goarch: amd64
-
-  - image_templates:
-      - 'shurco/gosign:v{{ .Version }}-arm64'
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-arm64'
-    dockerfile: Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - '--pull'
-      - '--label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/shurco/gosign/main/README.md'
-      - '--label=io.artifacthub.package.maintainers=[{"name":"Dmitry Shurco"}]'
-      - '--label=io.artifacthub.package.license=MIT'
-      - '--label=org.opencontainers.image.description=✍️ Sign documents without stress'
-      - '--label=org.opencontainers.image.created={{.Date}}'
-      - '--label=org.opencontainers.image.name={{.ProjectName}}'
-      - '--label=org.opencontainers.image.revision={{.FullCommit}}'
-      - '--label=org.opencontainers.image.version={{.Version}}'
-      - '--label=org.opencontainers.image.source={{.GitURL}}'
-      - '--platform=linux/arm64'
-    goarch: arm64
-
-docker_manifests:
-  - name_template: 'shurco/gosign:v{{ .Version }}'
-    image_templates:
-      - 'shurco/gosign:v{{ .Version }}-amd64'
-      - 'shurco/gosign:v{{ .Version }}-arm64'
-  - name_template: 'ghcr.io/shurco/gosign:v{{ .Version }}'
-    image_templates:
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-amd64'
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-arm64'
-  - name_template: 'shurco/gosign:latest'
-    image_templates:
-      - 'shurco/gosign:v{{ .Version }}-amd64'
-      - 'shurco/gosign:v{{ .Version }}-arm64'
-  - name_template: 'ghcr.io/shurco/gosign:latest'
-    image_templates:
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-amd64'
-      - 'ghcr.io/shurco/gosign:v{{ .Version }}-arm64'
-
 release:
   name_template: "v{{ .Version }}"
-  header: |
-    > *To update the prebuilt executable you can run `./gosign update`*
-
   footer: |
     **Full Changelog**: https://github.com/shurco/gosign/compare/{{ .PreviousTag }}...{{ .Tag }}
     

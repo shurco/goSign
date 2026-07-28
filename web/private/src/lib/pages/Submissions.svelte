@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { goto } from "$app/navigation";
   import { t, te } from "@/i18n/index.svelte";
   import ResourceTable from "@/components/common/ResourceTable.svelte";
@@ -118,7 +119,7 @@
     isLoading = true;
     loadSubmissionsPromise = (async () => {
       try {
-        const response = await fetchWithAuth("/api/v1/signing-links");
+        const response = await fetchWithAuth(apiUrl("/signing-links"));
         if (response.ok) {
           const data = await response.json();
           const payload = data.data || data;
@@ -151,7 +152,7 @@
       try {
         // Use search endpoint which properly filters by organization
         // This will return all templates from root and folders in current organization
-        const response = await apiGet("/api/v1/templates/search?limit=1000");
+        const response = await apiGet("/templates/search?limit=1000");
 
         if (response && response.data) {
           // Search endpoint returns: { success: true, message: "templates", data: { templates: [...], total: ... } }
@@ -180,7 +181,7 @@
 
   async function loadFolders(): Promise<void> {
     try {
-      const response = await apiGet("/api/v1/templates/folders");
+      const response = await apiGet("/templates/folders");
       if (response && response.data) {
         const result = response.data;
         if (Array.isArray(result)) {
@@ -226,7 +227,7 @@
     }
 
     try {
-      const res: any = await apiGet(`/api/v1/templates/${templateID}`);
+      const res: any = await apiGet(`/templates/${templateID}`);
       const tpl = res.data;
       const count = Array.isArray(tpl?.submitters) ? tpl.submitters.length : 0;
       expectedSubmittersCount = count;
@@ -312,7 +313,7 @@
         return;
       }
 
-      const response = await fetchWithAuth("/api/v1/signing-links", {
+      const response = await fetchWithAuth(apiUrl("/signing-links"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -403,7 +404,7 @@
       return;
     }
     try {
-      const res = await fetchWithAuth(`/api/v1/signing-links/${encodeURIComponent(id)}/document`, { method: "GET" });
+      const res = await fetchWithAuth(apiUrl(`/signing-links/${encodeURIComponent(id)}/document`), { method: "GET" });
       if (res.status === 409) {
         alert("Document is not completed yet.");
         return;

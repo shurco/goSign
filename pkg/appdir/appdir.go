@@ -12,7 +12,7 @@ var (
 )
 
 // Init sets the data directory for lc_pages, lc_signed, etc.
-// Priority: GOSIGN_DATA_DIR env → dev fallback (cmd/goSign → repo bin/) → executable directory.
+// Priority: GOSIGN_DATA_DIR env → dev fallback (cmd/server → repo bin/) → executable directory.
 func Init() {
 	mu.Lock()
 	defer mu.Unlock()
@@ -30,8 +30,8 @@ func Init() {
 	execDir := filepath.Dir(execPath)
 	dataDir = execDir
 
-	// IDE/debug runs from cmd/goSign but built binary stores data in repo bin/.
-	if filepath.Base(execDir) == "goSign" {
+	// IDE/debug runs from cmd/server but built binary stores data in repo bin/.
+	if filepath.Base(execDir) == "server" {
 		binDir := filepath.Clean(filepath.Join(execDir, "..", "..", "bin"))
 		if _, err := os.Stat(filepath.Join(binDir, "lc_pages")); err == nil {
 			dataDir = binDir
@@ -84,4 +84,9 @@ func LcTmp() string {
 // Base returns path to base data directory (e.g. {DataDir}/base), used for GeoLite2 etc.
 func Base() string {
 	return filepath.Join(DataDir(), "base")
+}
+
+// GeoLite2 returns path to the GeoLite2 city database file (e.g. {DataDir}/base/GeoLite2-City.mmdb).
+func GeoLite2() string {
+	return filepath.Join(Base(), "GeoLite2-City.mmdb")
 }

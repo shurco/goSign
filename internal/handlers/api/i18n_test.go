@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/testutil"
@@ -49,9 +50,9 @@ func TestI18nHandler_GetLocales(t *testing.T) {
 			} else {
 				app.Use(middleware.Protected())
 			}
-			app.Get("/i18n/locales", h.GetLocales)
+			app.Get("/settings/i18n/locales", h.GetLocales)
 
-			req := httptest.NewRequest(http.MethodGet, "/i18n/locales", nil)
+			req := httptest.NewRequest(http.MethodGet, "/settings/i18n/locales", nil)
 			resp, err := app.Test(req)
 			if err != nil {
 				t.Fatalf("app.Test: %v", err)
@@ -113,7 +114,7 @@ func TestI18nHandler_UpdateUserLocale(t *testing.T) {
 			} else {
 				app.Use(middleware.Protected())
 			}
-			app.Put("/i18n/user/locale", h.UpdateUserLocale)
+			app.Put("/settings/i18n/user/locale", h.UpdateUserLocale)
 
 			var reqBody *bytes.Reader
 			if tt.body != nil {
@@ -126,7 +127,7 @@ func TestI18nHandler_UpdateUserLocale(t *testing.T) {
 				reqBody = bytes.NewReader(nil)
 			}
 
-			req := httptest.NewRequest(http.MethodPut, "/i18n/user/locale", reqBody)
+			req := httptest.NewRequest(http.MethodPut, "/settings/i18n/user/locale", reqBody)
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req)
@@ -180,7 +181,7 @@ func TestI18nHandler_UpdateAccountLocale(t *testing.T) {
 			} else {
 				app.Use(middleware.Protected())
 			}
-			app.Put("/i18n/account/locale", h.UpdateAccountLocale)
+			app.Put("/settings/i18n/account/locale", h.UpdateAccountLocale)
 
 			var reqBody *bytes.Reader
 			if tt.body != nil {
@@ -193,7 +194,7 @@ func TestI18nHandler_UpdateAccountLocale(t *testing.T) {
 				reqBody = bytes.NewReader(nil)
 			}
 
-			req := httptest.NewRequest(http.MethodPut, "/i18n/account/locale", reqBody)
+			req := httptest.NewRequest(http.MethodPut, "/settings/i18n/account/locale", reqBody)
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req)

@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -94,11 +93,10 @@ func VerifyPDF(c fiber.Ctx) error {
 		if !value.TrustedIssuer {
 			for _, cert := range value.Certificates {
 				aki := cert.Certificate.AuthorityKeyId
-				trustCert, err := queries.DB.CheckAKI(context.Background(), strings.ToUpper(hex.EncodeToString(aki[:])))
+				trustCert, err := queries.DB.CheckAKI(context.Background(), strings.ToUpper(hex.EncodeToString(aki)))
 				if err != nil && err != pgx.ErrNoRows {
 					return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 				}
-				fmt.Print(trustCert)
 				if trustCert != nil && trustCert.List != "" {
 					signer.TrustedIssuer = models.TrustedIssuer{
 						Valid: true,
@@ -113,10 +111,6 @@ func VerifyPDF(c fiber.Ctx) error {
 	}
 
 	response.Verify = true
-	//response.Document = &Document{
-	//	Creator: verifyInfo.DocumentInfo.Creator,
-	//	Hash:    verifyInfo.DocumentInfo.Hash,
-	//}
 
 	return webutil.Response(c, fiber.StatusOK, "Verify", response)
 }

@@ -1,6 +1,7 @@
 import { fetchWithAuth } from "@/utils/auth";
+import { apiUrl } from "@/services/api-base";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
+export { apiUrl, API_BASE_URL } from "@/services/api-base";
 
 interface ApiResponse<T = any> {
   data: T;
@@ -18,14 +19,7 @@ class ApiError extends Error {
 }
 
 async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  let finalUrl: string;
-  if (endpoint.startsWith("/api/v1")) {
-    finalUrl = endpoint;
-  } else if (endpoint.startsWith("/api/")) {
-    finalUrl = endpoint.replace("/api/", "/api/v1/");
-  } else {
-    finalUrl = `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-  }
+  const finalUrl = apiUrl(endpoint);
 
   const config: RequestInit = {
     headers: {

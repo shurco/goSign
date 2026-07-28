@@ -31,7 +31,7 @@ func NewUserHandler(userQueries *queries.UserQueries) *UserHandler {
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/users/me [get]
+// @Router /v1/users/me [get]
 func (h *UserHandler) GetCurrentUser(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {

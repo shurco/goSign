@@ -19,8 +19,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/peterldowns/pgtestdb"
 	"github.com/peterldowns/pgtestdb/migrators/goosemigrator"
-
-	"github.com/shurco/gosign/migrations"
 )
 
 const (
@@ -83,7 +81,7 @@ func NewTestDB(t *testing.T) *pgxpool.Pool {
 
 	migrator := chainedMigrator{
 		migrators: []pgtestdb.Migrator{
-			goosemigrator.New(".", goosemigrator.WithFS(migrations.Embed())),
+			goosemigrator.New("migrations", goosemigrator.WithFS(os.DirFS(repoRoot))),
 			goosemigrator.New(
 				"fixtures/migration",
 				goosemigrator.WithFS(os.DirFS(repoRoot)),

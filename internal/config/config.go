@@ -20,8 +20,18 @@ type Config struct {
 	DevMode            bool
 	JWTSecret          string
 	CORSAllowedOrigins []string
-	Postgres           postgres.Config
-	Redis              redis.Config
+	// AppURL is the public URL of the web app (e.g. https://app.example.com).
+	// Used for links that leave the API origin: signing links in emails,
+	// OAuth redirects, the /embed iframe. Empty means same-origin relative links.
+	AppURL   string
+	Postgres postgres.Config
+	Redis    redis.Config
+}
+
+// AppLink joins the configured app URL with a path.
+// With empty AppURL the path is returned as-is (same-origin deployment).
+func (c *Config) AppLink(path string) string {
+	return c.AppURL + path
 }
 
 // Default returns config with default values (used when env vars are not set).
@@ -91,6 +101,7 @@ func Load() error {
 	if config.JWTSecret == "" {
 		return fmt.Errorf("GOSIGN_JWT_SECRET environment variable is required")
 	}
+	config.AppURL = strings.TrimRight(getenv("APP_URL", ""), "/")
 	if raw := getenv("CORS_ALLOWED_ORIGINS", ""); raw != "" {
 		config.CORSAllowedOrigins = splitCommaNonEmpty(raw)
 	} else if config.DevMode {

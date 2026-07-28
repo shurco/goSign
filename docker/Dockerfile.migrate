@@ -1,0 +1,7 @@
+# syntax=docker/dockerfile:1
+# Self-contained migration image: goose + SQL migrations baked in.
+# Runs `goose ${GOOSE_COMMAND:-up}` against GOOSE_DBSTRING and exits.
+
+FROM ghcr.io/kukymbr/goose-docker:3.27.2
+
+COPY migrations /migrations

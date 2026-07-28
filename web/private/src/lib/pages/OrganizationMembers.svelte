@@ -48,7 +48,7 @@
 
   const loadMembers = async () => {
     try {
-      const response = await apiGet(`/api/v1/organizations/${orgId}/members`);
+      const response = await apiGet(`/company/${orgId}/members`);
       members = response.data.members || [];
 
       // Get current user's role and ID from members list
@@ -65,7 +65,7 @@
 
       // Get current user ID from API
       try {
-        const userResponse = await apiGet("/api/v1/users/me");
+        const userResponse = await apiGet("/users/me");
 
         if (userResponse?.data) {
           // user_id in members table is actually account_id
@@ -111,7 +111,7 @@
 
   const loadInvitations = async () => {
     try {
-      const response = await apiGet(`/api/v1/organizations/${orgId}/invitations`);
+      const response = await apiGet(`/company/${orgId}/invitations`);
       invitations = response.data.invitations || [];
     } catch (error) {
       console.error("Failed to load invitations:", error);
@@ -120,7 +120,7 @@
 
   const loadOrganization = async () => {
     try {
-      const response = await apiGet(`/api/v1/organizations/${orgId}`);
+      const response = await apiGet(`/company/${orgId}`);
       organization = response.data.organization;
     } catch (error) {
       console.error("Failed to load organization:", error);
@@ -169,7 +169,7 @@
 
   const changeMemberRole = async (member: OrganizationMember, newRole: string) => {
     try {
-      await apiPut(`/api/v1/organizations/${orgId}/members/${member.id}/role`, {
+      await apiPut(`/company/${orgId}/members/${member.id}/role`, {
         role: newRole
       });
 
@@ -187,7 +187,7 @@
     }
 
     try {
-      await apiDelete(`/api/v1/organizations/${orgId}/members/${member.id}`);
+      await apiDelete(`/company/${orgId}/members/${member.id}`);
       members = members.filter((m) => m.id !== member.id);
     } catch (error) {
       console.error("Failed to remove member:", error);
@@ -201,7 +201,7 @@
     }
 
     try {
-      await apiDelete(`/api/v1/organizations/${orgId}/invitations/${invitation.id}`);
+      await apiDelete(`/company/${orgId}/invitations/${invitation.id}`);
       invitations = invitations.filter((i) => i.id !== invitation.id);
     } catch (error) {
       console.error("Failed to revoke invitation:", error);
@@ -225,7 +225,7 @@
     }
 
     try {
-      await apiPost(`/api/v1/organizations/${orgId}/members/invite`, {
+      await apiPost(`/company/${orgId}/members/invite`, {
         email,
         role
       });

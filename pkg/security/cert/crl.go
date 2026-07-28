@@ -84,7 +84,7 @@ func CRLInfo(rl *x509.RevocationList) string {
 	buf.WriteString(fmt.Sprintf("%4sVersion \n", ""))
 	buf.WriteString(fmt.Sprintf("%4sSignature Algorithm: %v\n", "", rl.SignatureAlgorithm))
 
-	buf.WriteString(fmt.Sprintf("%4sIssuer: %v\n", "", strings.Replace(rl.Issuer.String(), ",", ", ", -1)))
+	buf.WriteString(fmt.Sprintf("%4sIssuer: %v\n", "", strings.ReplaceAll(rl.Issuer.String(), ",", ", ")))
 	buf.WriteString(fmt.Sprintf("%8sLastUpdate: %v\n", "", rl.ThisUpdate.Format("Jan 2 15:04:05 2006 GMT")))
 	buf.WriteString(fmt.Sprintf("%8sNextUpdate: %v\n", "", rl.NextUpdate.Format("Jan 2 15:04:05 2006 GMT")))
 

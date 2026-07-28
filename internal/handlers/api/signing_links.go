@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/utils/webutil"
@@ -53,7 +54,7 @@ type CreateSigningLinkRequest struct {
 type CreatedSubmitterLink struct {
 	SubmitterID string `json:"submitter_id"`
 	Slug        string `json:"slug"`
-	DirectURL   string `json:"direct_url"` // "/s/:slug"
+	DirectURL   string `json:"direct_url"` // absolute when GOSIGN_APP_URL is set, else "/s/:slug"
 }
 
 type CreateSigningLinkResponse struct {
@@ -101,7 +102,7 @@ type SigningLinkDetail struct {
 // @Success 201 {object} map[string]any
 // @Failure 400 {object} map[string]any
 // @Failure 500 {object} map[string]any
-// @Router /api/v1/signing-links [post]
+// @Router /v1/signing-links [post]
 func (h *SigningLinkHandler) Create(c fiber.Ctx) error {
 	var req CreateSigningLinkRequest
 	if err := parseAndValidateJSON(c, &req); err != nil {
@@ -191,7 +192,7 @@ func (h *SigningLinkHandler) Create(c fiber.Ctx) error {
 		links = append(links, CreatedSubmitterLink{
 			SubmitterID: submitterID,
 			Slug:        submitterSlug,
-			DirectURL:   "/s/" + submitterSlug,
+			DirectURL:   config.Data().AppLink("/s/" + submitterSlug),
 		})
 	}
 
@@ -222,7 +223,7 @@ func (h *SigningLinkHandler) Create(c fiber.Ctx) error {
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(20)
 // @Success 200 {object} map[string]any
-// @Router /api/v1/signing-links [get]
+// @Router /v1/signing-links [get]
 func (h *SigningLinkHandler) List(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -323,7 +324,7 @@ func (h *SigningLinkHandler) List(c fiber.Ctx) error {
 			links = append(links, CreatedSubmitterLink{
 				SubmitterID: id,
 				Slug:        slug,
-				DirectURL:   "/s/" + slug,
+				DirectURL:   config.Data().AppLink("/s/" + slug),
 			})
 		}
 
@@ -360,7 +361,7 @@ func (h *SigningLinkHandler) List(c fiber.Ctx) error {
 // @Produce json
 // @Param submission_id path string true "Submission ID"
 // @Success 200 {object} map[string]any
-// @Router /api/v1/signing-links/{submission_id} [get]
+// @Router /v1/signing-links/{submission_id} [get]
 func (h *SigningLinkHandler) Get(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {
@@ -496,7 +497,7 @@ func (h *SigningLinkHandler) Get(c fiber.Ctx) error {
 		links = append(links, CreatedSubmitterLink{
 			SubmitterID: id,
 			Slug:        slug,
-			DirectURL:   "/s/" + slug,
+			DirectURL:   config.Data().AppLink("/s/" + slug),
 		})
 	}
 
@@ -537,7 +538,7 @@ func (h *SigningLinkHandler) Get(c fiber.Ctx) error {
 // @Success 200 {file} file
 // @Failure 403 {object} map[string]any
 // @Failure 404 {object} map[string]any
-// @Router /api/v1/signing-links/{submission_id}/document [get]
+// @Router /v1/signing-links/{submission_id}/document [get]
 func (h *SigningLinkHandler) DownloadCompletedDocument(c fiber.Ctx) error {
 	userID, err := GetUserID(c)
 	if err != nil {

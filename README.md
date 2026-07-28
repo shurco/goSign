@@ -25,7 +25,7 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 ### 🔑 API & Integration
 
 - 🔑 JWT tokens and API keys with rate limiting
-- 📚 Swagger/OpenAPI interactive documentation
+- 📚 OpenAPI (swag) annotations for API documentation
 - 🔗 Webhook support for real-time event notifications
 - 🖼️ Embedded signing via JavaScript SDK (iframe)
 - 📦 Bulk operations: CSV/XLSX import for mass submissions
@@ -46,7 +46,7 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 
 ### 🛡️ Security
 
-- 🔑 JWT access tokens (10 min) + refresh tokens (7 days)
+- 🔑 JWT access tokens (15 min) + refresh tokens (7 days)
 - 🧾 Two-factor authentication (TOTP with QR codes)
 - 🌐 OAuth integration: Google and GitHub
 - ✅ Email verification and password reset
@@ -68,7 +68,7 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 - **PDF**: digitorus/pdf (signing/verification), signintech/gopdf (creation)
 - **Formula engine**: expr-lang/expr
 - **Logging**: zerolog
-- **API docs**: Swagger/OpenAPI
+- **API docs**: OpenAPI annotations (swag)
 
 ### 🖥️ Frontend
 
@@ -80,16 +80,38 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 - **Package manager**: Bun
 - **i18n**: custom lightweight i18n module
 
+## 🏗️ Architecture
+
+The application ships as independent services, each with its own binary and Dockerfile:
+
+- **`gosign-server`** (`cmd/server`, `docker/Dockerfile.server`) — stateless HTTP API (Fiber). Scales horizontally. Serves everything under `/v1` plus `/drive` (files), `/embed` (iframe page) and `/health`.
+- **`gosign-worker`** (`cmd/worker`, `docker/Dockerfile.worker`) — background maintenance: Adobe trust list updates and GeoLite2 database downloads. Runs as a single instance; shares the `base` volume with the API, which picks up refreshed GeoLite2 files automatically. Communicates with the API only through the shared database and volume — no RPC layer is needed.
+- **`migrate`** (`docker/Dockerfile.migrate`) — self-contained migration image: goose + SQL migrations baked in. Runs once and exits.
+- **`frontend`** (`docker/Dockerfile.frontend`) — SvelteKit SPA served by unprivileged nginx.
+
+In the Docker Compose stack the services are split across two domains behind the `nginx` edge proxy:
+
+- **`api.<domain>`** → API server (`/v1/...`, `/drive/...`, `/embed/{slug}`)
+- **`app.<domain>`** → web app SPA
+
+Domains are configured via `API_DOMAIN` / `APP_DOMAIN` in `.env` (defaults `api.localhost` / `app.localhost` work in browsers out of the box). The API allows CORS from the app origin, and `GOSIGN_APP_URL` tells the backend where the web app lives (signing links in emails, OAuth redirects, the `/embed` iframe). A future admin panel and marketing site can be added as separate services on their own domains without touching the API.
+
+Database migrations are **not** embedded in the server: they are applied externally — locally via `./scripts/migration`, in Docker via the `migrate` service. Both server and worker verify at startup that the schema is initialized and exit with a clear error otherwise.
+
 ## 🗺️ Project Structure
 
 ```
 goSign/
 ├── cmd/
-│   ├── goSign/              # Main application (server entrypoint)
-│   ├── cert/                # Certificate utilities
-│   └── pdf-cert/            # PDF certificate utilities
+│   ├── server/              # API server entrypoint
+│   └── worker/              # Background worker entrypoint
+├── exp/
+│   ├── cert/                # Experiments: certificate utilities
+│   └── pdf-cert/            # Experiments: PDF certificate utilities
 ├── internal/
 │   ├── config/              # Configuration (env vars)
+│   ├── server/              # HTTP API bootstrap
+│   ├── worker/              # Background worker bootstrap and tasks
 │   ├── handlers/
 │   │   ├── api/             # REST API v1 handlers
 │   │   └── public/          # Public and auth endpoints
@@ -129,11 +151,10 @@ goSign/
 │   │       │   ├── models/    # TypeScript interfaces
 │   │       │   └── pages/     # Page components
 │   │       └── routes/        # SvelteKit filesystem routes
-│   └── site_old/            # Legacy Vue frontend, scheduled for removal
-├── migrations/              # SQL migrations (goose)
+├── migrations/              # SQL migrations (goose, applied externally)
 ├── fixtures/                # Test/development data
-├── docker/                  # Docker configuration
-│   └── core/                # Docker Compose for infrastructure
+├── docker/                  # Dockerfiles and nginx config
+├── compose.yaml             # Docker Compose (all services)
 └── scripts/                 # Utility scripts
 ```
 
@@ -172,11 +193,11 @@ cd gosign
 go mod download
 ```
 
-3. Configure environment variables (see `cmd/goSign/.env.example`):
+3. Configure environment variables (see `.env.example`):
 
 ```bash
-cp cmd/goSign/.env.example cmd/goSign/.env
-# Edit: GOSIGN_POSTGRES_URL, GOSIGN_REDIS_ADDRESS, GOSIGN_REDIS_PASSWORD
+cp .env.example .env
+# Set GOSIGN_JWT_SECRET (required); adjust GOSIGN_POSTGRES_URL, GOSIGN_REDIS_ADDRESS if needed
 ```
 
 4. Run database migrations:
@@ -208,9 +229,11 @@ bun run dev
 ### Common commands
 
 ```bash
-go build -o bin/goSign ./cmd/goSign          # build backend binary
-go run ./cmd/goSign serve                    # start the server locally
-go test -short -race -count=1 ./...          # Go unit tests (no external services)
+go build -o bin/gosign-server ./cmd/server   # build the API server
+go build -o bin/gosign-worker ./cmd/worker   # build the background worker
+go run ./cmd/server                          # start the API server locally
+go run ./cmd/worker                          # start the background worker
+go test ./...                                # Go tests (DB tests auto-skip without test DB)
 go vet ./...                                 # go vet
 golangci-lint run ./...                      # linter
 
@@ -225,50 +248,51 @@ cd web/private && bun run lint                  # ESLint
 ### ▶️ Starting the Application
 
 ```bash
-go run cmd/goSign/main.go serve
+go run ./cmd/server           # HTTP API on http://localhost:8088
+go run ./cmd/worker           # background maintenance tasks
+cd web/private && bun run dev # frontend dev server on http://localhost:5173
 ```
 
-The server starts on `http://localhost:8088` by default:
+The API server exposes:
 
 
-| Interface                   | URL                                        |
-| --------------------------- | ------------------------------------------ |
-| Public signing/verification | `http://localhost:8088/`                   |
-| Admin panel                 | `http://localhost:8088/_/`                 |
-| REST API                    | `http://localhost:8088/api/v1/`            |
-| Swagger UI                  | `http://localhost:8088/swagger/index.html` |
+| Interface    | URL                             |
+| ------------ | ------------------------------- |
+| REST API     | `http://localhost:8088/v1/` |
+| Health check | `http://localhost:8088/health`  |
 
 
 ### 🔗 API Endpoints
 
-#### Authentication (`/auth`)
+#### Authentication (`/v1/auth`)
 
 
 | Method | Path                    | Description                         |
 | ------ | ----------------------- | ----------------------------------- |
-| POST   | `/auth/signup`          | Register new user                   |
-| POST   | `/auth/signin`          | Login (returns JWT + refresh token) |
-| POST   | `/auth/refresh`         | Refresh access token                |
-| POST   | `/auth/signout`         | Logout                              |
-| GET    | `/auth/verify-email`    | Verify email address                |
-| POST   | `/auth/password/forgot` | Request password reset              |
-| POST   | `/auth/password/reset`  | Reset password                      |
-| POST   | `/auth/2fa/enable`      | Enable 2FA                          |
-| POST   | `/auth/2fa/verify`      | Verify 2FA code                     |
-| POST   | `/auth/2fa/disable`     | Disable 2FA                         |
-| GET    | `/auth/oauth/google`    | Google OAuth                        |
-| GET    | `/auth/oauth/github`    | GitHub OAuth                        |
+| POST   | `/v1/auth/signup`          | Register new user                   |
+| POST   | `/v1/auth/signin`          | Login (returns JWT + refresh token) |
+| POST   | `/v1/auth/refresh`         | Refresh access token                |
+| POST   | `/v1/auth/signout`         | Logout                              |
+| GET    | `/v1/auth/verify-email`    | Verify email address                |
+| POST   | `/v1/auth/password/forgot` | Request password reset              |
+| POST   | `/v1/auth/password/reset`  | Reset password                      |
+| POST   | `/v1/auth/2fa/enable`      | Enable 2FA                          |
+| POST   | `/v1/auth/2fa/verify`      | Verify 2FA code                     |
+| POST   | `/v1/auth/2fa/disable`     | Disable 2FA                         |
+| GET    | `/v1/auth/oauth/google`    | Google OAuth                        |
+| GET    | `/v1/auth/oauth/github`    | GitHub OAuth                        |
 
 
 #### Public
 
 
-| Method | Path          | Description              |
-| ------ | ------------- | ------------------------ |
-| POST   | `/verify/pdf` | Verify signed document   |
-| POST   | `/sign/`      | Sign PDF document        |
-| GET    | `/s/:slug`    | Submitter signing portal |
-| GET    | `/health`     | Health check             |
+| Method | Path                  | Description                        |
+| ------ | --------------------- | ---------------------------------- |
+| POST   | `/v1/verify/pdf`         | Verify signed document             |
+| GET    | `/s/:slug`            | Submitter signing portal (SPA)     |
+| GET    | `/embed/:slug`        | Embeddable signing page (iframe)   |
+| GET    | `/embed/:slug/config` | Embed configuration                |
+| GET    | `/health`             | Health check                       |
 
 
 #### API v1 (requires JWT or API key)
@@ -278,25 +302,25 @@ The server starts on `http://localhost:8088` by default:
 
 | Method | Path                       | Description               |
 | ------ | -------------------------- | ------------------------- |
-| GET    | `/api/v1/submissions`      | List submissions          |
-| POST   | `/api/v1/submissions`      | Create submission         |
-| GET    | `/api/v1/submissions/:id`  | Get submission            |
-| PUT    | `/api/v1/submissions/:id`  | Update submission         |
-| DELETE | `/api/v1/submissions/:id`  | Delete submission         |
-| POST   | `/api/v1/submissions/send` | Send to signers           |
-| POST   | `/api/v1/submissions/bulk` | Bulk import from CSV/XLSX |
+| GET    | `/v1/submissions`      | List submissions          |
+| POST   | `/v1/submissions`      | Create submission         |
+| GET    | `/v1/submissions/:id`  | Get submission            |
+| PUT    | `/v1/submissions/:id`  | Update submission         |
+| DELETE | `/v1/submissions/:id`  | Delete submission         |
+| POST   | `/v1/submissions/send` | Send to signers           |
+| POST   | `/v1/submissions/bulk` | Bulk import from CSV/XLSX |
 
 
 **👤 Submitters**
 
 
-| Method | Path                              | Description       |
-| ------ | --------------------------------- | ----------------- |
-| GET    | `/api/v1/submitters`              | List submitters   |
-| GET    | `/api/v1/submitters/:id`          | Get submitter     |
-| POST   | `/api/v1/submitters/:id/resend`   | Resend invitation |
-| POST   | `/api/v1/submitters/:id/complete` | Complete signing  |
-| POST   | `/api/v1/submitters/:id/decline`  | Decline signing   |
+| Method | Path                          | Description       |
+| ------ | ----------------------------- | ----------------- |
+| GET    | `/v1/submitters`          | List submitters   |
+| GET    | `/v1/submitters/:id`      | Get submitter     |
+| POST   | `/v1/submitters/resend`   | Resend invitation |
+| POST   | `/v1/submitters/complete` | Complete signing  |
+| POST   | `/v1/submitters/decline`  | Decline signing   |
 
 
 **📄 Templates**
@@ -304,15 +328,15 @@ The server starts on `http://localhost:8088` by default:
 
 | Method | Path                                        | Description         |
 | ------ | ------------------------------------------- | ------------------- |
-| GET    | `/api/v1/templates`                         | List templates      |
-| POST   | `/api/v1/templates`                         | Create template     |
-| GET    | `/api/v1/templates/:id`                     | Get template        |
-| PUT    | `/api/v1/templates/:id`                     | Update template     |
-| DELETE | `/api/v1/templates/:id`                     | Delete template     |
-| POST   | `/api/v1/templates/clone`                   | Clone template      |
-| POST   | `/api/v1/templates/from-file`               | Create from PDF     |
-| POST   | `/api/v1/templates/formulas/validate`       | Validate formula    |
-| POST   | `/api/v1/templates/:id/conditions/validate` | Validate conditions |
+| GET    | `/v1/templates`                         | List templates      |
+| POST   | `/v1/templates`                         | Create template     |
+| GET    | `/v1/templates/:id`                     | Get template        |
+| PUT    | `/v1/templates/:id`                     | Update template     |
+| DELETE | `/v1/templates/:id`                     | Delete template     |
+| POST   | `/v1/templates/clone`                   | Clone template      |
+| POST   | `/v1/templates/from-file`               | Create from PDF     |
+| POST   | `/v1/templates/formulas/validate`       | Validate formula    |
+| POST   | `/v1/templates/:id/conditions/validate` | Validate conditions |
 
 
 **🔗 Signing Links** (direct signing without email)
@@ -320,68 +344,68 @@ The server starts on `http://localhost:8088` by default:
 
 | Method | Path                                            | Description                 |
 | ------ | ----------------------------------------------- | --------------------------- |
-| GET    | `/api/v1/signing-links`                         | List signing links          |
-| POST   | `/api/v1/signing-links`                         | Create signing link         |
-| GET    | `/api/v1/signing-links/:submission_id`          | Get signing link            |
-| GET    | `/api/v1/signing-links/:submission_id/document` | Download completed document |
+| GET    | `/v1/signing-links`                         | List signing links          |
+| POST   | `/v1/signing-links`                         | Create signing link         |
+| GET    | `/v1/signing-links/:submission_id`          | Get signing link            |
+| GET    | `/v1/signing-links/:submission_id/document` | Download completed document |
 
 
-**🏢 Organizations**
+**🏢 Company**
 
 
 | Method | Path                               | Description                              |
 | ------ | ---------------------------------- | ---------------------------------------- |
-| GET    | `/api/v1/organizations`            | List organizations                       |
-| POST   | `/api/v1/organizations`            | Create organization                      |
-| GET    | `/api/v1/organizations/:id`        | Get organization                         |
-| PUT    | `/api/v1/organizations/:id`        | Update organization                      |
-| DELETE | `/api/v1/organizations/:id`        | Delete organization                      |
-| POST   | `/api/v1/organizations/:id/switch` | Switch organization context (admin only) |
+| GET    | `/v1/company`                      | List organizations                       |
+| POST   | `/v1/company`                      | Create organization                      |
+| GET    | `/v1/company/:id`                  | Get organization                         |
+| PUT    | `/v1/company/:id`                  | Update organization                      |
+| DELETE | `/v1/company/:id`                  | Delete organization                      |
+| POST   | `/v1/company/:id/switch`           | Switch organization context (admin only) |
+| POST   | `/v1/company/switch`               | Exit organization context                |
 
 
-**👥 Organization Members**
+**👥 Company Members**
 
 
-| Method | Path                                         | Description        |
-| ------ | -------------------------------------------- | ------------------ |
-| GET    | `/api/v1/organizations/:id/members`          | List members       |
-| POST   | `/api/v1/organizations/:id/members`          | Add member         |
-| PUT    | `/api/v1/organizations/:id/members/:user_id` | Update member role |
-| DELETE | `/api/v1/organizations/:id/members/:user_id` | Remove member      |
+| Method | Path                                                | Description        |
+| ------ | --------------------------------------------------- | ------------------ |
+| GET    | `/v1/company/:id/members`                           | List members       |
+| POST   | `/v1/company/:id/members/invite`                    | Invite member      |
+| PUT    | `/v1/company/:id/members/:member_id/role`           | Update member role |
+| DELETE | `/v1/company/:id/members/:member_id`                | Remove member      |
 
 
 **✉️ Invitations**
 
 
-| Method | Path                                    | Description       |
-| ------ | --------------------------------------- | ----------------- |
-| GET    | `/api/v1/organizations/:id/invitations` | List invitations  |
-| POST   | `/api/v1/organizations/:id/invitations` | Send invitation   |
-| POST   | `/api/v1/invitations/:token/accept`     | Accept invitation |
-| DELETE | `/api/v1/invitations/:id`               | Revoke invitation |
+| Method | Path                                                   | Description               |
+| ------ | ------------------------------------------------------ | ------------------------- |
+| GET    | `/v1/company/:id/invitations`                          | List invitations          |
+| DELETE | `/v1/company/:id/invitations/:invitation_id`           | Revoke invitation         |
+| GET    | `/v1/invitations/:token`                               | Invitation details        |
+| POST   | `/v1/invitations/:token/accept`                        | Accept invitation         |
 
 
 **🔑 API Keys**
 
 
-| Method | Path                          | Description    |
-| ------ | ----------------------------- | -------------- |
-| GET    | `/api/v1/apikeys`             | List API keys  |
-| POST   | `/api/v1/apikeys`             | Create API key |
-| DELETE | `/api/v1/apikeys/:id`         | Revoke key     |
-| POST   | `/api/v1/apikeys/:id/enable`  | Enable key     |
-| POST   | `/api/v1/apikeys/:id/disable` | Disable key    |
+| Method | Path                          | Description                            |
+| ------ | ----------------------------- | -------------------------------------- |
+| GET    | `/v1/settings/api`            | List API keys                          |
+| POST   | `/v1/settings/api`            | Create API key                         |
+| PATCH  | `/v1/settings/api/:id`        | Enable/disable key (`{enabled: bool}`) |
+| DELETE | `/v1/settings/api/:id`        | Revoke key                             |
 
 
 **🪝 Webhooks**
 
 
-| Method | Path                   | Description    |
-| ------ | ---------------------- | -------------- |
-| GET    | `/api/v1/webhooks`     | List webhooks  |
-| POST   | `/api/v1/webhooks`     | Create webhook |
-| PUT    | `/api/v1/webhooks/:id` | Update webhook |
-| DELETE | `/api/v1/webhooks/:id` | Delete webhook |
+| Method | Path                           | Description    |
+| ------ | ------------------------------ | -------------- |
+| GET    | `/v1/settings/webhooks`        | List webhooks  |
+| POST   | `/v1/settings/webhooks`          | Create webhook |
+| PUT    | `/v1/settings/webhooks/:id`      | Update webhook |
+| DELETE | `/v1/settings/webhooks/:id`      | Delete webhook |
 
 
 **⚙️ Settings**
@@ -389,32 +413,33 @@ The server starts on `http://localhost:8088` by default:
 
 | Method | Path                        | Description           |
 | ------ | --------------------------- | --------------------- |
-| GET    | `/api/v1/settings`          | Get settings          |
-| PUT    | `/api/v1/settings/email`    | Update email config   |
-| PUT    | `/api/v1/settings/storage`  | Update storage config |
-| PUT    | `/api/v1/settings/branding` | Update branding       |
+| GET    | `/v1/settings`              | Get settings          |
+| PUT    | `/v1/settings/email`        | Update email config   |
+| PUT    | `/v1/settings/sms`          | Update SMS config     |
+| PUT    | `/v1/settings/storage`      | Update storage config |
+| PUT    | `/v1/settings/geolocation`  | Update GeoIP config   |
 
 
 **🎨 Branding & i18n**
 
 
-| Method | Path                      | Description            |
-| ------ | ------------------------- | ---------------------- |
-| GET    | `/api/v1/branding`        | Get branding settings  |
-| PUT    | `/api/v1/branding`        | Update branding        |
-| POST   | `/api/v1/branding/assets` | Upload branding asset  |
-| GET    | `/api/v1/i18n/locales`    | List available locales |
-| PUT    | `/api/v1/account/locale`  | Update account locale  |
+| Method | Path                                | Description            |
+| ------ | ----------------------------------- | ---------------------- |
+| GET    | `/v1/settings/branding`             | Get branding settings  |
+| PUT    | `/v1/settings/branding`             | Update branding        |
+| GET    | `/v1/settings/i18n/locales`           | List available locales |
+| PUT    | `/v1/settings/i18n/user/locale`       | Update user locale     |
+| PUT    | `/v1/settings/i18n/account/locale`    | Update account locale  |
 
 
 **✉️ Email Templates**
 
 
-| Method | Path                          | Description     |
-| ------ | ----------------------------- | --------------- |
-| GET    | `/api/v1/email-templates`     | List templates  |
-| POST   | `/api/v1/email-templates`     | Create template |
-| PUT    | `/api/v1/email-templates/:id` | Update template |
+| Method | Path                                    | Description     |
+| ------ | --------------------------------------- | --------------- |
+| GET    | `/v1/settings/email/templates`          | List templates  |
+| POST   | `/v1/settings/email/templates`          | Create template |
+| PUT    | `/v1/settings/email/templates/:id`      | Update template |
 
 
 **📊 Events & Stats**
@@ -422,24 +447,28 @@ The server starts on `http://localhost:8088` by default:
 
 | Method | Path             | Description             |
 | ------ | ---------------- | ----------------------- |
-| GET    | `/api/v1/events` | List events (audit log) |
-| GET    | `/api/v1/stats`  | Get statistics          |
+| GET    | `/v1/events` | List events (audit log) |
+| GET    | `/v1/stats`  | Get statistics          |
 
 
-> Full interactive reference: [Swagger UI](http://localhost:8088/swagger/index.html) · [docs/SWAGGER.md](docs/SWAGGER.md)
+> Authoritative route list: `internal/routes/api_routes.go` and handler `RegisterRoutes` methods · OpenAPI generation: [docs/SWAGGER.md](docs/SWAGGER.md)
 
 ## Configuration
 
 All configuration is via environment variables with the `GOSIGN_` prefix. Infrastructure settings are read at startup; application settings (SMTP, storage, branding) are managed in the database via Admin UI.
 
 
-| Variable                | Default          | Description               |
-| ----------------------- | ---------------- | ------------------------- |
-| `GOSIGN_HTTP_ADDR`      | `0.0.0.0:8088`   | HTTP server address       |
-| `GOSIGN_DEV_MODE`       | `false`          | Development mode          |
-| `GOSIGN_POSTGRES_URL`   | —                | PostgreSQL connection URL |
-| `GOSIGN_REDIS_ADDRESS`  | `localhost:6379` | Redis address             |
-| `GOSIGN_REDIS_PASSWORD` | —                | Redis password            |
+| Variable                      | Default          | Description                             |
+| ----------------------------- | ---------------- | --------------------------------------- |
+| `GOSIGN_JWT_SECRET`           | — (**required**) | Secret for signing JWT tokens           |
+| `GOSIGN_HTTP_ADDR`            | `0.0.0.0:8088`   | HTTP server address                     |
+| `GOSIGN_DEV_MODE`             | `false`          | Development mode (relaxed CORS)         |
+| `GOSIGN_POSTGRES_URL`         | —                | PostgreSQL connection URL               |
+| `GOSIGN_REDIS_ADDRESS`        | `localhost:6379` | Redis address                           |
+| `GOSIGN_REDIS_PASSWORD`       | —                | Redis password                          |
+| `GOSIGN_CORS_ALLOWED_ORIGINS` | —                | Comma-separated allowed origins         |
+| `GOSIGN_APP_URL`              | —                | Public URL of the web app (emails, OAuth redirects, /embed iframe); empty = same origin |
+| `GOSIGN_DATA_DIR`             | executable dir   | Data directory for `lc_*` folders       |
 
 
 ## Development
@@ -447,7 +476,7 @@ All configuration is via environment variables with the `GOSIGN_` prefix. Infras
 ### Running Tests
 
 ```bash
-# All tests
+# All tests (DB-backed tests auto-skip when the test DB is down)
 go test ./...
 
 # With coverage
@@ -457,11 +486,14 @@ go test -cover ./...
 go test ./pkg/pdf/sign/...
 ```
 
+Database-backed tests need a dedicated PostgreSQL at `localhost:5453` — see [docs/TESTING.md](docs/TESTING.md).
+
 ### Building for Production
 
 ```bash
 # Backend
-go build -o gosign cmd/goSign/main.go
+go build -o bin/gosign-server ./cmd/server
+go build -o bin/gosign-worker ./cmd/worker
 
 # Frontend
 cd web/private && bun run build
@@ -470,14 +502,36 @@ cd web/private && bun run build
 ### Docker
 
 ```bash
-docker compose -f compose.yaml up -d
+cp .env.example .env   # set GOSIGN_JWT_SECRET (and domains if needed)
+docker compose up -d
 ```
 
-Production compose uses a dedicated `nginx` gateway container:
+By default the stack is available at `http://app.localhost` (web app) and `http://api.localhost` (API). Override with `API_DOMAIN` / `APP_DOMAIN` / `PUBLIC_SCHEME` in `.env`.
 
-- `http://localhost/` -> frontend
-- `http://localhost/api/` -> backend API
-- `http://localhost/swagger/index.html` -> Swagger UI
+Compose uses prebuilt images from GitHub Container Registry (`ghcr.io/shurco/gosign-*:latest`, published by the `docker` workflow on each release):
+
+- `migrate` — `ghcr.io/shurco/gosign-migrate` — self-contained goose image with `migrations/` baked in; runs and exits (API waits for it)
+- `gosign` — `ghcr.io/shurco/gosign-server` — HTTP API
+- `worker` — `ghcr.io/shurco/gosign-worker` — background tasks, shares the `base` volume with the API
+- `frontend` — `ghcr.io/shurco/gosign-frontend` — SvelteKit SPA served by unprivileged nginx; the API base URL is injected at container start via `GOSIGN_API_URL` (no rebuild needed per domain)
+- `nginx` — edge proxy on port 80: `api.<domain>` -> backend, `app.<domain>` -> frontend
+- `postgres`, `redis`, `minio` — infrastructure
+
+To build the images locally instead of pulling from ghcr (Dockerfiles live in `docker/`):
+
+```bash
+docker build -t ghcr.io/shurco/gosign-server:latest   -f docker/Dockerfile.server .
+docker build -t ghcr.io/shurco/gosign-worker:latest   -f docker/Dockerfile.worker .
+docker build -t ghcr.io/shurco/gosign-migrate:latest  -f docker/Dockerfile.migrate .
+docker build -t ghcr.io/shurco/gosign-frontend:latest -f docker/Dockerfile.frontend .
+```
+
+Re-run migrations manually:
+
+```bash
+docker compose run --rm migrate                       # up
+GOOSE_COMMAND=status docker compose run --rm migrate  # status
+```
 
 ## Scripts
 

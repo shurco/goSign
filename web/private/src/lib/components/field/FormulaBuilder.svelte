@@ -117,7 +117,7 @@
     }
 
     try {
-      const response = await apiPost("/api/v1/templates/formulas/validate", {
+      const response = await apiPost("/templates/formulas/validate", {
         formula,
         fields: availableFields
       });

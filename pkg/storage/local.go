@@ -108,14 +108,14 @@ func (s *LocalStorage) List(ctx context.Context, prefix string) ([]string, error
 
 	err := filepath.Walk(prefixPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // ignore read errors
+			return nil //nolint:nilerr // skip unreadable entries, keep walking
 		}
 
 		if !info.IsDir() {
 			// Get relative path from basePath
 			relPath, err := filepath.Rel(s.basePath, path)
 			if err != nil {
-				return nil
+				return nil //nolint:nilerr // skip entries outside basePath
 			}
 			files = append(files, relPath)
 		}

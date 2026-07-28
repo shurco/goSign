@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/shurco/gosign/internal/models"
 )
 

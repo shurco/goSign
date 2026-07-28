@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
+	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/pkg/logging"
@@ -20,7 +21,7 @@ import (
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
-// OAuth configuration should be loaded from environment variables
+// OAuthConfig holds OAuth provider settings loaded from environment variables
 type OAuthConfig struct {
 	ClientID     string
 	ClientSecret string
@@ -61,9 +62,9 @@ func getGitHubOAuthConfig() *OAuthConfig {
 
 // GoogleLogin redirects to Google OAuth
 func GoogleLogin(c fiber.Ctx) error {
-	config := getGoogleOAuthConfig()
+	oauthCfg := getGoogleOAuthConfig()
 
-	if config.ClientID == "" {
+	if oauthCfg.ClientID == "" {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
@@ -81,13 +82,13 @@ func GoogleLogin(c fiber.Ctx) error {
 
 	// Build authorization URL
 	params := url.Values{}
-	params.Add("client_id", config.ClientID)
-	params.Add("redirect_uri", config.RedirectURL)
+	params.Add("client_id", oauthCfg.ClientID)
+	params.Add("redirect_uri", oauthCfg.RedirectURL)
 	params.Add("response_type", "code")
 	params.Add("scope", "openid email profile")
 	params.Add("state", state)
 
-	authURL := fmt.Sprintf("%s?%s", config.AuthURL, params.Encode())
+	authURL := fmt.Sprintf("%s?%s", oauthCfg.AuthURL, params.Encode())
 
 	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(authURL)
 }
@@ -112,19 +113,19 @@ func GoogleCallback(c fiber.Ctx) error {
 	}
 
 	// Delete used state token
-	redis.Conn.Delete(stateKey)
+	_, _ = redis.Conn.Delete(stateKey) // best-effort: state is one-time
 
-	config := getGoogleOAuthConfig()
+	oauthCfg := getGoogleOAuthConfig()
 
 	// Exchange code for token
-	tokenResp, err := exchangeCodeForToken(config, code)
+	tokenResp, err := exchangeCodeForToken(oauthCfg, code)
 	if err != nil {
 		log.Err(err).Msg("Failed to exchange code for token")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Get user info from Google
-	userInfo, err := getUserInfo(config, tokenResp.AccessToken)
+	userInfo, err := getUserInfo(oauthCfg, tokenResp.AccessToken)
 	if err != nil {
 		log.Err(err).Msg("Failed to get user info")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
@@ -190,17 +191,16 @@ func GoogleCallback(c fiber.Ctx) error {
 		log.Err(err).Msg("Failed to update login info")
 	}
 
-	// Redirect to frontend with tokens
-	// TODO: Configure frontend URL
-	frontendURL := fmt.Sprintf("http://localhost:3000/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken)
+	// Redirect to the web app with tokens
+	frontendURL := config.Data().AppLink(fmt.Sprintf("/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken))
 	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(frontendURL)
 }
 
 // GitHubLogin redirects to GitHub OAuth
 func GitHubLogin(c fiber.Ctx) error {
-	config := getGitHubOAuthConfig()
+	oauthCfg := getGitHubOAuthConfig()
 
-	if config.ClientID == "" {
+	if oauthCfg.ClientID == "" {
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
@@ -218,12 +218,12 @@ func GitHubLogin(c fiber.Ctx) error {
 
 	// Build authorization URL
 	params := url.Values{}
-	params.Add("client_id", config.ClientID)
-	params.Add("redirect_uri", config.RedirectURL)
+	params.Add("client_id", oauthCfg.ClientID)
+	params.Add("redirect_uri", oauthCfg.RedirectURL)
 	params.Add("scope", "read:user user:email")
 	params.Add("state", state)
 
-	authURL := fmt.Sprintf("%s?%s", config.AuthURL, params.Encode())
+	authURL := fmt.Sprintf("%s?%s", oauthCfg.AuthURL, params.Encode())
 
 	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(authURL)
 }
@@ -248,19 +248,19 @@ func GitHubCallback(c fiber.Ctx) error {
 	}
 
 	// Delete used state token
-	redis.Conn.Delete(stateKey)
+	_, _ = redis.Conn.Delete(stateKey) // best-effort: state is one-time
 
-	config := getGitHubOAuthConfig()
+	oauthCfg := getGitHubOAuthConfig()
 
 	// Exchange code for token
-	tokenResp, err := exchangeCodeForToken(config, code)
+	tokenResp, err := exchangeCodeForToken(oauthCfg, code)
 	if err != nil {
 		log.Err(err).Msg("Failed to exchange code for token")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
 	}
 
 	// Get user info from GitHub
-	userInfo, err := getUserInfo(config, tokenResp.AccessToken)
+	userInfo, err := getUserInfo(oauthCfg, tokenResp.AccessToken)
 	if err != nil {
 		log.Err(err).Msg("Failed to get user info")
 		return webutil.Response(c, fiber.StatusInternalServerError, "Internal server error", nil)
@@ -273,7 +273,7 @@ func GitHubCallback(c fiber.Ctx) error {
 		email = userEmail
 	} else {
 		// Get primary email from GitHub API
-		emails, err := getGitHubEmails(config, tokenResp.AccessToken)
+		emails, err := getGitHubEmails(tokenResp.AccessToken)
 		if err == nil && len(emails) > 0 {
 			email = emails[0]
 		}
@@ -343,9 +343,8 @@ func GitHubCallback(c fiber.Ctx) error {
 		log.Err(err).Msg("Failed to update login info")
 	}
 
-	// Redirect to frontend with tokens
-	// TODO: Configure frontend URL
-	frontendURL := fmt.Sprintf("http://localhost:3000/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken)
+	// Redirect to the web app with tokens
+	frontendURL := config.Data().AppLink(fmt.Sprintf("/auth/callback?access_token=%s&refresh_token=%s", accessToken, refreshToken))
 	return c.Redirect().Status(fiber.StatusTemporaryRedirect).To(frontendURL)
 }
 
@@ -359,15 +358,15 @@ type TokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-func exchangeCodeForToken(config *OAuthConfig, code string) (*TokenResponse, error) {
+func exchangeCodeForToken(oauthCfg *OAuthConfig, code string) (*TokenResponse, error) {
 	data := url.Values{}
-	data.Set("client_id", config.ClientID)
-	data.Set("client_secret", config.ClientSecret)
+	data.Set("client_id", oauthCfg.ClientID)
+	data.Set("client_secret", oauthCfg.ClientSecret)
 	data.Set("code", code)
-	data.Set("redirect_uri", config.RedirectURL)
+	data.Set("redirect_uri", oauthCfg.RedirectURL)
 	data.Set("grant_type", "authorization_code")
 
-	req, err := http.NewRequest("POST", config.TokenURL, nil)
+	req, err := http.NewRequest("POST", oauthCfg.TokenURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -395,8 +394,8 @@ func exchangeCodeForToken(config *OAuthConfig, code string) (*TokenResponse, err
 	return &tokenResp, nil
 }
 
-func getUserInfo(config *OAuthConfig, accessToken string) (map[string]any, error) {
-	req, err := http.NewRequest("GET", config.UserInfoURL, nil)
+func getUserInfo(oauthCfg *OAuthConfig, accessToken string) (map[string]any, error) {
+	req, err := http.NewRequest("GET", oauthCfg.UserInfoURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +423,7 @@ func getUserInfo(config *OAuthConfig, accessToken string) (map[string]any, error
 	return userInfo, nil
 }
 
-func getGitHubEmails(config *OAuthConfig, accessToken string) ([]string, error) {
+func getGitHubEmails(accessToken string) ([]string, error) {
 	req, err := http.NewRequest("GET", "https://api.github.com/user/emails", nil)
 	if err != nil {
 		return nil, err

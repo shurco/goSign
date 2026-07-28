@@ -28,7 +28,8 @@
     "optional": "Optional",
     "download": "Herunterladen",
     "deleted": "Gelöscht",
-    "reasonLabel": "Grund:"
+    "reasonLabel": "Grund:",
+    "continue": "Weiter"
   },
   "status": {
     "draft": "Entwurf",
@@ -130,7 +131,8 @@
       "functions": "Funktionen",
       "examples": "Beispiele",
       "noFields": "Keine Zahl- oder Textfelder verfügbar."
-    }
+    },
+    "type_value": "Wert eingeben"
   },
   "signing": {
     "title": "Dokument abschließen",
@@ -187,7 +189,11 @@
     "linksTitleWithTemplate": "Unterschriftslinks — {template}",
     "copyLink": "Link kopieren",
     "copyAllLinks": "Alle Links kopieren",
-    "sendEachLinkHint": "Senden Sie jeden Link über einen beliebigen Kanal an den jeweiligen Unterzeichner."
+    "sendEachLinkHint": "Senden Sie jeden Link über einen beliebigen Kanal an den jeweiligen Unterzeichner.",
+    "invalidNumber": "Bitte geben Sie eine gültige Zahl ein",
+    "numberMax": "Der Wert darf höchstens {max} sein",
+    "numberMin": "Der Wert muss mindestens {min} sein",
+    "signing_date": "Signaturdatum"
   },
   "signingMode": {
     "title": "Unterschriftsmodus",
@@ -223,7 +229,18 @@
     "titleField": "Titel",
     "template": "Vorlage",
     "selectTemplate": "Vorlage auswählen",
-    "placeholder": "Vertrag für Max Mustermann"
+    "placeholder": "Vertrag für Max Mustermann",
+    "createDescription": "Wählen Sie eine Vorlage und geben Sie die Daten der Unterzeichner ein, um Signaturlinks zu erstellen.",
+    "createLinks": "Links erstellen",
+    "invalidTemplateSubmitters": "Die Unterzeichner der Vorlage sind nicht korrekt konfiguriert",
+    "saveFailed": "Einreichung konnte nicht gespeichert werden",
+    "selectTemplateRequired": "Bitte wählen Sie eine Vorlage",
+    "signerEmail": "E-Mail",
+    "signerName": "Name",
+    "signerPhone": "Telefon",
+    "signers": "Unterzeichner",
+    "signersHint": "Die Anzahl der Unterzeichner wird durch die gewählte Vorlage vorgegeben.",
+    "signersOrderDragHint": "Im sequenziellen Modus können Sie die Karten der Unterzeichner per Drag-and-drop anordnen, um die Reihenfolge festzulegen."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -239,7 +256,8 @@
     "thisMonth": "Diesen Monat",
     "recentActivity": "Letzte Aktivität",
     "noActivity": "Keine letzte Aktivität",
-    "active": "aktiv"
+    "active": "aktiv",
+    "description": "Überblick über Ihre Dokumente, Einreichungen und Aktivitäten"
   },
   "submissionStatus": {
     "title": "Dokumentenstatus",
@@ -378,7 +396,50 @@
     "sourceUrl": "URL",
     "unknownSource": "Unbekannt",
     "savedKeyLabel": "Gespeicherter Schlüssel",
-    "deleteKey": "Schlüssel löschen"
+    "deleteKey": "Schlüssel löschen",
+    "availableVariables": "Verfügbare Variablen",
+    "confirmDeleteTemplate": "Möchten Sie diese Vorlage wirklich löschen?",
+    "createEmailTemplate": "E-Mail-Vorlage erstellen",
+    "default": "Standard",
+    "deleteError": "Vorlage konnte nicht gelöscht werden",
+    "downloadGeoLite2Database": "GeoLite2-Datenbank herunterladen",
+    "downloadGeoLite2DatabaseDescription": "Laden Sie die GeoLite2-City-Datenbank herunter, um die IP-Geolokalisierung zu aktivieren. Wählen Sie eine der folgenden Optionen.",
+    "downloadMethodInfo": "Konfigurieren Sie die Download-Methoden. Die MaxMind-Methode hat Vorrang: Wenn ein Lizenzschlüssel gespeichert ist, wird er für automatische Updates verwendet. Andernfalls dient die URL-Methode als Fallback.",
+    "editEmailTemplate": "E-Mail-Vorlage bearbeiten",
+    "emailSubjectPlaceholder": "E-Mail-Betreff (optional)",
+    "emailTemplatePlaceholder": "HTML-Inhalt der Vorlage eingeben...",
+    "emailTemplates": "E-Mail-Vorlagen",
+    "emailTemplatesDescription": "Verwalten Sie E-Mail-Vorlagen für Einladungen, Erinnerungen und Benachrichtigungen",
+    "failedToSaveGeolocationSettings": "Geolokalisierungseinstellungen konnten nicht gespeichert werden",
+    "failedToSaveLicenseKey": "Lizenzschlüssel konnte nicht gespeichert werden",
+    "geolocationBaseDir": "Basisverzeichnis",
+    "geolocationBaseDirDescription": "Verzeichnis zur Speicherung der GeoLite2-Datenbankdateien",
+    "geolocationBaseDirPlaceholder": "./base",
+    "geolocationDbPath": "Datenbankpfad",
+    "geolocationDbPathDescription": "Vollständiger Pfad zur Datei GeoLite2-City.mmdb",
+    "geolocationDbPathPlaceholder": "./base/GeoLite2-City.mmdb",
+    "geolocationSettingsSaved": "Geolokalisierungseinstellungen erfolgreich gespeichert",
+    "licenseKeyAlreadySet": "Lizenzschlüssel ist bereits konfiguriert (leer lassen, um den aktuellen zu behalten)",
+    "licenseKeyRequiredForMaxMind": "Lizenzschlüssel erforderlich. Bitte konfigurieren Sie ihn zuerst oben.",
+    "licenseKeySaved": "Lizenzschlüssel erfolgreich gespeichert",
+    "maxmindLicenseKeyDescription": "Holen Sie sich Ihren Lizenzschlüssel unter https://www.maxmind.com/en/accounts/current/license-key. Dieser Schlüssel wird in der Datenbank gespeichert und für automatische Downloads beim Start verwendet.",
+    "noEmailTemplates": "Keine E-Mail-Vorlagen gefunden",
+    "saveError": "Vorlage konnte nicht gespeichert werden",
+    "saving": "Speichern",
+    "subject": "Betreff",
+    "systemTemplate": "System",
+    "templateBase": "Basisvorlage",
+    "templateCompleted": "Signiert",
+    "templateContent": "Vorlageninhalt",
+    "templateInvitation": "Einladung",
+    "templateName": "Vorlagenname",
+    "templateReminder": "Erinnerung",
+    "variableCustomMessage": "{{.CustomMessage}} - Benutzerdefinierte Nachricht",
+    "variableDocumentName": "{{.DocumentName}} - Dokumentname",
+    "variableExpiresAt": "{{.ExpiresAt}} - Ablaufdatum",
+    "variableRecipientName": "{{.RecipientName}} - Name des Empfängers",
+    "variableSenderName": "{{.SenderName}} - Name des Absenders",
+    "variableSigningLink": "{{.SigningLink}} - Link zum Signieren des Dokuments"
   },
   "errors": {
     "generic": "Ein Fehler ist aufgetreten",
@@ -462,7 +523,17 @@
     "uploadPdfToStartEditing": "PDF hochladen, um zu bearbeiten",
     "uploadPdfToStartEditingHint": "Diese Vorlage hat noch keine Dokumente. Ziehen Sie hier ein PDF hinein – es wird automatisch hochgeladen und angewendet.",
     "selectPdfFile": "Bitte wählen Sie eine PDF-Datei aus",
-    "uploadError": "PDF konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut."
+    "uploadError": "PDF konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut.",
+    "clickToUpload": "Zum Hochladen klicken",
+    "create": "Erstellen",
+    "dragAndDrop": "oder hierher ziehen und ablegen",
+    "enterTemplateName": "Vorlagennamen eingeben",
+    "invalidFileType": "Es werden nur PDF-Dateien unterstützt",
+    "optional": "optional",
+    "removeFile": "Datei entfernen",
+    "selectedFile": "Ausgewählte Datei",
+    "uploadFromFile": "Aus Datei hochladen",
+    "uploadFromFileHint": "PDF-Dateien werden unterstützt. Wenn keine Datei ausgewählt ist, wird eine leere Vorlage erstellt."
   },
   "organizations": {
     "title": "Organisationen",
@@ -515,7 +586,7 @@
     "invitationSent": "Einladung erfolgreich gesendet!",
     "inviteError": "Fehler beim Senden der Einladung",
     "emailRequired": "E-Mail ist erforderlich",
-    "emailPlaceholder": "member{'@'}example.com",
+    "emailPlaceholder": "member@example.com",
     "viewerDescription": "Kann Dokumente und Einreichungen anzeigen",
     "memberDescription": "Kann Dokumente erstellen und bearbeiten",
     "adminDescription": "Kann Mitglieder und Organisationseinstellungen verwalten"

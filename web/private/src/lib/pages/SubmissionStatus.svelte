@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { apiUrl } from "@/services/api";
   import { page } from "$app/state";
   import { t, te } from "@/i18n/index.svelte";
   import ResourceTable from "@/components/common/ResourceTable.svelte";
@@ -58,7 +59,7 @@
     loading = true;
     error = null;
     try {
-      const res = await fetchWithAuth(`/api/v1/signing-links/${encodeURIComponent(submissionID)}`);
+      const res = await fetchWithAuth(apiUrl(`/signing-links/${encodeURIComponent(submissionID)}`));
       if (!res.ok) {
         error = t("submissionStatus.errors.failedToLoad");
         detail = null;
@@ -237,7 +238,7 @@
       return;
     }
     try {
-      const res = await fetchWithAuth(`/api/v1/signing-links/${encodeURIComponent(id)}/document`, { method: "GET" });
+      const res = await fetchWithAuth(apiUrl(`/signing-links/${encodeURIComponent(id)}/document`), { method: "GET" });
       if (res.status === 409) {
         alert(t("submissionStatus.errors.notCompletedYet"));
         return;

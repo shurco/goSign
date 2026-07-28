@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/services"
@@ -21,11 +22,10 @@ func TestAPIKeyHandler(t *testing.T) {
 	h := NewAPIKeyHandler(service)
 
 	routes := func(app *fiber.App) {
-		app.Get("/apikeys", h.List)
-		app.Post("/apikeys", h.Create)
-		app.Put("/apikeys/:id/enable", h.Enable)
-		app.Put("/apikeys/:id/disable", h.Disable)
-		app.Delete("/apikeys/:id", h.Delete)
+		app.Get("/settings/api", h.List)
+		app.Post("/settings/api", h.Create)
+		app.Patch("/settings/api/:id", h.Update)
+		app.Delete("/settings/api/:id", h.Delete)
 	}
 
 	t.Run("list no auth returns 401", func(t *testing.T) {
@@ -33,7 +33,7 @@ func TestAPIKeyHandler(t *testing.T) {
 		app.Use(middleware.Protected())
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/apikeys", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/api", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -50,7 +50,7 @@ func TestAPIKeyHandler(t *testing.T) {
 		}))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/apikeys", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/api", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -65,7 +65,7 @@ func TestAPIKeyHandler(t *testing.T) {
 		app.Use(testutil.AuthMiddleware(testutil.User1))
 		routes(app)
 
-		req := httptest.NewRequest(http.MethodGet, "/apikeys", nil)
+		req := httptest.NewRequest(http.MethodGet, "/settings/api", nil)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("app.Test: %v", err)
@@ -82,7 +82,7 @@ func TestAPIKeyHandler(t *testing.T) {
 
 		// name must be string; send number to force JSON binding error.
 		body := []byte(`{"name":123}`)
-		req := httptest.NewRequest(http.MethodPost, "/apikeys", bytes.NewReader(body))
+		req := httptest.NewRequest(http.MethodPost, "/settings/api", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 
 		resp, err := app.Test(req)
@@ -100,7 +100,7 @@ func TestAPIKeyHandler(t *testing.T) {
 		routes(app)
 
 		createBody := []byte(`{"name":"mykey"}`)
-		createReq := httptest.NewRequest(http.MethodPost, "/apikeys", bytes.NewReader(createBody))
+		createReq := httptest.NewRequest(http.MethodPost, "/settings/api", bytes.NewReader(createBody))
 		createReq.Header.Set("Content-Type", "application/json")
 
 		createResp, err := app.Test(createReq)
@@ -131,10 +131,16 @@ func TestAPIKeyHandler(t *testing.T) {
 		if !ok {
 			t.Fatalf("api_key[\"id\"] is not string: %v", apiKeyMap["id"])
 		}
-		// Enable/Disable routes use key_hash as :id; Delete uses the UUID.
+		// Update route uses key_hash as :id; Delete uses the UUID.
 		keyHash := middleware.HashAPIKey(plainKey)
 
-		enableResp, err := app.Test(httptest.NewRequest(http.MethodPut, "/apikeys/"+keyHash+"/enable", nil))
+		patch := func(body string) (*http.Response, error) {
+			req := httptest.NewRequest(http.MethodPatch, "/settings/api/"+keyHash, bytes.NewReader([]byte(body)))
+			req.Header.Set("Content-Type", "application/json")
+			return app.Test(req)
+		}
+
+		enableResp, err := patch(`{"enabled":true}`)
 		if err != nil {
 			t.Fatalf("enable app.Test: %v", err)
 		}
@@ -142,7 +148,7 @@ func TestAPIKeyHandler(t *testing.T) {
 			t.Fatalf("enable status = %d, want %d", enableResp.StatusCode, http.StatusOK)
 		}
 
-		disableResp, err := app.Test(httptest.NewRequest(http.MethodPut, "/apikeys/"+keyHash+"/disable", nil))
+		disableResp, err := patch(`{"enabled":false}`)
 		if err != nil {
 			t.Fatalf("disable app.Test: %v", err)
 		}
@@ -150,7 +156,15 @@ func TestAPIKeyHandler(t *testing.T) {
 			t.Fatalf("disable status = %d, want %d", disableResp.StatusCode, http.StatusOK)
 		}
 
-		deleteResp, err := app.Test(httptest.NewRequest(http.MethodDelete, "/apikeys/"+apiKeyID, nil))
+		missingResp, err := patch(`{}`)
+		if err != nil {
+			t.Fatalf("missing field app.Test: %v", err)
+		}
+		if missingResp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("missing field status = %d, want %d", missingResp.StatusCode, http.StatusBadRequest)
+		}
+
+		deleteResp, err := app.Test(httptest.NewRequest(http.MethodDelete, "/settings/api/"+apiKeyID, nil))
 		if err != nil {
 			t.Fatalf("delete app.Test: %v", err)
 		}

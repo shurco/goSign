@@ -24,8 +24,7 @@ func NewAPIKeyHandler(service *services.APIKeyService) *APIKeyHandler {
 func (h *APIKeyHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/", h.List)
 	router.Post("/", h.Create)
-	router.Put("/:id/enable", h.Enable)
-	router.Put("/:id/disable", h.Disable)
+	router.Patch("/:id", h.Update)
 	router.Delete("/:id", h.Delete)
 }
 
@@ -46,7 +45,7 @@ type CreateRequest struct {
 // @Failure 500 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/apikeys [get]
+// @Router /v1/settings/api [get]
 func (h *APIKeyHandler) List(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -74,7 +73,7 @@ func (h *APIKeyHandler) List(c fiber.Ctx) error {
 // @Failure 500 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/apikeys [post]
+// @Router /v1/settings/api [post]
 func (h *APIKeyHandler) Create(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil || auth.AccountID == "" {
@@ -109,58 +108,51 @@ func (h *APIKeyHandler) Create(c fiber.Ctx) error {
 	})
 }
 
-// Enable enables API key
-// @Summary Enable API key
-// @Description Enable a disabled API key
-// @Tags apikeys
-// @Accept json
-// @Produce json
-// @Param id path string true "API key ID"
-// @Success 200 {object} map[string]any
-// @Failure 401 {object} map[string]any
-// @Failure 500 {object} map[string]any
-// @Security BearerAuth
-// @Security ApiKeyAuth
-// @Router /api/v1/apikeys/{id}/enable [put]
-func (h *APIKeyHandler) Enable(c fiber.Ctx) error {
-	auth := middleware.GetAuthContext(c)
-	if auth == nil {
-		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
-
-	keyID := c.Params("id")
-	if err := h.service.EnableKey(keyID); err != nil {
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to enable API key", nil)
-	}
-
-	return webutil.Response(c, fiber.StatusOK, "API key enabled successfully", nil)
+// UpdateAPIKeyRequest represents API key update request
+type UpdateAPIKeyRequest struct {
+	Enabled *bool `json:"enabled" validate:"required"`
 }
 
-// Disable disables API key
-// @Summary Disable API key
-// @Description Disable an active API key
+// Update updates API key state (enable/disable)
+// @Summary Update API key
+// @Description Enable or disable an API key
 // @Tags apikeys
 // @Accept json
 // @Produce json
 // @Param id path string true "API key ID"
+// @Param body body UpdateAPIKeyRequest true "Update request"
 // @Success 200 {object} map[string]any
 // @Failure 401 {object} map[string]any
 // @Failure 500 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/apikeys/{id}/disable [put]
-func (h *APIKeyHandler) Disable(c fiber.Ctx) error {
+// @Router /v1/settings/api/{id} [patch]
+func (h *APIKeyHandler) Update(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {
 		return webutil.Response(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
-	keyID := c.Params("id")
-	if err := h.service.DisableKey(keyID); err != nil {
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to disable API key", nil)
+	var req UpdateAPIKeyRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+	if req.Enabled == nil {
+		return webutil.Response(c, fiber.StatusBadRequest, "Field 'enabled' is required", nil)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "API key disabled successfully", nil)
+	keyID := c.Params("id")
+	if *req.Enabled {
+		if err := h.service.EnableKey(keyID); err != nil {
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to enable API key", nil)
+		}
+	} else {
+		if err := h.service.DisableKey(keyID); err != nil {
+			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to disable API key", nil)
+		}
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "API key updated successfully", nil)
 }
 
 // Delete deletes API key
@@ -175,7 +167,7 @@ func (h *APIKeyHandler) Disable(c fiber.Ctx) error {
 // @Failure 500 {object} map[string]any
 // @Security BearerAuth
 // @Security ApiKeyAuth
-// @Router /api/v1/apikeys/{id} [delete]
+// @Router /v1/settings/api/{id} [delete]
 func (h *APIKeyHandler) Delete(c fiber.Ctx) error {
 	auth := middleware.GetAuthContext(c)
 	if auth == nil {

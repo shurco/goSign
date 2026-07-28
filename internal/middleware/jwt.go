@@ -39,11 +39,11 @@ type AuthContext struct {
 
 // MyCustomClaims represents JWT token claims
 type MyCustomClaims struct {
-	Id             string `json:"id"`
+	ID             string `json:"id"`
 	Name           string `json:"name"`
 	Email          string `json:"email"`
-	AccountId      string `json:"account_id,omitempty"`
-	OrganizationId string `json:"organization_id,omitempty"`
+	AccountID      string `json:"account_id,omitempty"`
+	OrganizationID string `json:"organization_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -63,11 +63,11 @@ func SetAPIKeyValidator(validator APIKeyValidator) {
 // CreateTokenWithOrg generates JWT access token with claims and organization ID (15 minutes)
 func CreateTokenWithOrg(user *models.User, organizationID string) (string, error) {
 	claims := MyCustomClaims{
-		Id:             user.ID,
+		ID:             user.ID,
 		Name:           user.Name,
 		Email:          user.Email,
-		AccountId:      user.AccountID,
-		OrganizationId: organizationID,
+		AccountID:      user.AccountID,
+		OrganizationID: organizationID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			// Keep user ID also in standard `jti` so callers/tests using RegisteredClaims.ID work.
 			ID:        user.ID,
@@ -191,19 +191,19 @@ func Protected() fiber.Handler {
 		// Store auth context
 		c.Locals("auth", &AuthContext{
 			Type:      AuthTypeJWT,
-			UserID:    claims.Id,
-			AccountID: claims.AccountId,
+			UserID:    claims.ID,
+			AccountID: claims.AccountID,
 			Email:     claims.Email,
 			Name:      claims.Name,
 		})
 
 		// Also store user_id, account_id and organization_id for easier access
-		c.Locals("user_id", claims.Id)
-		if claims.AccountId != "" {
-			c.Locals("account_id", claims.AccountId)
+		c.Locals("user_id", claims.ID)
+		if claims.AccountID != "" {
+			c.Locals("account_id", claims.AccountID)
 		}
-		if claims.OrganizationId != "" {
-			c.Locals("organization_id", claims.OrganizationId)
+		if claims.OrganizationID != "" {
+			c.Locals("organization_id", claims.OrganizationID)
 		}
 
 		return c.Next()

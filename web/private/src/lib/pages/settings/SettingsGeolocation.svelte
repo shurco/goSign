@@ -34,7 +34,7 @@
 
   async function loadSettings() {
     try {
-      const response = await apiGet("/api/v1/settings");
+      const response = await apiGet("/settings");
       if (response.data?.geolocation) {
         maxmindLicenseKeySet = response.data.geolocation.maxmind_license_key_set === true;
         maxmindLicenseKeyMasked = response.data.geolocation.maxmind_license_key_masked || "";
@@ -90,7 +90,7 @@
 
     deleteKeyState = "saving";
     try {
-      await apiDelete("/api/v1/settings/geolocation/maxmind-key");
+      await apiDelete("/settings/geolocation/maxmind-key");
       // Refresh state from backend
       await loadSettings();
       deleteKeyState = "saved";
@@ -118,7 +118,7 @@
     }
 
     try {
-      const response = await apiPost("/api/v1/settings/geolocation/download", { url: urlToUse, force: true });
+      const response = await apiPost("/settings/geolocation/download", { method: "url", url: urlToUse, force: true });
 
       if (response.data?.status === "success" || response.data?.status === "skipped") {
         // No popups; just return success (button will show state)
@@ -140,7 +140,8 @@
     }
 
     try {
-      const response = await apiPost("/api/v1/settings/geolocation/download-maxmind", {
+      const response = await apiPost("/settings/geolocation/download", {
+        method: "maxmind",
         force: true
       });
 
@@ -169,7 +170,7 @@
 
     saveUrlState = "saving";
     try {
-      await apiPut("/api/v1/settings/geolocation", { download_url: url, download_method: "url" });
+      await apiPut("/settings/geolocation", { download_url: url, download_method: "url" });
       savedDownloadUrl = url;
       saveUrlState = "saved";
       await loadSettings();
@@ -212,7 +213,7 @@
         payload.maxmind_license_key = licenseKey;
       }
 
-      await apiPut("/api/v1/settings/geolocation", payload);
+      await apiPut("/settings/geolocation", payload);
 
       if (licenseKey) {
         maxmindLicenseKeySet = true;

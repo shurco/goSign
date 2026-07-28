@@ -37,22 +37,21 @@ docker/.env
 !testfile*.pdf
 fixtures/testfiles/*_signed.pdf
 fixtures/testfiles/failed/*
-cmd/cert/ca/
-cmd/pdf/*.pdf
+exp/cert/ca/
+exp/pdf-cert/*.pdf
+!exp/pdf-cert/example.pdf
 fixtures/migration/*_private.sql
 docker/core/
 __debug_bin*
-cmd/goSign/lc_*
-cmd/goSign/assets/
-cmd/goSign/base/
+cmd/server/lc_*
+cmd/server/assets/
+cmd/server/base/
 
 .eslintcache
 
 EXPERIMENT_*
-web/site_old/public/fixtures
 gosign.toml
 .cursor/
 bin/
 .playwright-mcp/
 graphify-out/
-web/site_old/

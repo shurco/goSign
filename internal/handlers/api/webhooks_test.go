@@ -87,14 +87,14 @@ func TestWebhookHandler_CRUD(t *testing.T) {
 			name:       "List no auth returns 401",
 			useAuth:    false,
 			method:     http.MethodGet,
-			path:       "/webhooks/",
+			path:       "/settings/webhooks/",
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "List empty returns 200",
 			useAuth:    true,
 			method:     http.MethodGet,
-			path:       "/webhooks/",
+			path:       "/settings/webhooks/",
 			wantStatus: http.StatusOK,
 			check: func(t *testing.T, body map[string]any) {
 				data := body["data"].(map[string]any)
@@ -112,7 +112,7 @@ func TestWebhookHandler_CRUD(t *testing.T) {
 			name:       "Create returns 201",
 			useAuth:    true,
 			method:     http.MethodPost,
-			path:       "/webhooks/",
+			path:       "/settings/webhooks/",
 			body:       []byte(`{"url":"https://x","events":["submission.created"],"secret":"s"}`),
 			wantStatus: http.StatusCreated,
 			check: func(t *testing.T, body map[string]any) {
@@ -129,7 +129,7 @@ func TestWebhookHandler_CRUD(t *testing.T) {
 			name:       "Create without events returns 400",
 			useAuth:    true,
 			method:     http.MethodPost,
-			path:       "/webhooks/",
+			path:       "/settings/webhooks/",
 			body:       []byte(`{"url":"https://x"}`),
 			wantStatus: http.StatusBadRequest,
 		},
@@ -137,14 +137,14 @@ func TestWebhookHandler_CRUD(t *testing.T) {
 			name:       "Get not found returns 404",
 			useAuth:    true,
 			method:     http.MethodGet,
-			path:       "/webhooks/bad-id",
+			path:       "/settings/webhooks/bad-id",
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "Delete not found returns 404",
 			useAuth:    true,
 			method:     http.MethodDelete,
-			path:       "/webhooks/bad-id",
+			path:       "/settings/webhooks/bad-id",
 			wantStatus: http.StatusNotFound,
 		},
 	}
@@ -158,7 +158,7 @@ func TestWebhookHandler_CRUD(t *testing.T) {
 				app.Use(middleware.Protected())
 			}
 
-			h.RegisterRoutes(app.Group("/webhooks"))
+			h.RegisterRoutes(app.Group("/settings/webhooks"))
 
 			var req *http.Request
 			switch tt.method {
@@ -209,10 +209,10 @@ func TestWebhookHandler_AccountIsolation(t *testing.T) {
 
 	app := fiber.New()
 	app.Use(testutil.AuthMiddleware(testutil.User2))
-	h.RegisterRoutes(app.Group("/webhooks"))
+	h.RegisterRoutes(app.Group("/settings/webhooks"))
 
 	// User2 must not see or delete User1's webhook.
-	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/webhooks/"+owned.ID, nil))
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/settings/webhooks/"+owned.ID, nil))
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestWebhookHandler_AccountIsolation(t *testing.T) {
 		t.Fatalf("get foreign webhook status = %d, want 404", resp.StatusCode)
 	}
 
-	resp, err = app.Test(httptest.NewRequest(http.MethodDelete, "/webhooks/"+owned.ID, nil))
+	resp, err = app.Test(httptest.NewRequest(http.MethodDelete, "/settings/webhooks/"+owned.ID, nil))
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}

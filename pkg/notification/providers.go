@@ -9,8 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shurco/gosign/internal/models"
 	"github.com/wneessen/go-mail"
+
+	"github.com/shurco/gosign/internal/models"
 )
 
 // SMTPConfig contains SMTP settings
