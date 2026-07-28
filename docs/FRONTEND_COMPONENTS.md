@@ -4,12 +4,12 @@
 
 ## Overview
 
-The active goSign frontend lives in `web/site/` and uses Svelte 5, SvelteKit, TypeScript, and Tailwind CSS v4. The legacy Vue implementation is archived in `web/site_old/` and will be removed. The component library still follows three layers: UI primitives, common composites, and domain-specific components.
+The active goSign frontend lives in `web/private/` and uses Svelte 5, SvelteKit, TypeScript, and Tailwind CSS v4. The legacy Vue implementation is archived in `web/site_old/` and will be removed. The component library still follows three layers: UI primitives, common composites, and domain-specific components.
 
 ## Component Structure
 
 ```
-web/site/src/lib/components/
+web/private/src/lib/components/
 ├── ui/                    # 21 primitive UI components
 ├── common/                # 4 generic composite components
 ├── field/                 # Field-specific components
@@ -19,7 +19,7 @@ web/site/src/lib/components/
 
 ## UI Layer (Primitives)
 
-Located in `web/site/src/lib/components/ui/`, these 21 components provide the foundation for all user interfaces.
+Located in `web/private/src/lib/components/ui/`, these 21 components provide the foundation for all user interfaces.
 
 ### Form Components
 - **Input** - Text input with type support, error state, and optional password visibility toggle
@@ -58,7 +58,7 @@ All UI components follow consistent design principles:
 
 ## Common Layer (Composites)
 
-Located in `web/site/src/lib/components/common/`, these 4 components compose UI primitives into powerful, reusable patterns.
+Located in `web/private/src/lib/components/common/`, these 4 components compose UI primitives into powerful, reusable patterns.
 
 ### FieldInput
 
@@ -163,7 +163,7 @@ Universal modal for forms with validation.
 
 ## Composables
 
-Located in `web/site/src/lib/composables/`, shared logic used across components.
+Located in `web/private/src/lib/composables/`, shared logic used across components.
 
 ### useCurrentUser
 
@@ -171,7 +171,7 @@ Provides shared current user state for layout components (Sidebar, SettingsSideb
 
 ## Domain Layer
 
-### Field Components (`web/site/src/lib/components/field/`)
+### Field Components (`web/private/src/lib/components/field/`)
 
 Components specific to document field management:
 - **Field** - Individual field wrapper with drag-and-drop
@@ -181,12 +181,12 @@ Components specific to document field management:
 - **Contenteditable** - Inline text editing
 - **SigningModeSelector** - Signing mode (Parallel / Sequential) with i18n. Always visible (no collapse). Optional `hideOrderList` to control order via parent (e.g. draggable signer cards on Submissions page).
 
-### Signing Components (`web/site/src/lib/components/signing/`)
+### Signing Components (`web/private/src/lib/components/signing/`)
 
 Components for the public signing portal (`/s/:slug`):
 - **FieldFormDrawer** - Bottom drawer with current field form, progress dots, and prev/next navigation; expandable/collapsible with keyboard support.
 
-### Template Components (`web/site/src/lib/components/template/`)
+### Template Components (`web/private/src/lib/components/template/`)
 
 Components for document template editing and viewing:
 - **Document** - Complete document viewer

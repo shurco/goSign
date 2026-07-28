@@ -1,17 +1,17 @@
-# Vue → Svelte 5 porting conventions (goSign web/site)
+# Vue → Svelte 5 porting conventions (goSign web/private)
 
 Archived working document for the Vue→Svelte migration. Keep only while `web/site_old/` still exists as a reference.
 
 ## Context
 
 - **Source**: `web/site_old/` — Vue 3.5 SPA (`<script setup lang="ts">`, vue-router, vue-i18n, composables).
-- **Target**: `web/site/` — Svelte 5 (runes) + SvelteKit 2 static SPA (`ssr=false`), TypeScript strict, Tailwind v4 (identical classes).
+- **Target**: `web/private/` — Svelte 5 (runes) + SvelteKit 2 static SPA (`ssr=false`), TypeScript strict, Tailwind v4 (identical classes).
 - Port **1:1**: same markup, same Tailwind classes, same behavior, same API calls. Do not redesign, do not add features, do not "improve" logic. Translate idioms only.
-- `@/` alias → `web/site/src/lib/` (configured in vite.config.ts). Keep import specifiers identical to Vue where possible, only changing extensions/suffixes.
+- `@/` alias → `web/private/src/lib/` (configured in vite.config.ts). Keep import specifiers identical to Vue where possible, only changing extensions/suffixes.
 
 ## File mapping
 
-| Vue (web/site_old/src/…)                 | Svelte (web/site/src/lib/…)                                                         |
+| Vue (web/site_old/src/…)                 | Svelte (web/private/src/lib/…)                                                         |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
 | `components/**/X.vue`                    | `components/**/X.svelte`                                                            |
 | `pages/X.vue`                            | `pages/X.svelte`                                                                    |
@@ -20,7 +20,7 @@ Archived working document for the Vue→Svelte migration. Keep only while `web/s
 | `i18n/index.ts`                          | `i18n/index.svelte.ts`                                                              |
 | `models/*`, `utils/*`, `services/api.ts` | already copied verbatim — import as `@/models/...`, `@/utils/...`, `@/services/api` |
 
-Routing already exists under `web/site/src/routes/` (thin wrappers importing `@/pages/*`). Pages are plain components; route params come from `$app/state`.
+Routing already exists under `web/private/src/routes/` (thin wrappers importing `@/pages/*`). Pages are plain components; route params come from `$app/state`.
 
 ## Core APIs (already implemented — use these, do not reinvent)
 

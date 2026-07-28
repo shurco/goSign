@@ -33,7 +33,7 @@ for entry in "${ROOT_PATH}/cmd/"*/; do
 done
 
 declare -A arr_folders=(
-  ["./web/site/dist"]="${ROOT_PATH}/web/site/dist"
+  ["./web/private/dist"]="${ROOT_PATH}/web/private/dist"
   ["./bin/*"]="${ROOT_PATH}/bin/*"
   ["./lc_signed"]="${ROOT_PATH}/cmd/goSign/lc_signed"
   ["./lc_tmp"]="${ROOT_PATH}/cmd/goSign/lc_tmp"

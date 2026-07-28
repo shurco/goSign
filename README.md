@@ -119,7 +119,7 @@ goSign/
 │   ├── logging/             # Logger setup
 │   └── utils/               # Helper functions
 ├── web/
-│   ├── site/                # Active frontend application (Svelte 5 + SvelteKit)
+│   ├── private/             # Active frontend application (Svelte 5 + SvelteKit)
 │   │   └── src/
 │   │       ├── lib/
 │   │       │   ├── components/ # Reusable UI and domain components
@@ -200,7 +200,7 @@ Test users created by fixtures:
 ### Frontend Setup
 
 ```bash
-cd web/site
+cd web/private
 bun install
 bun run dev
 ```
@@ -214,10 +214,10 @@ go test -short -race -count=1 ./...          # Go unit tests (no external servic
 go vet ./...                                 # go vet
 golangci-lint run ./...                      # linter
 
-cd web/site && bun run dev                   # frontend dev server
-cd web/site && bun run check                 # Svelte typecheck
-cd web/site && bun run test                  # Vitest suite
-cd web/site && bun run lint                  # ESLint
+cd web/private && bun run dev                   # frontend dev server
+cd web/private && bun run check                 # Svelte typecheck
+cd web/private && bun run test                  # Vitest suite
+cd web/private && bun run lint                  # ESLint
 ```
 
 ## 🧭 Usage
@@ -464,7 +464,7 @@ go test ./pkg/pdf/sign/...
 go build -o gosign cmd/goSign/main.go
 
 # Frontend
-cd web/site && bun run build
+cd web/private && bun run build
 ```
 
 ### Docker

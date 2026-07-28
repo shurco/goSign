@@ -2,18 +2,18 @@
 
 FROM oven/bun:1.3-alpine AS builder
 
-WORKDIR /app/web/site
+WORKDIR /app/web/private
 
-COPY web/site/package.json web/site/bun.lock ./
+COPY web/private/package.json web/private/bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
-COPY web/site ./
+COPY web/private ./
 RUN bun run build
 
 FROM nginx:1.27-alpine
 
-COPY --from=builder /app/web/site/dist /usr/share/nginx/html
+COPY --from=builder /app/web/private/dist /usr/share/nginx/html
 
 EXPOSE 80
 
