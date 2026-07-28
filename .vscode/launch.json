@@ -7,7 +7,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/server",
-      "envFile": "${workspaceFolder}/cmd/server/.env",
+      "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceFolder}"
     },
     {
@@ -16,7 +16,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/worker",
-      "envFile": "${workspaceFolder}/cmd/server/.env",
+      "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceFolder}"
     },
     {
