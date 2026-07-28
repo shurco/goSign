@@ -49,8 +49,10 @@ cmd/goSign/base/
 .eslintcache
 
 EXPERIMENT_*
-web/public/fixtures
+web/site_old/public/fixtures
 gosign.toml
 .cursor/
 bin/
 .playwright-mcp/
+graphify-out/
+web/site_old/

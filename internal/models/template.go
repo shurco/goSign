@@ -93,22 +93,26 @@ type Submitter struct {
 // FieldType represents field type in template
 type FieldType string
 
-// 14 field types for document templates
+// Field types for document templates (DocuSeal-compatible set).
 const (
-	FieldTypeSignature   FieldType = "signature"
-	FieldTypeInitials    FieldType = "initials"
-	FieldTypeDate        FieldType = "date"
-	FieldTypeText        FieldType = "text"
-	FieldTypeNumber      FieldType = "number"
-	FieldTypeCheckbox    FieldType = "checkbox"
-	FieldTypeRadio       FieldType = "radio"
-	FieldTypeSelect      FieldType = "select"
+	FieldTypeSignature FieldType = "signature"
+	FieldTypeInitials  FieldType = "initials"
+	FieldTypeDate      FieldType = "date"
+	FieldTypeText      FieldType = "text"
+	FieldTypeNumber    FieldType = "number"
+	FieldTypeCheckbox  FieldType = "checkbox"
+	FieldTypeRadio     FieldType = "radio"
+	FieldTypeSelect    FieldType = "select"
+	// FieldTypeMultiple is the editor's multi-choice type ("multiple");
+	// FieldTypeMultiSelect is kept for backward compatibility with older templates.
+	FieldTypeMultiple    FieldType = "multiple"
 	FieldTypeMultiSelect FieldType = "multi_select"
 	FieldTypeFile        FieldType = "file"
 	FieldTypeImage       FieldType = "image"
 	FieldTypeCells       FieldType = "cells"
 	FieldTypeStamp       FieldType = "stamp"
 	FieldTypePayment     FieldType = "payment"
+	FieldTypePhone       FieldType = "phone"
 )
 
 // ConditionOperator represents comparison operator
@@ -196,7 +200,7 @@ type fieldPayload struct {
 	Type            FieldType             `json:"type"`
 	Required        bool                  `json:"required"`
 	Readonly        bool                  `json:"readonly,omitempty"`
-	DefaultValue    string                `json:"default_value,omitempty"`
+	DefaultValue    any                   `json:"default_value,omitempty"`
 	Options         FieldOptions          `json:"options,omitempty"`
 	Validation      json.RawMessage       `json:"validation,omitempty"`
 	Preferences     *FieldPreferences     `json:"preferences,omitempty"`
@@ -218,7 +222,7 @@ type Field struct {
 	Type            FieldType             `json:"type"`
 	Required        bool                  `json:"required"`
 	Readonly        bool                  `json:"readonly,omitempty"`
-	DefaultValue    string                `json:"default_value,omitempty"`
+	DefaultValue    any                   `json:"default_value,omitempty"`
 	Options         FieldOptions          `json:"options,omitempty"`
 	Validation      *FieldValidation      `json:"validation,omitempty"`
 	Preferences     *FieldPreferences     `json:"preferences,omitempty"`

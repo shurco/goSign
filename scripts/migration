@@ -20,17 +20,60 @@ fi
 
 POSTGRES_USER=${POSTGRES_USER:-goSign}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgresPassword}
-POSTGRES_HOST=${POSTGRES_HOST:-localhost:5432}
+POSTGRES_HOST=${POSTGRES_HOST:-localhost:5452}
 POSTGRES_DB=${POSTGRES_DB:-goSign}
 POSTGRES_SSLMODE=${POSTGRES_SSLMODE:-disable}
 
 MIGRATION_DIR="${ROOT_PATH}/migrations"
 MIGRATION_DIR_TMP="$(mktemp -d)"
 
-LC_PAGES_DIR="${ROOT_PATH}/cmd/goSign/lc_pages"
-LC_SIGNED_DIR="${ROOT_PATH}/cmd/goSign/lc_signed"
-LC_UPLOADS_DIR="${ROOT_PATH}/cmd/goSign/lc_uploads"
-LC_TMP_DIR="${ROOT_PATH}/cmd/goSign/lc_tmp"
+# App data dirs: cmd/goSign for IDE/debug, bin/ for `go build -o bin/goSign ./cmd/goSign && ./bin/goSign serve`.
+DATA_DIRS=("${ROOT_PATH}/cmd/goSign")
+if [ -d "${ROOT_PATH}/bin" ]; then
+  DATA_DIRS+=("${ROOT_PATH}/bin")
+fi
+
+lc_dir() {
+  local kind="$1"
+  local base="$2"
+  case "$kind" in
+  pages) echo "${base}/lc_pages" ;;
+  signed) echo "${base}/lc_signed" ;;
+  uploads) echo "${base}/lc_uploads" ;;
+  tmp) echo "${base}/lc_tmp" ;;
+  esac
+}
+
+copy_fixture_tree() {
+  local fixture="$1"
+  local src_dir="${ROOT_PATH}/fixtures/${fixture}/"
+  local file_count=0
+
+  if [ ! -d "${src_dir}" ] || [ -z "$(ls -A "${src_dir}" 2>/dev/null || true)" ]; then
+    return 0
+  fi
+
+  file_count=$(find "${src_dir}" -type f | wc -l | tr -d ' ')
+
+  for base in "${DATA_DIRS[@]}"; do
+    local dest_dir
+    dest_dir="$(lc_dir "$fixture" "$base")"
+    mkdir -p "${dest_dir}"
+    cp -R "${src_dir}"* "${dest_dir}/"
+  done
+
+  echo "fixtures/${fixture} -> lc_${fixture} (${file_count} file(s) x ${#DATA_DIRS[@]} data dir(s))"
+}
+
+remove_dev_data_dirs() {
+  for base in "${DATA_DIRS[@]}"; do
+    for kind in pages signed uploads tmp; do
+      local dir
+      dir="$(lc_dir "$kind" "$base")"
+      [ -d "$dir" ] && rm -rf "$dir"
+    done
+  done
+}
 
 DB_POSTFIX="migrate_db_version"
 MIGRATION="${1:-}"
@@ -44,17 +87,29 @@ run_goose() {
     local -a goose_cmd=("goose" "-dir" "$MIGRATION_DIR" "-table" "$DB_POSTFIX" "postgres" "$postgres_url")
 
     local OUTPUT=""
+    local rc=0
+    set +e
     case "$action" in
-    "create") OUTPUT="$("${goose_cmd[@]}" create migration_name sql 2>&1)" ;;
-    "up")     OUTPUT="$("${goose_cmd[@]}" up 2>&1)" ;;
-    "up1")    OUTPUT="$("${goose_cmd[@]}" up-by-one 2>&1)" ;;
-    "down")   OUTPUT="$("${goose_cmd[@]}" reset 2>&1)" ;;
-    "down1")  OUTPUT="$("${goose_cmd[@]}" down 2>&1)" ;;
-    "redo")   OUTPUT="$("${goose_cmd[@]}" redo 2>&1)" ;;
-    "status") OUTPUT="$("${goose_cmd[@]}" status 2>&1)" ;;
+    "create") OUTPUT="$("${goose_cmd[@]}" create migration_name sql 2>&1)"; rc=$? ;;
+    "up")     OUTPUT="$("${goose_cmd[@]}" up 2>&1)"; rc=$? ;;
+    "up1")    OUTPUT="$("${goose_cmd[@]}" up-by-one 2>&1)"; rc=$? ;;
+    "down")   OUTPUT="$("${goose_cmd[@]}" reset 2>&1)"; rc=$? ;;
+    "down1")  OUTPUT="$("${goose_cmd[@]}" down 2>&1)"; rc=$? ;;
+    "redo")   OUTPUT="$("${goose_cmd[@]}" redo 2>&1)"; rc=$? ;;
+    "status") OUTPUT="$("${goose_cmd[@]}" status 2>&1)"; rc=$? ;;
     esac
+    set -e
 
     rm -rf "${MIGRATION_DIR_TMP}"
+
+    if [ "$rc" -ne 0 ]; then
+      print_answer "ERROR" red
+      if [ -n "${OUTPUT}" ]; then
+        echo "${OUTPUT}"
+        echo
+      fi
+      exit "$rc"
+    fi
 
     print_answer "SUCCESS" green
     if [ -n "${OUTPUT}" ]; then
@@ -91,7 +146,7 @@ if [[ $MIGRATION == "test" ]]; then
 
   while IFS= read -r file_migrate; do
     cp "$file_migrate" "${MIGRATION_DIR_TMP}/"
-  done < <(find "$ROOT_PATH" -path '*/fixtures/migration/*' | sort -r)
+  done < <(find "$ROOT_PATH" -path '*/fixtures/migration/*.sql' | sort -r)
   MIGRATION_DIR="${MIGRATION_DIR_TMP}"
   DB_POSTFIX="${DB_POSTFIX}_test"
 
@@ -101,26 +156,16 @@ elif [[ $MIGRATION == "dev" ]]; then
   up|down|reset)
     SOURCE="${BASH_SOURCE[0]}"
     if [ "$GOOSE_ACTION" == "up" ]; then
+      print_header "Copy fixture files"
       for fixture in pages signed uploads; do
-        src_dir="${ROOT_PATH}/fixtures/${fixture}/"
-        case "$fixture" in
-        pages) dest_dir="${LC_PAGES_DIR}" ;;
-        signed) dest_dir="${LC_SIGNED_DIR}" ;;
-        uploads) dest_dir="${LC_UPLOADS_DIR}" ;;
-        *) continue ;;
-        esac
-        mkdir -p "${dest_dir}"
-        if [ -d "${src_dir}" ] && [ -n "$(ls -A "${src_dir}" 2>/dev/null || true)" ]; then
-          cp -R "${src_dir}"* "${dest_dir}"
-        fi
+        copy_fixture_tree "$fixture"
       done
+      echo
 
       $SOURCE up
       $SOURCE test up
     elif [ "$GOOSE_ACTION" == "down" ]; then
-      for dir in "${LC_PAGES_DIR}" "${LC_SIGNED_DIR}" "${LC_UPLOADS_DIR}" "${LC_TMP_DIR}"; do
-        [ -d "$dir" ] && rm -rf "$dir"
-      done
+      remove_dev_data_dirs
 
       $SOURCE test down
       $SOURCE down

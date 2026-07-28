@@ -114,7 +114,11 @@ func (q *TemplateQueries) Template(ctx context.Context, id string) (*models.Temp
 		}
 
 		if serviceName == "disk" {
-			document.URL = "http://localhost:8088/drive/pages"
+			// Relative URL: same-origin in production (backend serves the SPA) and
+			// proxied by the Vite dev server. An absolute backend origin would be
+			// blocked by helmet's Cross-Origin-Resource-Policy when the SPA runs
+			// on a different origin (e.g. localhost:5173 in dev).
+			document.URL = "/drive/pages"
 		}
 
 		if document.Metadata.Pdf.NumberOfPages == 0 {

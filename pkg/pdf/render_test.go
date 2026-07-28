@@ -116,3 +116,114 @@ func TestRenderCompletedTemplatePDF_smoke(t *testing.T) {
 		t.Fatalf("expected PDF header, got %q", string(out[:prefixLen]))
 	}
 }
+
+func TestFormatDateValue(t *testing.T) {
+	tests := []struct {
+		value, pattern, want string
+	}{
+		{"2026-07-28", "DD/MM/YYYY", "28/07/2026"},
+		{"2026-07-28", "MM/DD/YYYY", "07/28/2026"},
+		{"2026-07-28", "YYYY-MM-DD", "2026-07-28"},
+		{"2026-07-28", "MMM D, YYYY", "Jul 28, 2026"},
+		{"2026-07-28", "MMMM D, YYYY", "July 28, 2026"},
+		{"2026-07-28", "D MMM YYYY", "28 Jul 2026"},
+		{"2026-07-28T10:00:00Z", "DD.MM.YYYY", "28.07.2026"},
+		{"2026-07-28", "", "28/07/2026"}, // default pattern
+		{"not-a-date", "DD/MM/YYYY", "not-a-date"},
+		{"", "DD/MM/YYYY", ""},
+	}
+	for _, tt := range tests {
+		if got := formatDateValue(tt.value, tt.pattern); got != tt.want {
+			t.Errorf("formatDateValue(%q, %q) = %q, want %q", tt.value, tt.pattern, got, tt.want)
+		}
+	}
+}
+
+func TestFormatNumberValue(t *testing.T) {
+	tests := []struct {
+		value, format, want string
+	}{
+		{"1000.5", "comma", "1,000.5"},
+		{"1000.5", "dot", "1.000,5"},
+		{"1000.5", "space", "1 000,5"},
+		{"1000.5", "usd", "$1,000.50"},
+		{"1000.5", "eur", "€1.000,50"},
+		{"1000.5", "gbp", "£1,000.50"},
+		{"12.5", "percent", "12.5%"},
+		{"1234567", "comma", "1,234,567"},
+		{"-1234.56", "comma", "-1,234.56"},
+		{"1000", "", "1000"},
+		{"1000", "none", "1000"},
+		{"abc", "comma", "abc"},
+	}
+	for _, tt := range tests {
+		if got := formatNumberValue(tt.value, tt.format); got != tt.want {
+			t.Errorf("formatNumberValue(%q, %q) = %q, want %q", tt.value, tt.format, got, tt.want)
+		}
+	}
+}
+
+func TestValueContains(t *testing.T) {
+	if !valueContains("Red", "Red") {
+		t.Error("string match failed")
+	}
+	if valueContains("Red", "Blue") {
+		t.Error("string mismatch should be false")
+	}
+	if !valueContains([]any{"Red", "Blue"}, "Blue") {
+		t.Error("[]any membership failed")
+	}
+	if valueContains([]any{"Red"}, "Green") {
+		t.Error("[]any non-member should be false")
+	}
+	if !valueContains([]string{"A", "B"}, "A") {
+		t.Error("[]string membership failed")
+	}
+	if valueContains(42, "42") {
+		t.Error("non-string type should be false")
+	}
+}
+
+func TestOptionValueByID(t *testing.T) {
+	field := models.Field{
+		Options: models.FieldOptions{
+			{ID: "opt-1", Value: "Yes"},
+			{ID: "opt-2", Value: ""},
+		},
+	}
+	if got := optionValueByID(field, "opt-1"); got != "Yes" {
+		t.Errorf("expected Yes, got %q", got)
+	}
+	if got := optionValueByID(field, "opt-2"); got != "Option 2" {
+		t.Errorf("expected fallback Option 2, got %q", got)
+	}
+	if got := optionValueByID(field, "missing"); got != "" {
+		t.Errorf("expected empty for unknown id, got %q", got)
+	}
+}
+
+func TestIsTruthyValue(t *testing.T) {
+	for _, v := range []any{true, "true", "1", "yes"} {
+		if !isTruthyValue(v) {
+			t.Errorf("expected truthy for %v", v)
+		}
+	}
+	for _, v := range []any{false, "false", "", nil, 1} {
+		if isTruthyValue(v) {
+			t.Errorf("expected falsy for %v", v)
+		}
+	}
+}
+
+func TestParseHexColor(t *testing.T) {
+	r, g, b, ok := parseHexColor("#FF8000")
+	if !ok || r != 255 || g != 128 || b != 0 {
+		t.Errorf("parseHexColor(#FF8000) = %d,%d,%d,%v", r, g, b, ok)
+	}
+	if _, _, _, ok := parseHexColor(""); ok {
+		t.Error("empty string should not parse")
+	}
+	if _, _, _, ok := parseHexColor("#FFF"); ok {
+		t.Error("short hex should not parse")
+	}
+}

@@ -17,8 +17,6 @@ go install github.com/swaggo/swag/cmd/swag@latest
 ### Generate Documentation
 
 ```bash
-make swagger
-# or
 swag init -g cmd/goSign/main.go -o cmd/goSign/docs --parseDependency --parseInternal
 ```
 
@@ -142,7 +140,7 @@ func Handler(c *fiber.Ctx) error {
 After changing annotations:
 
 ```bash
-make swagger
+swag init -g cmd/goSign/main.go -o cmd/goSign/docs --parseDependency --parseInternal
 ```
 
 Swagger UI will update automatically when you restart the application.
@@ -159,7 +157,7 @@ export PATH=$PATH:$(go env GOPATH)/bin
 ### Documentation Not Updating
 
 1. Delete old docs: `rm -rf cmd/goSign/docs/`
-2. Regenerate: `make swagger`
+2. Regenerate: `swag init -g cmd/goSign/main.go -o cmd/goSign/docs --parseDependency --parseInternal`
 3. Restart application
 
 ### Models Not Displaying

@@ -11,17 +11,43 @@ var (
 	dataDir string
 )
 
-// Init sets the data directory to the directory of the running executable.
-// Called once at app startup. If os.Executable() fails, current working directory is used.
+// Init sets the data directory for lc_pages, lc_signed, etc.
+// Priority: GOSIGN_DATA_DIR env → dev fallback (cmd/goSign → repo bin/) → executable directory.
 func Init() {
 	mu.Lock()
 	defer mu.Unlock()
+
+	if dir := os.Getenv("GOSIGN_DATA_DIR"); dir != "" {
+		dataDir = resolveDataDir(dir)
+		return
+	}
+
 	execPath, err := os.Executable()
 	if err != nil {
 		dataDir = "."
 		return
 	}
-	dataDir = filepath.Dir(execPath)
+	execDir := filepath.Dir(execPath)
+	dataDir = execDir
+
+	// IDE/debug runs from cmd/goSign but built binary stores data in repo bin/.
+	if filepath.Base(execDir) == "goSign" {
+		binDir := filepath.Clean(filepath.Join(execDir, "..", "..", "bin"))
+		if _, err := os.Stat(filepath.Join(binDir, "lc_pages")); err == nil {
+			dataDir = binDir
+		}
+	}
+}
+
+func resolveDataDir(dir string) string {
+	if filepath.IsAbs(dir) {
+		return dir
+	}
+	execPath, err := os.Executable()
+	if err != nil {
+		return dir
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(execPath), dir))
 }
 
 // DataDir returns the directory where app data (lc_uploads, lc_signed, etc.) should live.

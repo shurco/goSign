@@ -123,8 +123,8 @@ Content-Type: application/json
 
 ## Adding New Languages
 
-1. Create translation file: `web/src/i18n/locales/{locale}.json`
-2. Add locale to `SUPPORTED_LOCALES` in `web/src/i18n/index.ts`
+1. Create translation file: `web/site/src/lib/i18n/locales/{locale}.json`
+2. Add locale to `SUPPORTED_LOCALES` in `web/site/src/lib/i18n/index.svelte.ts`
 3. Add datetime and number formats
 4. Update all translation keys
 

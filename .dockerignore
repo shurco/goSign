@@ -2,9 +2,12 @@
 .cursor
 .vscode
 node_modules
-web/node_modules
-web/dist
-web/.output
+web/site/node_modules
+web/site/dist
+web/site/.output
+web/site_old/node_modules
+web/site_old/dist
+web/site_old/.output
 docs
 migrations
 fixtures

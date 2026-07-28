@@ -202,6 +202,29 @@ func (b *CompletedDocumentBuilder) loadSubmissionData(ctx context.Context, submi
 	}, nil
 }
 
+// resolveReadonlyDefaults fills missing values for readonly fields from template
+// defaults. The {{date}} placeholder resolves to the submission completion date.
+func resolveReadonlyDefaults(fields []models.Field, values map[string]any, completedAt *time.Time) {
+	for i := range fields {
+		f := fields[i]
+		if !f.Readonly || f.DefaultValue == nil {
+			continue
+		}
+		if v, ok := values[f.ID]; ok && strings.TrimSpace(fmt.Sprint(v)) != "" {
+			continue
+		}
+		if s, ok := f.DefaultValue.(string); ok && s == "{{date}}" {
+			t := time.Now()
+			if completedAt != nil && !completedAt.IsZero() {
+				t = *completedAt
+			}
+			values[f.ID] = t.Format("2006-01-02")
+			continue
+		}
+		values[f.ID] = f.DefaultValue
+	}
+}
+
 // IsSubmissionFullyCompleted returns true if ALL submitters for the submission are completed.
 func (b *CompletedDocumentBuilder) IsSubmissionFullyCompleted(ctx context.Context, submissionID string) (bool, error) {
 	if b.Pool == nil {
@@ -242,6 +265,10 @@ func (b *CompletedDocumentBuilder) EnsureCompletedPDF(ctx context.Context, submi
 		return "", err
 	}
 	tpl := data.tpl
+
+	// Readonly fields are not collected in the signing form; render their
+	// template defaults ({{date}} resolves to the completion date).
+	resolveReadonlyDefaults(tpl.Fields, data.values, data.completedAtMax)
 
 	// 3) Render base completed PDF.
 	outBytes, err := pdf.RenderCompletedTemplatePDF(pdf.RenderCompletedTemplatePDFInput{

@@ -2,7 +2,7 @@
 
 ✍️ **Sign documents without stress**
 
-A modern, full-featured document signing platform with multi-signer workflows, email notifications, and a comprehensive REST API. Built with Go and Vue 3, goSign provides enterprise-grade capabilities for secure digital document signing.
+A modern, full-featured document signing platform with multi-signer workflows, email notifications, and a comprehensive REST API. Built with Go and SvelteKit, goSign provides enterprise-grade capabilities for secure digital document signing.
 
 ## ✨ Key Features
 
@@ -72,13 +72,13 @@ A modern, full-featured document signing platform with multi-signer workflows, e
 
 ### 🖥️ Frontend
 
-- **Framework**: Vue 3 + TypeScript (Composition API)
-- **State management**: Pinia 3
-- **Routing**: Vue Router 5
+- **Framework**: Svelte 5 + SvelteKit 2
+- **State management**: Svelte runes
+- **Routing**: SvelteKit filesystem routing
 - **Styling**: Tailwind CSS v4
 - **Build tool**: Vite
 - **Package manager**: Bun
-- **i18n**: vue-i18n
+- **i18n**: custom lightweight i18n module
 
 ## 🗺️ Project Structure
 
@@ -118,22 +118,18 @@ goSign/
 │   ├── geolocation/         # GeoIP lookups
 │   ├── logging/             # Logger setup
 │   └── utils/               # Helper functions
-├── web/                     # Frontend application (Vue 3)
-│   └── src/
-│       ├── components/
-│       │   ├── ui/          # Reusable UI primitives (Button, Input, Modal, etc.)
-│       │   ├── common/      # Generic components (FieldInput, FormModal, ResourceTable)
-│       │   ├── field/       # Field-specific components (ConditionBuilder, FormulaBuilder)
-│       │   ├── template/    # Document template components
-│       │   ├── organization/# Organization management components
-│       │   ├── signing/     # Signing portal components
-│       │   └── themes/      # White-label theme components
-│       ├── composables/     # Vue composables (useConditions, useFormulas, useTheme, useCurrentUser)
-│       ├── i18n/            # Translations (7 languages)
-│       ├── layouts/         # Page layouts
-│       ├── models/          # TypeScript interfaces
-│       ├── pages/           # Application pages
-│       └── stores/          # Pinia stores
+├── web/
+│   ├── site/                # Active frontend application (Svelte 5 + SvelteKit)
+│   │   └── src/
+│   │       ├── lib/
+│   │       │   ├── components/ # Reusable UI and domain components
+│   │       │   ├── composables/ # Runes-based shared logic
+│   │       │   ├── i18n/      # Translations (7 UI languages)
+│   │       │   ├── layouts/   # Application layouts
+│   │       │   ├── models/    # TypeScript interfaces
+│   │       │   └── pages/     # Page components
+│   │       └── routes/        # SvelteKit filesystem routes
+│   └── site_old/            # Legacy Vue frontend, scheduled for removal
 ├── migrations/              # SQL migrations (goose)
 ├── fixtures/                # Test/development data
 ├── docker/                  # Docker configuration
@@ -204,25 +200,25 @@ Test users created by fixtures:
 ### Frontend Setup
 
 ```bash
-cd web
+cd web/site
 bun install
 bun run dev
 ```
 
-### Makefile shortcuts
-
-A top-level `Makefile` bundles the most common commands — run `make help` to see all targets:
+### Common commands
 
 ```bash
-make run          # start the server locally
-make test         # go test -short -race ./...
-make web-test     # Vitest suite
-make check        # vet + Go tests + typecheck + Vitest
-make lint         # golangci-lint run ./...
-make ci           # full quality gate (lint + check)
-```
+go build -o bin/goSign ./cmd/goSign          # build backend binary
+go run ./cmd/goSign serve                    # start the server locally
+go test -short -race -count=1 ./...          # Go unit tests (no external services)
+go vet ./...                                 # go vet
+golangci-lint run ./...                      # linter
 
-See [`AGENTS.md`](AGENTS.md) for the contributor / agent handbook and the module-level `AGENTS.md` files in `internal/`, `pkg/`, and `web/`.
+cd web/site && bun run dev                   # frontend dev server
+cd web/site && bun run check                 # Svelte typecheck
+cd web/site && bun run test                  # Vitest suite
+cd web/site && bun run lint                  # ESLint
+```
 
 ## 🧭 Usage
 
@@ -468,7 +464,7 @@ go test ./pkg/pdf/sign/...
 go build -o gosign cmd/goSign/main.go
 
 # Frontend
-cd web && bun run build
+cd web/site && bun run build
 ```
 
 ### Docker
