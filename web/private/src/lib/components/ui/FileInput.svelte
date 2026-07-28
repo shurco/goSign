@@ -6,21 +6,52 @@
   }
 
   let { size = "md", ...rest }: Props = $props();
-
-  const fileInputClasses = $derived.by(() => {
-    const base =
-      "w-full rounded border border-gray-300 bg-white transition-colors focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200";
-
-    const sizes = {
-      sm: "text-sm",
-      md: "text-base",
-      lg: "text-lg"
-    };
-
-    const disabled = "$attrs.disabled" in ["", true] ? "opacity-50 cursor-not-allowed" : "cursor-pointer";
-
-    return [base, sizes[size], disabled].filter(Boolean).join(" ");
-  });
 </script>
 
-<input type="file" class={fileInputClasses} {...rest} />
+<input type="file" class="ui-file-input ui-file-input-{size}" {...rest} />
+
+<style>
+  .ui-file-input {
+    width: 100%;
+    color: var(--base-txt-secondary);
+    background: var(--base-cont-top);
+    border: 1px solid var(--base-line-tertiary);
+    border-radius: var(--radius-6);
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .ui-file-input:focus {
+    outline: none;
+    border-color: var(--base-hlt-invert);
+    box-shadow: 0 0 0 2px var(--base-hlt-easy);
+  }
+  .ui-file-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ui-file-input::file-selector-button {
+    margin-right: var(--space-12);
+    border: none;
+    background: var(--base-hlt-g-hover);
+    padding: var(--space-6) var(--space-12);
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    font-family: inherit;
+    color: var(--base-txt-secondary);
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .ui-file-input:hover::file-selector-button {
+    background: var(--base-hlt-g-selected);
+  }
+
+  .ui-file-input-sm {
+    font-size: var(--font-size-12);
+  }
+  .ui-file-input-md {
+    font-size: var(--font-size-13);
+  }
+  .ui-file-input-lg {
+    font-size: var(--font-size-14);
+  }
+</style>

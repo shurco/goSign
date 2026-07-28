@@ -71,9 +71,9 @@
 
 <label
   for={inputId}
-  class="relative block w-full cursor-pointer rounded-xl border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-50 {heightClass} {selectedLabel
-    ? 'border-blue-400 bg-gray-50'
-    : ''} {disabled ? 'cursor-not-allowed opacity-60' : ''}"
+  class="drop-zone relative block w-full {heightClass}"
+  class:selected={Boolean(selectedLabel)}
+  class:disabled
   ondragover={(e) => e.preventDefault()}
   ondrop={(e) => {
     e.preventDefault();
@@ -83,14 +83,14 @@
   <div class="absolute inset-0 flex items-center justify-center p-2">
     <div class="flex flex-col items-center text-center">
       {#if !selectedLabel}
-        <SvgIcon name="cloud-upload" class="h-8 w-8 shrink-0 text-gray-400" />
-        <div class="mt-2 text-sm font-medium text-gray-700">{clickLabel}</div>
-        <div class="text-xs text-gray-500">{dragLabel}</div>
+        <SvgIcon name="cloud-upload" class="drop-icon h-8 w-8 shrink-0" />
+        <div class="drop-click mt-2">{clickLabel}</div>
+        <div class="drop-hint">{dragLabel}</div>
       {:else}
-        <SvgIcon name="document" class="h-8 w-8 shrink-0 text-blue-500" />
-        <div class="mt-2 max-w-full truncate text-sm font-medium text-gray-900">{selectedLabel}</div>
+        <SvgIcon name="document" class="drop-icon-selected h-8 w-8 shrink-0" />
+        <div class="drop-name mt-2 max-w-full truncate">{selectedLabel}</div>
         {#if !disabled}
-          <button type="button" class="mt-1 text-xs text-red-600 hover:text-red-800" onclick={clear}>
+          <button type="button" class="drop-remove mt-1" onclick={clear}>
             {removeLabel}
           </button>
         {/if}
@@ -100,3 +100,58 @@
 
   <input id={inputId} bind:this={inputRef} type="file" class="hidden" {accept} {disabled} onchange={onInputChange} />
 </label>
+
+<style>
+  .drop-zone {
+    cursor: pointer;
+    border: 2px dashed var(--base-line-secondary);
+    border-radius: var(--radius-12);
+    background: var(--base-cont-top);
+    transition: var(--transition-colors);
+  }
+  .drop-zone:hover {
+    background: var(--base-hlt-easy);
+    border-color: var(--base-line-act-minor);
+  }
+  .drop-zone.selected {
+    border-color: var(--base-line-act-minor);
+    background: var(--base-hlt-easy);
+  }
+  .drop-zone.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .drop-zone :global(.drop-icon) {
+    color: var(--base-txt-ghost);
+  }
+  .drop-zone :global(.drop-icon-selected) {
+    color: var(--base-hlt-invert);
+  }
+  .drop-click {
+    font-size: var(--font-size-13);
+    font-weight: var(--font-weight-medium);
+    color: var(--base-txt-secondary);
+  }
+  .drop-hint {
+    font-size: var(--font-size-12);
+    color: var(--base-txt-muted);
+  }
+  .drop-name {
+    font-size: var(--font-size-13);
+    font-weight: var(--font-weight-medium);
+    color: var(--base-txt-primary);
+  }
+  .drop-remove {
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: var(--font-size-12);
+    color: var(--base-txt-alert-minor);
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .drop-remove:hover {
+    color: var(--base-txt-alert-major);
+  }
+</style>

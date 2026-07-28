@@ -90,6 +90,7 @@
     dir="auto"
     contenteditable={editable}
     role="textbox"
+    tabindex={editable ? 0 : undefined}
     style="min-width: 2px"
     class="peer outline-none focus:block {iconInline ? 'inline' : 'block'}"
     onkeydown={(e) => {

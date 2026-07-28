@@ -1,3 +1,5 @@
+import { t, te } from "@/i18n/index.svelte";
+
 export type BadgeVariant = "ghost" | "primary" | "success" | "warning" | "error" | "info";
 
 function normalizeStatus(status: unknown): string {
@@ -10,6 +12,12 @@ function normalizeStatus(status: unknown): string {
 // This keeps translations consistent across dashboard, submissions, and modals.
 export function getI18nStatusKey(status: unknown): string {
   return `status.${normalizeStatus(status)}`;
+}
+
+/** Human-readable status: translated when a key exists, raw value otherwise. */
+export function statusLabel(status: unknown): string {
+  const key = getI18nStatusKey(status);
+  return te(key) ? t(key) : String(status || "");
 }
 
 export function getBadgeVariantForSubmissionStatus(status: unknown): BadgeVariant {

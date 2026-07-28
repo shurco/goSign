@@ -9,45 +9,75 @@
     children?: Snippet;
   }
 
-  let { value = $bindable(), error = false, size = "md", children, ...rest }: Props = $props();
-
-  // Arrow icon style (same as form.css)
-  const arrowStyle = {
-    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-    backgroundPosition: "right 0.5rem center",
-    backgroundRepeat: "no-repeat",
-    backgroundSize: "1.5em 1.5em"
-  };
-
-  const selectClasses = $derived.by(() => {
-    const base =
-      "w-full rounded border bg-white transition-colors focus:outline-none focus:ring-2 cursor-pointer appearance-none pr-10";
-
-    const borderColor = error
-      ? "border-[var(--color-error)] focus:ring-[var(--color-error)]"
-      : "border-gray-300 focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]";
-
-    const sizes = {
-      sm: "px-2 py-1 text-sm h-8",
-      md: "px-3 py-2 text-base h-12",
-      lg: "px-4 py-3 text-lg h-14"
-    };
-
-    const disabled = "$attrs.disabled" in ["", true] ? "opacity-50 cursor-not-allowed bg-gray-100" : "";
-
-    return [base, borderColor, sizes[size], disabled].filter(Boolean).join(" ");
-  });
+  let { value = $bindable(), error = false, size = "md", class: className = "", children, ...rest }: Props = $props();
 </script>
 
 <select
-  class={selectClasses}
-  style:background-image={arrowStyle.backgroundImage}
-  style:background-position={arrowStyle.backgroundPosition}
-  style:background-repeat={arrowStyle.backgroundRepeat}
-  style:background-size={arrowStyle.backgroundSize}
+  class="ui-select ui-select-{size} {className}"
+  class:error
   {value}
   onchange={(e) => (value = e.currentTarget.value)}
   {...rest}
 >
   {@render children?.()}
 </select>
+
+<style>
+  /* WS2 framed select: tertiary border, token chevron, focus — blue border */
+  .ui-select {
+    width: 100%;
+    min-width: 0;
+    color: var(--base-txt-primary);
+    background-color: var(--base-cont-top);
+    background-image: var(--ui-select-chevron);
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px 14px;
+    border: 1px solid var(--base-line-tertiary);
+    border-radius: var(--radius-6);
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .ui-select:hover:not(:disabled):not(:focus) {
+    border-color: var(--base-line-secondary);
+  }
+  .ui-select:focus {
+    border-color: var(--base-hlt-invert);
+    box-shadow: 0 0 0 2px var(--base-hlt-easy);
+  }
+  .ui-select:disabled {
+    color: var(--base-txt-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+    background-color: var(--base-cont-trans-low);
+  }
+
+  .ui-select.error {
+    border-color: var(--base-line-alert);
+  }
+  .ui-select.error:focus {
+    box-shadow: 0 0 0 2px var(--color-red-alpha-100);
+  }
+
+  .ui-select-sm {
+    height: var(--size-control-28);
+    padding: 0 24px 0 var(--space-8);
+    font-size: var(--font-size-12);
+    background-position: right 6px center;
+    background-size: 12px 12px;
+  }
+  .ui-select-md {
+    height: var(--size-control-36);
+    padding: 0 32px 0 var(--space-12);
+    font-size: var(--font-size-13);
+  }
+  .ui-select-lg {
+    height: var(--size-control-44);
+    padding: 0 36px 0 var(--space-12);
+    font-size: var(--font-size-14);
+  }
+</style>

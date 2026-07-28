@@ -9,28 +9,57 @@
   }
 
   let { variant = "info", class: className = "", icon, children }: Props = $props();
-
-  const alertClasses = $derived.by(() => {
-    const base = "flex items-start gap-4 p-4 rounded-xl border-l-4";
-
-    const variants = {
-      info: "bg-[var(--color-info)]/10 border-[var(--color-info)] text-[var(--color-info-content)]",
-      success: "bg-[var(--color-success)]/10 border-[var(--color-success)] text-[var(--color-success-content)]",
-      warning: "bg-[var(--color-warning)]/10 border-[var(--color-warning)] text-[var(--color-warning-content)]",
-      error: "bg-[var(--color-error)]/10 border-[var(--color-error)] text-[var(--color-error-content)]"
-    };
-
-    return [base, variants[variant], className].filter(Boolean).join(" ");
-  });
 </script>
 
-<div class={alertClasses} role="alert">
+<div class="alert alert-{variant} {className}" role="alert">
   {#if icon}
-    <div class="flex-shrink-0">
+    <div class="alert-icon">
       {@render icon()}
     </div>
   {/if}
-  <div class="flex-1">
+  <div class="alert-body">
     {@render children?.()}
   </div>
 </div>
+
+<style>
+  /* WS2 note blocks: soft tinted panel with accent stripe */
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    padding: var(--space-12) var(--space-16);
+    border-radius: var(--radius-8);
+    border-left: 3px solid transparent;
+    font-size: var(--font-size-13);
+    line-height: var(--line-height-20);
+  }
+  .alert-icon {
+    flex-shrink: 0;
+  }
+  .alert-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .alert-info {
+    background: var(--base-hlt-notr-easy);
+    border-left-color: var(--base-line-act-minor);
+    color: var(--color-interblue-920);
+  }
+  .alert-success {
+    background: var(--color-lime-50);
+    border-left-color: var(--color-lime-600);
+    color: var(--color-green-750);
+  }
+  .alert-warning {
+    background: var(--base-cont-note);
+    border-left-color: var(--color-amber-500);
+    color: var(--base-txt-notice-major);
+  }
+  .alert-error {
+    background: var(--base-hlt-w-easy);
+    border-left-color: var(--base-line-alert);
+    color: var(--base-txt-alert-major);
+  }
+</style>

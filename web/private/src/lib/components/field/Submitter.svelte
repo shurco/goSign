@@ -110,7 +110,13 @@
 </script>
 
 {#if mobileView}
-  <div bind:this={mobileDropdownRef} class={className} {onclick} use:clickOutside={() => dropdown.close()}>
+  <div
+    bind:this={mobileDropdownRef}
+    class={className}
+    role="presentation"
+    {onclick}
+    use:clickOutside={() => dropdown.close()}
+  >
     <div class="flex items-end space-x-2">
       <div
         class="group/contenteditable-container flex w-full items-end justify-between rounded-md border border-[#e7e2df] bg-[#faf7f5] p-2"
@@ -118,9 +124,7 @@
         <div class="flex items-center space-x-2">
           {#if selectedSubmitter}
             <span class="h-3 w-3 flex-shrink-0 rounded-full {getSubmitterColor(selectedSubmitter)}"></span>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div onclick={(e) => e.stopPropagation()}>
+            <div role="presentation" onclick={(e) => e.stopPropagation()}>
               <Contenteditable
                 bind:value={selectedSubmitter.name as string}
                 class="cursor-text"
@@ -136,8 +140,8 @@
         </div>
       </div>
       <div class="dropdown dropdown-end dropdown-top">
-        <label
-          tabindex="0"
+        <button
+          type="button"
           class="flex w-full cursor-pointer justify-center rounded-md border border-[#e7e2df] bg-[#faf7f5] p-2"
           onclick={(e) => {
             e.stopPropagation();
@@ -145,16 +149,16 @@
           }}
         >
           <SvgIcon name="chevron-up" width="24" height="24" />
-        </label>
+        </button>
         {#if editable && dropdown.isOpen}
-          <ul tabindex="0" class="mb-2 min-w-max rounded-md {menuClasses}">
+          <ul class="mb-2 min-w-max rounded-md {menuClasses}">
             {#each submitters as submitter (submitter.id)}
-              <li>
-                <a
-                  href="#"
-                  class="group flex items-center justify-between px-2 {submitter === selectedSubmitter ? 'active' : ''}"
-                  onclick={(e) => {
-                    e.preventDefault();
+              <li class="relative">
+                <button
+                  type="button"
+                  class="menu-item flex items-center px-2 {submitter === selectedSubmitter ? 'active' : ''}"
+                  class:pr-10={submitters.length > 1 && editable}
+                  onclick={() => {
                     selectSubmitter(submitter);
                     dropdown.close();
                   }}
@@ -165,34 +169,35 @@
                       {submitter.name}
                     </span>
                   </span>
-                  {#if submitters.length > 1 && editable}
-                    <button
-                      class="px-2"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        remove(submitter);
-                      }}
-                    >
-                      <SvgIcon name="trash-x" width="18" height="18" />
-                    </button>
-                  {/if}
-                </a>
+                </button>
+                {#if submitters.length > 1 && editable}
+                  <button
+                    type="button"
+                    title="Remove"
+                    class="absolute top-1/2 right-1 -translate-y-1/2 px-2"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      remove(submitter);
+                    }}
+                  >
+                    <SvgIcon name="trash-x" width="18" height="18" />
+                  </button>
+                {/if}
               </li>
             {/each}
             {#if submitters.length < 10 && editable}
               <li>
-                <a
-                  href="#"
-                  class="flex px-2"
-                  onclick={(e) => {
-                    e.preventDefault();
+                <button
+                  type="button"
+                  class="menu-item flex px-2"
+                  onclick={() => {
                     addSubmitter();
                     dropdown.close();
                   }}
                 >
                   <SvgIcon name="user-plus" width="20" height="20" stroke-width="1.6" />
                   <span class="py-1"> Add {subNames[submitters.length]} </span>
-                </a>
+                </button>
               </li>
             {/if}
           </ul>
@@ -201,32 +206,35 @@
     </div>
   </div>
 {:else}
-  <div bind:this={dropdownRef} class="dropdown {className}" {onclick} use:clickOutside={() => dropdown.close()}>
+  <div
+    bind:this={dropdownRef}
+    class="dropdown {className}"
+    role="presentation"
+    {onclick}
+    use:clickOutside={() => dropdown.close()}
+  >
     {#if compact}
-      <label
-        tabindex="0"
+      <button
+        type="button"
         title={selectedSubmitter?.name as string}
-        class="flex h-full cursor-pointer items-center justify-center text-[#faf7f5]"
+        class="flex h-full w-full cursor-pointer items-center justify-center text-[#faf7f5]"
         onclick={(e) => {
           e.stopPropagation();
           dropdown.toggle();
         }}
       >
         {#if selectedSubmitter}
-          <button class="mx-1 h-3 w-3 rounded-full {getSubmitterColor(selectedSubmitter)}"></button>
+          <span class="mx-1 h-3 w-3 rounded-full {getSubmitterColor(selectedSubmitter)}"></span>
         {/if}
-      </label>
+      </button>
     {:else}
-      <label
-        tabindex="0"
+      <div
         class="group/contenteditable-container hover:border-content group flex w-full justify-between rounded-md border border-[#e7e2df] p-2"
       >
         <div class="flex items-center space-x-2">
           {#if selectedSubmitter}
             <span class="h-3 w-3 rounded-full {getSubmitterColor(selectedSubmitter)}"></span>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div onclick={(e) => e.stopPropagation()}>
+            <div role="presentation" onclick={(e) => e.stopPropagation()}>
               <Contenteditable
                 bind:value={selectedSubmitter.name as string}
                 class="cursor-text"
@@ -240,27 +248,28 @@
             </div>
           {/if}
         </div>
-        <span
+        <button
+          type="button"
+          title="Select submitter"
           class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-dashed border-[#291334]/20 transition-all duration-75 group-hover:border"
           onclick={(e) => {
             e.stopPropagation();
             dropdown.toggle();
           }}
-          role="presentation"
         >
           <SvgIcon name="plus" width="18" height="18" />
-        </span>
-      </label>
+        </button>
+      </div>
     {/if}
     {#if (editable || !compact) && dropdown.isOpen}
-      <ul tabindex="0" class={menuClasses}>
+      <ul class={menuClasses}>
         {#each submitters as submitter (submitter.id)}
-          <li>
-            <a
-              href="#"
-              class="group flex items-center justify-between px-2 {submitter === selectedSubmitter ? 'active' : ''}"
-              onclick={(e) => {
-                e.preventDefault();
+          <li class="group relative" class:active={submitter === selectedSubmitter}>
+            <button
+              type="button"
+              class="menu-item flex items-center px-2 {submitter === selectedSubmitter ? 'active' : ''}"
+              class:pr-16={!compact && submitters.length > 1 && editable}
+              onclick={() => {
                 selectSubmitter(submitter);
                 dropdown.close();
               }}
@@ -271,58 +280,61 @@
                   {submitter.name}
                 </span>
               </span>
-              {#if !compact && submitters.length > 1 && editable}
-                <div class="flex items-center gap-1">
-                  <div class="invisible flex flex-col gap-1 group-hover:visible group-[.active]:visible">
-                    <button
-                      title="Up"
-                      class="flex h-4 w-6 items-center justify-center rounded border border-base-200 bg-white text-[--color-base-content] transition-colors group-[.active]:text-base-content hover:border-base-content hover:bg-base-content hover:text-base-100"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        move(submitter, -1);
-                      }}
-                    >
-                      <SvgIcon name="chevron-up" width="12" height="12" />
-                    </button>
-                    <button
-                      title="Down"
-                      class="flex h-4 w-6 items-center justify-center rounded border border-base-200 bg-white text-[--color-base-content] transition-colors group-[.active]:text-base-content hover:border-base-content hover:bg-base-content hover:text-base-100"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        move(submitter, 1);
-                      }}
-                    >
-                      <SvgIcon name="chevron-down" width="12" height="12" />
-                    </button>
-                  </div>
+            </button>
+            {#if !compact && submitters.length > 1 && editable}
+              <div class="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-1">
+                <div class="invisible flex flex-col gap-1 group-hover:visible group-[.active]:visible">
                   <button
-                    class="invisible px-2 group-hover:visible group-[.active]:visible"
+                    type="button"
+                    title="Up"
+                    class="flex h-4 w-6 items-center justify-center rounded border border-base-200 bg-white text-[--color-base-content] transition-colors group-[.active]:text-base-content hover:border-base-content hover:bg-base-content hover:text-base-100"
                     onclick={(e) => {
                       e.stopPropagation();
-                      remove(submitter);
+                      move(submitter, -1);
                     }}
                   >
-                    <SvgIcon name="trash-x" width="18" height="18" />
+                    <SvgIcon name="chevron-up" width="12" height="12" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Down"
+                    class="flex h-4 w-6 items-center justify-center rounded border border-base-200 bg-white text-[--color-base-content] transition-colors group-[.active]:text-base-content hover:border-base-content hover:bg-base-content hover:text-base-100"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      move(submitter, 1);
+                    }}
+                  >
+                    <SvgIcon name="chevron-down" width="12" height="12" />
                   </button>
                 </div>
-              {/if}
-            </a>
+                <button
+                  type="button"
+                  title="Remove"
+                  class="invisible px-2 group-hover:visible group-[.active]:visible"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    remove(submitter);
+                  }}
+                >
+                  <SvgIcon name="trash-x" width="18" height="18" />
+                </button>
+              </div>
+            {/if}
           </li>
         {/each}
         {#if submitters.length < 10 && editable}
           <li>
-            <a
-              href="#"
-              class="flex px-2"
-              onclick={(e) => {
-                e.preventDefault();
+            <button
+              type="button"
+              class="menu-item flex px-2"
+              onclick={() => {
                 addSubmitter();
                 dropdown.close();
               }}
             >
               <SvgIcon name="user-plus" class="mr-2" width="20" height="20" stroke-width="1.6" />
               <span class="py-1"> Add {subNames[submitters.length]} </span>
-            </a>
+            </button>
           </li>
         {/if}
       </ul>

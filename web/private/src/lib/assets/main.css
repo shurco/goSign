@@ -1,6 +1,4 @@
-body {
-  @apply bg-[#faf7f5] text-sm;
-}
+/* Base body styles live in styles/base.css (WS2 tokens). */
 
 /* Ensure all links show hand cursor (also when using button.link). */
 a,
@@ -9,20 +7,24 @@ button.link {
   cursor: pointer;
 }
 
+.link {
+  color: var(--base-txt-link-minor);
+}
+.link:hover {
+  color: var(--base-txt-link-major);
+}
+
 .autocomplete {
-  background: white;
+  background: var(--base-cont-top);
   z-index: 1000;
-  font:
-    14px/22px "-apple-system",
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-13);
+  line-height: var(--line-height-20);
   overflow: auto;
   box-sizing: border-box;
-  @apply mt-1 rounded-md border border-[#e7e2df];
+  margin-top: var(--space-4);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-menu-dropdown);
 }
 
 .autocomplete * {
@@ -30,24 +32,62 @@ button.link {
 }
 
 .autocomplete > div {
-  @apply px-2 py-1 text-sm font-normal;
+  padding: var(--space-6) var(--space-12);
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-regular);
 }
 
 .autocomplete .group {
-  background: #eee;
+  background: var(--base-surf-page);
+  color: var(--base-txt-muted);
 }
 
 .autocomplete > div:hover:not(.group),
 .autocomplete > div.selected {
-  @apply bg-[#e7e2df];
+  background: var(--base-hlt-g-hover);
   cursor: pointer;
 }
 
-/* DocuSeal-aligned input styles for signing form */
+/* Input styles for the signing form (kept class names) */
 .base-input {
-  @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none;
+  display: block;
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--font-size-14);
+  color: var(--base-txt-accent);
+  background: var(--base-cont-input);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--base-line-secondary) inset;
+  border-radius: var(--radius-8);
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-shadow);
+}
+.base-input::placeholder {
+  color: var(--base-txt-ghost);
+}
+.base-input:focus {
+  box-shadow: var(--shadow-focus);
 }
 
 .base-textarea {
-  @apply block w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none;
+  display: block;
+  width: 100%;
+  resize: none;
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--font-size-14);
+  color: var(--base-txt-accent);
+  background: var(--base-cont-input);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--base-line-secondary) inset;
+  border-radius: var(--radius-8);
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-shadow);
+}
+.base-textarea::placeholder {
+  color: var(--base-txt-ghost);
+}
+.base-textarea:focus {
+  box-shadow: var(--shadow-focus);
 }

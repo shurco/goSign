@@ -12,17 +12,17 @@
 </script>
 
 <div class="w-full overflow-x-auto">
-  <table class="w-full border-collapse">
+  <table class="data-grid">
     {#if header}
-      <thead class="border-b border-gray-200 bg-gray-50">
+      <thead>
         {@render header()}
       </thead>
     {/if}
-    <tbody class={zebra ? "divide-y divide-gray-200" : ""}>
+    <tbody class={zebra ? "zebra" : ""}>
       {@render children?.()}
     </tbody>
     {#if footer}
-      <tfoot class="border-t border-gray-200 bg-gray-50">
+      <tfoot>
         {@render footer()}
       </tfoot>
     {/if}
@@ -30,11 +30,11 @@
 </div>
 
 <style>
-  tbody.divide-y :global(> tr:nth-child(even)) {
-    background-color: #f9fafb;
+  /* Base table look — global table.data-grid (app.css) */
+  tbody.zebra :global(> tr:nth-child(even) td) {
+    background-color: var(--base-cont-mid);
   }
-
-  tbody :global(> tr:hover) {
-    background-color: #f3f4f6;
+  tbody.zebra :global(> tr:hover td) {
+    background-color: var(--base-hlt-g-easy);
   }
 </style>

@@ -60,22 +60,63 @@
   }
 </script>
 
-<div class="flex gap-2">
+<!-- twing-m toolbar-group: pill container, active segment — blue pill -->
+<div class="btn-group" class:disabled>
   {#each normalizedOptions as option (getOptionValue(option))}
     <button
       type="button"
-      class="flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors {isSelected(option)
-        ? 'border-blue-500 bg-blue-50 text-blue-700'
-        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+      class="btn-group-item"
+      class:active={isSelected(option)}
       {disabled}
       onclick={() => handleClick(option)}
     >
-      <div class="flex items-center justify-center gap-2">
-        {#if getOptionIcon(option)}
-          <SvgIcon name={getOptionIcon(option)!} width="16" height="16" />
-        {/if}
-        <span>{getOptionLabel(option)}</span>
-      </div>
+      {#if getOptionIcon(option)}
+        <SvgIcon name={getOptionIcon(option)!} width="16" height="16" />
+      {/if}
+      <span>{getOptionLabel(option)}</span>
     </button>
   {/each}
 </div>
+
+<style>
+  .btn-group {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+    background: var(--base-cont-top);
+    border: 1px solid var(--base-line-tertiary);
+    border-radius: var(--radius-10);
+    padding: var(--space-2);
+  }
+  .btn-group.disabled {
+    opacity: 0.6;
+  }
+  .btn-group-item {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+    border: none;
+    background: transparent;
+    font-size: var(--font-size-12);
+    font-weight: var(--font-weight-medium);
+    color: var(--base-txt-tertiary);
+    padding: 6px 10px;
+    border-radius: var(--radius-8);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: var(--transition-colors);
+  }
+  .btn-group-item:hover:not(:disabled) {
+    background: var(--base-surf-page);
+  }
+  .btn-group-item.active {
+    background: var(--base-hlt-invert);
+    color: var(--base-txt-btn-flip);
+  }
+  .btn-group-item:disabled {
+    cursor: not-allowed;
+  }
+</style>

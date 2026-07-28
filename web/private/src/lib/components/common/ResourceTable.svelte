@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
-  import Input from "@/components/ui/Input.svelte";
+  import SvgIcon from "@/components/SvgIcon.svelte";
   import Checkbox from "@/components/ui/Checkbox.svelte";
   import Button from "@/components/ui/Button.svelte";
   import Table from "@/components/ui/Table.svelte";
@@ -220,17 +220,20 @@
 </script>
 
 <div class="resource-table-wrapper w-full">
-  <!-- Filters and Search -->
+  <!-- Filters and Search (twing-m toolbar) -->
   {#if showFilters}
-    <div class="mb-4 flex flex-wrap gap-4">
+    <div class="toolbar">
       {#if searchable}
-        <Input
-          bind:value={searchQuery}
-          type="text"
-          placeholder={searchPlaceholder}
-          class="min-w-64 flex-1"
-          oninput={handleSearch}
-        />
+        <div class="search-box">
+          <span class="search-icon-wrap"><SvgIcon name="search" width="14" height="14" /></span>
+          <input
+            type="text"
+            class="search-input"
+            placeholder={searchPlaceholder}
+            bind:value={searchQuery}
+            oninput={handleSearch}
+          />
+        </div>
       {/if}
       {#if filters}
         {@render filters(filtersState, updateFilter)}
@@ -238,27 +241,25 @@
     </div>
   {/if}
 
-  <!-- Table -->
-  <div class="overflow-x-auto rounded-lg border border-[var(--color-base-300)] bg-white">
-    <Table zebra={true}>
+  <!-- Table (twing-m table-card + data-grid) -->
+  <div class="table-card overflow-x-auto">
+    <Table>
       {#snippet header()}
         <tr>
           {#if selectable}
-            <th class="w-12 px-4 py-3">
+            <th class="w-12">
               <Checkbox checked={allSelected} size="sm" onchange={toggleSelectAll} />
             </th>
           {/if}
           {#each columns as column (column.key)}
             <th
-              class="{column.headerClass ?? ''} {column.sortable
-                ? 'cursor-pointer hover:bg-gray-100'
-                : ''} px-4 py-3 text-left text-sm font-medium text-gray-700"
+              class="{column.headerClass ?? ''} {column.sortable ? 'th-sortable' : ''}"
               onclick={() => column.sortable && handleSort(column.key)}
             >
               <div class="flex items-center gap-2">
                 {column.label}
                 {#if column.sortable && sortBy === column.key}
-                  <span class="text-xs">
+                  <span>
                     {sortOrder === "asc" ? "↑" : "↓"}
                   </span>
                 {/if}
@@ -266,36 +267,36 @@
             </th>
           {/each}
           {#if hasActions}
-            <th class="w-32 px-4 py-3 text-right text-sm font-medium text-gray-700">Actions</th>
+            <th class="w-32 text-right">Actions</th>
           {/if}
         </tr>
       {/snippet}
 
       {#if isLoading}
         <tr>
-          <td colspan={totalColumns} class="py-8 text-center">
-            <div class="flex flex-col items-center justify-center gap-2">
+          <td colspan={totalColumns} class="cell-state">
+            <div class="flex flex-col items-center justify-center gap-2 py-8">
               <LoadingSpinner size="md" />
-              <p class="text-gray-600">Loading...</p>
+              <p class="state-text">Loading...</p>
             </div>
           </td>
         </tr>
       {:else if paginatedData.length === 0}
         <tr>
-          <td colspan={totalColumns} class="py-8 text-center text-gray-500">
-            {emptyMessage}
+          <td colspan={totalColumns} class="cell-state">
+            <div class="state-text py-8 text-center">{emptyMessage}</div>
           </td>
         </tr>
       {:else}
         {#each paginatedData as item (getItemId(item))}
-          <tr class="hover:bg-gray-50">
+          <tr>
             {#if selectable}
-              <td class="px-4 py-3">
+              <td>
                 <Checkbox checked={isSelected(item)} size="sm" onchange={() => toggleSelect(item)} />
               </td>
             {/if}
             {#each columns as column (column.key)}
-              <td class="{column.cellClass ?? ''} px-4 py-3 text-sm text-gray-900">
+              <td class={column.cellClass ?? ""}>
                 {#if cellSnippets[column.key]}
                   {@render cellSnippets[column.key](item, getNestedValue(item, column.key))}
                 {:else}
@@ -304,7 +305,7 @@
               </td>
             {/each}
             {#if hasActions}
-              <td class="px-4 py-3 text-right">
+              <td class="text-right">
                 {#if actions}
                   {@render actions(item)}
                 {:else}
@@ -343,3 +344,16 @@
     />
   {/if}
 </div>
+
+<style>
+  .th-sortable {
+    cursor: pointer;
+  }
+  .th-sortable:hover {
+    color: var(--base-txt-secondary);
+  }
+  .state-text {
+    font-size: var(--font-size-13);
+    color: var(--base-txt-muted);
+  }
+</style>

@@ -13,14 +13,32 @@
   let { label = "", required = false, error = "", hint = "", children }: Props = $props();
 </script>
 
-<div class="form-control">
+<div class="ui-form-control">
   {#if label}
     <Label {required}>{label}</Label>
   {/if}
   {@render children?.()}
   {#if error}
-    <p class="mt-1 text-sm text-[var(--color-error)]">{error}</p>
+    <p class="ui-form-error">{error}</p>
   {:else if hint}
-    <p class="mt-1 text-sm text-gray-500">{hint}</p>
+    <p class="ui-form-hint">{hint}</p>
   {/if}
 </div>
+
+<style>
+  .ui-form-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .ui-form-error {
+    margin: var(--space-2) 0 0;
+    font-size: var(--font-size-12);
+    color: var(--base-txt-alert-minor);
+  }
+  .ui-form-hint {
+    margin: var(--space-2) 0 0;
+    font-size: var(--font-size-12);
+    color: var(--base-txt-muted);
+  }
+</style>

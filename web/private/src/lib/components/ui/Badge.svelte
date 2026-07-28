@@ -8,28 +8,60 @@
   }
 
   let { variant = "ghost", size = "md", children }: Props = $props();
-
-  const badgeClasses = $derived.by(() => {
-    const base = "inline-flex items-center justify-center font-semibold border-0";
-
-    const variants = {
-      ghost: "bg-[var(--color-base-200)] text-[var(--color-base-content)]",
-      primary: "bg-[var(--color-primary)] text-[var(--color-primary-content)]",
-      success: "bg-[var(--color-success)] text-[var(--color-success-content)]",
-      warning: "bg-[var(--color-warning)] text-[var(--color-warning-content)]",
-      error: "bg-[var(--color-error)] text-[var(--color-error-content)]",
-      info: "bg-[var(--color-info)] text-[var(--color-info-content)]"
-    };
-
-    const sizes = {
-      sm: "h-5 px-2 text-xs rounded-full",
-      md: "h-6 px-3 text-sm rounded-full"
-    };
-
-    return [base, variants[variant], sizes[size]].join(" ");
-  });
 </script>
 
-<span class={badgeClasses}>
+<span class="badge badge-{variant} badge-{size}">
   {@render children?.()}
 </span>
+
+<style>
+  /* WS2 chips: soft tinted fill + colored text */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-semibold);
+    border: none;
+    white-space: nowrap;
+  }
+
+  .badge-sm {
+    height: 18px;
+    padding: 0 var(--space-6);
+    font-size: var(--font-size-11);
+    line-height: var(--line-height-16);
+    border-radius: var(--radius-4);
+  }
+  .badge-md {
+    height: 20px;
+    padding: 0 var(--space-8);
+    font-size: var(--font-size-12);
+    line-height: var(--line-height-16);
+    border-radius: var(--radius-6);
+  }
+
+  .badge-ghost {
+    background: var(--base-hlt-g-selected);
+    color: var(--base-txt-secondary);
+  }
+  .badge-primary {
+    background: var(--base-hlt-notr-easy);
+    color: var(--base-txt-act-major);
+  }
+  .badge-success {
+    background: var(--color-lime-50);
+    color: var(--color-green-750);
+  }
+  .badge-warning {
+    background: var(--color-amber-50);
+    color: var(--base-txt-notice-major);
+  }
+  .badge-error {
+    background: var(--base-hlt-w-hover);
+    color: var(--base-txt-alert-major);
+  }
+  .badge-info {
+    background: var(--base-hlt-notr-hover);
+    color: var(--base-txt-link-minor);
+  }
+</style>

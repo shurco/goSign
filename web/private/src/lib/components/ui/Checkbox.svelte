@@ -36,20 +36,31 @@
       checked = target.checked;
     }
   }
-
-  const checkboxClasses = $derived.by(() => {
-    const base =
-      "rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-2 transition-colors cursor-pointer";
-
-    const sizes = {
-      sm: "h-4 w-4",
-      md: "h-5 w-5"
-    };
-
-    const disabled = rest.disabled ? "opacity-50 cursor-not-allowed" : "";
-
-    return [base, sizes[size], disabled].filter(Boolean).join(" ");
-  });
 </script>
 
-<input type="checkbox" class={checkboxClasses} checked={isChecked} onchange={onChange} {...rest} />
+<input type="checkbox" class="ui-checkbox ui-checkbox-{size}" checked={isChecked} onchange={onChange} {...rest} />
+
+<style>
+  .ui-checkbox {
+    accent-color: var(--base-hlt-invert);
+    border-radius: var(--radius-4);
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .ui-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ui-checkbox:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+  .ui-checkbox-sm {
+    width: 14px;
+    height: 14px;
+  }
+  .ui-checkbox-md {
+    width: 16px;
+    height: 16px;
+  }
+</style>

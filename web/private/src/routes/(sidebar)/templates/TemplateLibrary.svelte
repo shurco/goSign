@@ -803,48 +803,43 @@
 
 <div class="template-library">
   <!-- Header -->
-  <div class="mb-6 flex items-center justify-between">
+  <div class="page-header">
     <div>
-      <h1 class="text-3xl font-bold">{t("templates.title")}</h1>
-      <p class="mt-1 text-sm text-gray-600">{t("templates.description")}</p>
+      <h1>{t("templates.title")}</h1>
+      <p class="page-subtitle">{t("templates.description")}</p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="page-actions">
       <Button variant="ghost" onclick={() => (showCreateFolderModal = true)}>
-        <SvgIcon name="folder" class="mr-2 h-5 w-5" />
+        <SvgIcon name="folder" class="h-4 w-4" />
         {t("templates.newFolder")}
       </Button>
-      <div class="relative">
-        <Button variant="primary" onclick={() => (showCreateTemplateModal = true)}>
-          <SvgIcon name="plus" class="mr-2 h-5 w-5" />
-          {t("templates.newTemplate")}
-        </Button>
-      </div>
+      <Button variant="primary" onclick={() => (showCreateTemplateModal = true)}>
+        <SvgIcon name="plus" class="h-4 w-4" />
+        {t("templates.newTemplate")}
+      </Button>
     </div>
   </div>
 
-  <!-- Search and Filters -->
-  <div class="mb-4 flex flex-col gap-4 lg:flex-row">
-    <!-- Search Input -->
-    <div class="flex-1">
-      <Input bind:value={searchQuery} placeholder={t("templates.searchTemplates")} class="w-full" />
+  <!-- Search and Filters (twing-m toolbar) -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon-wrap"><SvgIcon name="search" width="14" height="14" /></span>
+      <input type="text" class="search-input" bind:value={searchQuery} placeholder={t("templates.searchTemplates")} />
     </div>
 
-    <!-- Filters -->
-    <div class="flex gap-3">
-      <Select bind:value={selectedCategory} placeholder={t("templates.allCategories")} class="w-40">
-        <option value="">{t("templates.allCategories")}</option>
-        <option value="business">{t("templates.business")}</option>
-        <option value="legal">{t("templates.legal")}</option>
-        <option value="personal">{t("templates.personal")}</option>
-        <option value="education">{t("templates.education")}</option>
-      </Select>
+    <select class="tb-select" bind:value={selectedCategory}>
+      <option value="">{t("templates.allCategories")}</option>
+      <option value="business">{t("templates.business")}</option>
+      <option value="legal">{t("templates.legal")}</option>
+      <option value="personal">{t("templates.personal")}</option>
+      <option value="education">{t("templates.education")}</option>
+    </select>
 
-      <Select bind:value={sortBy} class="w-40">
-        <option value="name">{t("templates.sortByName")}</option>
-        <option value="created_at">{t("templates.sortByDate")}</option>
-        <option value="usage">{t("templates.mostUsed")}</option>
-      </Select>
-    </div>
+    <select class="tb-select" bind:value={sortBy}>
+      <option value="name">{t("templates.sortByName")}</option>
+      <option value="created_at">{t("templates.sortByDate")}</option>
+      <option value="usage">{t("templates.mostUsed")}</option>
+    </select>
   </div>
 
   <!-- Templates and Folders Table -->

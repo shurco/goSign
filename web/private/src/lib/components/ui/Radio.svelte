@@ -22,20 +22,38 @@
       value = optionValue != null ? String(optionValue) : "";
     }
   }
-
-  const radioClasses = $derived.by(() => {
-    const base =
-      "border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-2 transition-colors cursor-pointer";
-
-    const sizes = {
-      sm: "h-4 w-4",
-      md: "h-5 w-5"
-    };
-
-    const disabled = "$attrs.disabled" in ["", true] ? "opacity-50 cursor-not-allowed" : "";
-
-    return [base, sizes[size], disabled].filter(Boolean).join(" ");
-  });
 </script>
 
-<input type="radio" class={radioClasses} {name} checked={isChecked} value={optionValue} onchange={onChange} {...rest} />
+<input
+  type="radio"
+  class="ui-radio ui-radio-{size}"
+  {name}
+  checked={isChecked}
+  value={optionValue}
+  onchange={onChange}
+  {...rest}
+/>
+
+<style>
+  .ui-radio {
+    accent-color: var(--base-hlt-invert);
+    cursor: pointer;
+    transition: var(--transition-colors);
+  }
+  .ui-radio:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ui-radio:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+  .ui-radio-sm {
+    width: 14px;
+    height: 14px;
+  }
+  .ui-radio-md {
+    width: 16px;
+    height: 16px;
+  }
+</style>

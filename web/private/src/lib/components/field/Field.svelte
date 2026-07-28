@@ -601,18 +601,17 @@
             </button>
           {:else}
             <span bind:this={dropdownRef} class="dropdown dropdown-end" use:clickOutside={() => dropdown.close()}>
-              <label
-                tabindex="0"
+              <button
+                type="button"
                 title="Settings"
                 class="cursor-pointer text-transparent group-hover:text-[#291334]"
                 onclick={() => dropdown.toggle()}
               >
                 <SvgIcon name="settings" width="18" height="18" />
-              </label>
+              </button>
 
               {#if dropdown.isOpen}
                 <ul
-                  tabindex="0"
                   class="dropdown-content menu menu-xs z-10 mt-1.5 w-52 rounded-box bg-[#faf7f5] p-2 shadow"
                   draggable={true}
                   ondragstart={(e) => {
@@ -631,7 +630,7 @@
                         onblur={save}
                       />
                       {#if field.default_value}
-                        <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Default value </label>
+                        <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Default value </span>
                       {/if}
                     </div>
                   {/if}
@@ -646,10 +645,10 @@
                           <option value={format}>{formatDate(new Date(), format)}</option>
                         {/each}
                       </select>
-                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Format </label>
+                      <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Format </span>
                     </div>
                     {#if !defaultField}
-                      <li class="px-2" onclick={(e) => e.stopPropagation()}>
+                      <li class="px-2" role="presentation" onclick={(e) => e.stopPropagation()}>
                         <label class="flex cursor-pointer items-center gap-2 py-1.5">
                           <input
                             checked={isSetSigningDate}
@@ -663,7 +662,7 @@
                     {/if}
                   {/if}
                   {#if field.type === "checkbox" && !defaultField}
-                    <li class="px-2" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-2" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <label class="flex cursor-pointer items-center gap-2 py-1.5">
                         <input
                           checked={isCheckboxChecked}
@@ -692,11 +691,11 @@
                           <option value={option.value as string}>{option.value}</option>
                         {/each}
                       </select>
-                      <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Default value </label>
+                      <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"> Default value </span>
                     </div>
                   {/if}
                   {#if field.type === "number" && !defaultField}
-                    <li class="px-1 py-1" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-1 py-1" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <div class="relative py-1.5">
                           <input
@@ -709,9 +708,9 @@
                             onblur={save}
                           />
                           {#if field.default_value}
-                            <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">
+                            <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">
                               Default value
-                            </label>
+                            </span>
                           {/if}
                         </div>
                         <div class="relative py-1.5">
@@ -732,7 +731,7 @@
                             <option value="gbp">£1,000.00 (GBP)</option>
                             <option value="percent">1000%</option>
                           </select>
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Number format</label>
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Number format</span>
                         </div>
                         <div class="flex items-center gap-1 py-1.5">
                           <div class="relative max-w-20 min-w-0 flex-1">
@@ -745,7 +744,7 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Min</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Min</span>
                           </div>
                           <span class="shrink-0 text-xs text-base-content/60"> – </span>
                           <div class="relative max-w-20 min-w-0 flex-1">
@@ -758,7 +757,7 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Max</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Max</span>
                           </div>
                         </div>
                         <div class="relative py-1.5">
@@ -772,13 +771,13 @@
                               save();
                             }}
                           />
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Step</label>
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Step</span>
                         </div>
                       </div>
                     </li>
                   {/if}
                   {#if field.type === "signature" && !defaultField}
-                    <li class="px-1 py-1" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-1 py-1" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <div class="relative py-1.5">
                           <select
@@ -797,9 +796,7 @@
                             <option value="drawn_or_upload">Drawn or upload</option>
                             <option value="upload">Upload</option>
                           </select>
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px"
-                            >Signature format</label
-                          >
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Signature format</span>
                         </div>
                         <label class="flex cursor-pointer items-center gap-2 py-1">
                           <input
@@ -817,7 +814,7 @@
                     </li>
                   {/if}
                   {#if field.type === "payment" && editable && !defaultField}
-                    <li class="px-1 py-1" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-1 py-1" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <div class="relative py-1.5">
                           <input
@@ -831,7 +828,7 @@
                               save();
                             }}
                           />
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Price</label>
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Price</span>
                         </div>
                         <div class="relative py-1.5">
                           <select
@@ -848,13 +845,13 @@
                             <option value="JPY">JPY</option>
                             <option value="RUB">RUB</option>
                           </select>
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Currency</label>
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Currency</span>
                         </div>
                       </div>
                     </li>
                   {/if}
                   {#if field.type === "stamp" && !defaultField}
-                    <li onclick={(e) => e.stopPropagation()}>
+                    <li role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <label class="flex cursor-pointer items-center gap-2 py-1">
                           <input
@@ -884,7 +881,7 @@
                     </li>
                   {/if}
                   {#if ["text", "cells"].includes(field.type as string) && !defaultField}
-                    <li class="px-1 py-1" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-1 py-1" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <div class="relative py-1.5">
                           <select
@@ -903,7 +900,7 @@
                             <option value="letters_only">Letters only</option>
                             <option value="custom">Custom pattern</option>
                           </select>
-                          <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Validation</label>
+                          <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Validation</span>
                         </div>
                         {#if validationType === "length"}
                           <div class="relative py-1.5">
@@ -916,7 +913,7 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Min length</label>
+                            <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Min length</span>
                           </div>
                           <div class="relative py-1.5">
                             <input
@@ -928,7 +925,7 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Max length</label>
+                            <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Max length</span>
                           </div>
                         {/if}
                         {#if validationType === "custom"}
@@ -943,7 +940,7 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Pattern</label>
+                            <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Pattern</span>
                           </div>
                           <div class="relative py-1.5">
                             <input
@@ -955,15 +952,14 @@
                                 save();
                               }}
                             />
-                            <label class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Error message</label
-                            >
+                            <span class="absolute -top-1 left-2.5 h-4 px-1" style="font-size: 8px">Error message</span>
                           </div>
                         {/if}
                       </div>
                     </li>
                   {/if}
                   {#if field.type != "phone"}
-                    <li class="px-2" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-2" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <label class="flex cursor-pointer items-center gap-2 py-1.5">
                         <input
                           bind:checked={field.required as boolean}
@@ -976,7 +972,7 @@
                     </li>
                   {/if}
                   {#if ["text", "number", "stamp"].includes(field.type as string) && !defaultField}
-                    <li class="px-2" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-2" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <label class="flex cursor-pointer items-center gap-2 py-1.5">
                         <input
                           bind:checked={field.readonly as boolean}
@@ -989,7 +985,7 @@
                     </li>
                   {/if}
                   {#if showFontSettings && !defaultField}
-                    <li class="px-1 py-1" onclick={(e) => e.stopPropagation()}>
+                    <li class="px-1 py-1" role="presentation" onclick={(e) => e.stopPropagation()}>
                       <div class="space-y-1">
                         <div class="flex items-center gap-1 py-1.5">
                           <div class="relative max-w-16 min-w-0 flex-1">
@@ -1002,7 +998,7 @@
                               class="input-bordered input input-xs h-7 w-full !outline-0"
                               onchange={(e) => setFontSize(e.currentTarget.value)}
                             />
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Font size</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Font size</span>
                           </div>
                           <div class="relative min-w-0 flex-1">
                             <select
@@ -1016,7 +1012,7 @@
                               <option value="italic">Italic</option>
                               <option value="bold_italic">Bold italic</option>
                             </select>
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Style</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Style</span>
                           </div>
                         </div>
                         <div class="flex items-center gap-1 py-1.5">
@@ -1031,7 +1027,7 @@
                               <option value="center">Center</option>
                               <option value="right">Right</option>
                             </select>
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Align</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Align</span>
                           </div>
                           <div class="relative max-w-16 min-w-0 flex-1">
                             <input
@@ -1041,7 +1037,7 @@
                               class="input-bordered input input-xs h-7 w-full cursor-pointer p-0.5 !outline-0"
                               onchange={(e) => setFontPref("color", e.currentTarget.value)}
                             />
-                            <label class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Color</label>
+                            <span class="absolute -top-2 left-2.5 h-4 px-1" style="font-size: 8px">Color</span>
                           </div>
                         </div>
                       </div>
@@ -1053,18 +1049,17 @@
                   {#each areas as area, index (index)}
                     <li>
                       <div class="flex items-center justify-between gap-1 p-0">
-                        <a
-                          href="#"
-                          class="flex-1 px-2 py-1 text-sm"
-                          onclick={(e) => {
-                            e.preventDefault();
+                        <button
+                          type="button"
+                          class="menu-item flex-1 px-2 py-1 text-sm"
+                          onclick={() => {
                             onScrollTo?.(area);
                             dropdown.close();
                           }}
                         >
                           <SvgIcon name="shape" width="18" height="18" />
                           Page {(area.page as number) + 1}
-                        </a>
+                        </button>
                         {#if editable && !defaultField}
                           <button
                             title="Remove area"
@@ -1083,82 +1078,59 @@
                   {/each}
                   {#if !areas.length || !["radio", "multiple"].includes(field.type as string)}
                     <li>
-                      <a
-                        href="#"
-                        class="px-2 py-1 text-sm"
-                        onclick={(e) => {
-                          e.preventDefault();
+                      <button
+                        type="button"
+                        class="menu-item px-2 py-1 text-sm"
+                        onclick={() => {
                           onSetDraw?.({ field });
                           dropdown.close();
                         }}
                       >
                         <SvgIcon name="section" width="18" height="18" />
                         Draw new area
-                      </a>
+                      </button>
                     </li>
                   {/if}
                   {#if editable && !defaultField}
                     <hr class="mt-0.5 pb-0.5" />
                   {/if}
                   {#if editable && !defaultField}
-                    <li onclick={(e) => e.stopPropagation()}>
-                      <a
-                        href="#"
-                        class="px-2 py-1 text-sm"
-                        onclick={(e) => {
-                          e.preventDefault();
-                          openConditionBuilder();
-                        }}
-                      >
+                    <li role="presentation" onclick={(e) => e.stopPropagation()}>
+                      <button type="button" class="menu-item px-2 py-1 text-sm" onclick={openConditionBuilder}>
                         <SvgIcon name="settings" width="18" height="18" />
                         Conditional Logic
-                      </a>
+                      </button>
                     </li>
                   {/if}
                   {#if editable && !defaultField && ["number", "text"].includes(field.type as string)}
-                    <li onclick={(e) => e.stopPropagation()}>
-                      <a
-                        href="#"
-                        class="px-2 py-1 text-sm"
-                        onclick={(e) => {
-                          e.preventDefault();
-                          openFormulaBuilder();
-                        }}
-                      >
+                    <li role="presentation" onclick={(e) => e.stopPropagation()}>
+                      <button type="button" class="menu-item px-2 py-1 text-sm" onclick={openFormulaBuilder}>
                         <SvgIcon name="settings" width="18" height="18" />
                         Formula
-                      </a>
+                      </button>
                     </li>
                   {/if}
                   {#if editable && !defaultField}
-                    <li onclick={(e) => e.stopPropagation()}>
-                      <a
-                        href="#"
-                        class="px-2 py-1 text-sm"
-                        onclick={(e) => {
-                          e.preventDefault();
-                          openDescriptionModal();
-                        }}
-                      >
+                    <li role="presentation" onclick={(e) => e.stopPropagation()}>
+                      <button type="button" class="menu-item px-2 py-1 text-sm" onclick={openDescriptionModal}>
                         <SvgIcon name="settings" width="18" height="18" />
                         Description
-                      </a>
+                      </button>
                     </li>
                   {/if}
                   {#if areas.length >= 1 && !["radio", "multiple"].includes(field.type as string)}
                     <li>
-                      <a
-                        href="#"
-                        class="px-2 py-1 text-sm"
-                        onclick={(e) => {
-                          e.preventDefault();
+                      <button
+                        type="button"
+                        class="menu-item px-2 py-1 text-sm"
+                        onclick={() => {
                           copyToAllPages(field);
                           dropdown.close();
                         }}
                       >
                         <SvgIcon name="copy" width="18" height="18" />
                         Copy to All Pages
-                      </a>
+                      </button>
                     </li>
                   {/if}
                 </ul>
@@ -1180,6 +1152,7 @@
       <div
         bind:this={optionsRef}
         class="mx-2 space-y-1.5 border-t border-[#e7e2df] pt-2"
+        role="presentation"
         draggable={true}
         ondragstart={(e) => {
           e.preventDefault();
@@ -1292,8 +1265,9 @@
     {/snippet}
     <div class="space-y-4">
       <div>
-        <label class="label py-0 text-xs"><span>Description</span></label>
+        <label class="label py-0 text-xs" for="field-description-{field.id}"><span>Description</span></label>
         <textarea
+          id="field-description-{field.id}"
           bind:value={field.description as string}
           class="textarea textarea-bordered textarea-sm mt-1 min-h-24 w-full resize-y font-normal !outline-0"
           placeholder="Field description or instructions"
@@ -1301,10 +1275,11 @@
           onchange={save}></textarea>
       </div>
       <div>
-        <label class="label py-0 text-xs"
+        <label class="label py-0 text-xs" for="field-title-{field.id}"
           ><span>Display title</span> <span class="text-base-content/60">(optional)</span></label
         >
         <input
+          id="field-title-{field.id}"
           bind:value={field.title as string}
           type="text"
           class="input-bordered input input-sm mt-1 h-9 w-full font-normal !outline-0"

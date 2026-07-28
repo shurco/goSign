@@ -145,10 +145,11 @@
   </p>
 
   <div class="formula-editor">
-    <label class="mb-1.5 block text-sm font-medium text-gray-700">
+    <label class="mb-1.5 block text-sm font-medium text-gray-700" for="formula-expression">
       {t("fields.formula.expression") || "Formula"}
     </label>
     <textarea
+      id="formula-expression"
       value={displayFormula}
       placeholder={t("fields.formula.placeholder")}
       class="formula-input w-full rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed transition-colors focus:ring-2 focus:outline-none {validationError

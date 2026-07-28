@@ -1,0 +1,73 @@
+/*
+ * Base element styles. Layered on top of Tailwind's preflight (which handles the reset).
+ * Only project-wide element defaults, scrollbars, focus and selection live here.
+ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-13);
+    line-height: var(--line-height-20);
+    font-weight: var(--font-weight-regular);
+    color: var(--base-txt-accent);
+    background: var(--base-surf-page);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: var(--font-weight-semibold);
+    color: var(--base-txt-primary);
+  }
+
+  a {
+    color: var(--base-txt-link-minor);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--base-txt-link-major);
+  }
+
+  ::selection {
+    background: var(--base-hlt-selected);
+  }
+
+  /* keyboard focus ring driven by the accent token */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+}
+
+/* Thin, unobtrusive scrollbars matching WS2 neutral chrome */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-graphite-alpha-300) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-graphite-alpha-300);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-graphite-alpha-500);
+  background-clip: padding-box;
+}

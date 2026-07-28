@@ -8,7 +8,7 @@ interface ApiResponse<T = any> {
   message?: string;
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     public status: number,
     message: string
@@ -16,6 +16,14 @@ class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/**
+ * Backend error format: { success, message, data: { error } } (webutil.Response).
+ * Prefer the detailed data.error over the generic message.
+ */
+export function extractErrorMessage(errorData: any, status: number): string {
+  return errorData?.data?.error || errorData?.error || errorData?.message || `HTTP ${status}`;
 }
 
 async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -33,8 +41,8 @@ async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}):
   const response = await fetchWithAuth(finalUrl, config);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-    throw new ApiError(response.status, errorData.message || `HTTP ${response.status}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, extractErrorMessage(errorData, response.status));
   }
 
   return await response.json();

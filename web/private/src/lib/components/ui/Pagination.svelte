@@ -49,7 +49,7 @@
 
 <div class="flex items-center justify-between {className}">
   {#if showInfo}
-    <div class="text-sm text-gray-600">
+    <div class="pagination-info">
       Showing {startIndex + 1} to {Math.min(endIndex, total)} of {total} entries
     </div>
   {/if}
@@ -65,3 +65,10 @@
     </Button>
   </div>
 </div>
+
+<style>
+  .pagination-info {
+    font-size: var(--font-size-12);
+    color: var(--base-txt-muted);
+  }
+</style>

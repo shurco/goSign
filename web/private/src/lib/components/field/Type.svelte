@@ -29,8 +29,7 @@
   let dropdownRef = $state<HTMLElement | null>(null);
   const dropdown = createDropdown();
 
-  function handleTypeSelect(type: string, event: MouseEvent): void {
-    event.preventDefault();
+  function handleTypeSelect(type: string): void {
     value = type;
     onValueChange?.(type);
     dropdown.close();
@@ -41,8 +40,8 @@
   {#if label}
     {@render label()}
   {:else}
-    <label
-      tabindex="0"
+    <button
+      type="button"
       title={fieldNames[value]}
       class="cursor-pointer"
       onclick={(e) => {
@@ -58,24 +57,20 @@
         class={buttonClasses}
         stroke-width="1.6"
       />
-    </label>
+    </button>
   {/if}
   {#if editable && dropdown.isOpen}
-    <ul
-      tabindex="0"
-      class="dropdown-content menu menu-xs z-10 mb-3 w-52 rounded-box p-2 shadow {menuClasses}"
-      onclick={() => dropdown.close()}
-    >
+    <ul class="dropdown-content menu menu-xs z-10 mb-3 w-52 rounded-box p-2 shadow {menuClasses}">
       {#each Object.entries(fieldIcons) as [type, icon] (type)}
         <li>
-          <a
-            href="#"
-            class="flex flex-wrap px-2 py-1 text-sm {type === value ? 'active' : ''}"
-            onclick={(e) => handleTypeSelect(type, e)}
+          <button
+            type="button"
+            class="menu-item flex flex-wrap px-2 py-1 text-sm {type === value ? 'active' : ''}"
+            onclick={() => handleTypeSelect(type)}
           >
             <SvgIcon name={icon} stroke-width="1.6" width="20" height="20" />
             {fieldNames[type]}
-          </a>
+          </button>
         </li>
       {/each}
     </ul>

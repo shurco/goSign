@@ -1,51 +1,539 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/typography.css";
+@import "./styles/base.css";
+@import "./styles/layout.css";
 @import "./main.css";
 @import "./dropdown.css";
 @import "./form.css";
 
+/*
+ * Legacy palette bridge: old daisyUI-style variables are mapped onto the
+ * pmCRM/WS2 design tokens so existing markup picks up the new palette.
+ * New code should reference --base-* / --color-* tokens directly.
+ */
 @theme {
-  /* Primary colors from daisyUI */
-  --color-primary: #570df8;
-  --color-primary-focus: #4506cb;
-  --color-primary-content: #ffffff;
+  /* Primary (accent) — interblue */
+  --color-primary: var(--color-interblue-700);
+  --color-primary-focus: var(--color-interblue-800);
+  --color-primary-content: var(--color-alpha-light-95);
 
-  /* Secondary colors */
-  --color-secondary: #f000b8;
-  --color-secondary-focus: #bd0091;
-  --color-secondary-content: #ffffff;
+  /* Secondary — violet accent */
+  --color-secondary: var(--color-violet-800);
+  --color-secondary-focus: var(--color-violet-900);
+  --color-secondary-content: var(--color-alpha-light-95);
 
-  /* Accent colors */
-  --color-accent: #37cdbe;
-  --color-accent-focus: #2aa79b;
-  --color-accent-content: #ffffff;
+  /* Accent — pine */
+  --color-accent: var(--color-pine-500);
+  --color-accent-focus: var(--color-pine-700);
+  --color-accent-content: var(--color-alpha-light-95);
 
-  /* Neutral colors */
-  --color-neutral: #3d4451;
-  --color-neutral-focus: #2a2e37;
-  --color-neutral-content: #ffffff;
+  /* Neutral */
+  --color-neutral: var(--color-graphite-960);
+  --color-neutral-focus: var(--color-graphite-990);
+  --color-neutral-content: var(--color-alpha-light-95);
 
-  /* Base colors */
-  --color-base-100: #ffffff;
-  --color-base-200: #f2f2f2;
-  --color-base-300: #e5e6e6;
-  --color-base-content: #1f2937;
+  /* Base surfaces */
+  --color-base-100: var(--color-graphite-0);
+  --color-base-200: var(--color-graphite-100);
+  --color-base-300: var(--color-graphite-200);
+  --color-base-content: var(--color-graphite-990);
 
   /* State colors */
-  --color-info: #3abff8;
-  --color-info-content: #002b3d;
-  --color-success: #36d399;
-  --color-success-content: #003320;
-  --color-warning: #fbbd23;
-  --color-warning-content: #382800;
-  --color-error: #f87272;
-  --color-error-content: #470000;
+  --color-info: var(--color-interblue-600);
+  --color-info-content: var(--color-interblue-920);
+  --color-success: var(--color-lime-600);
+  --color-success-content: var(--color-green-750);
+  --color-warning: var(--color-amber-500);
+  --color-warning-content: var(--color-amber-700);
+  --color-error: var(--color-red-750);
+  --color-error-content: var(--color-red-900);
 
-  /* Additional utility colors */
   --color-ghost: transparent;
 
   /* Border radius */
-  --radius-badge: 1.9rem;
-  --radius-btn: 0.5rem;
-  --radius-box: 1rem;
-  --radius: 0.5rem;
+  --radius-badge: var(--radius-6);
+  --radius-btn: var(--radius-8);
+  --radius-box: var(--radius-12);
+  --radius: var(--radius-8);
+}
+
+/* ============================================================
+   Page shell (twing-m): title and toolbars live in the content
+   area on the gray canvas, not in a white top bar.
+   ============================================================ */
+.page {
+  /* top 16px — matches .list-head so all page titles share one baseline */
+  padding: var(--space-16) var(--space-24) var(--space-20);
+}
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  /* 34px row (button height) — title does not jump with/without actions */
+  min-height: 34px;
+  margin-bottom: var(--space-12);
+}
+.page-header h1,
+.page-header .page-title {
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  color: var(--base-txt-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-header .page-subtitle {
+  font-size: var(--font-size-13);
+  color: var(--base-txt-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-header .page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+/* Back button in detail page headers */
+.page-header .page-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-8);
+  background: transparent;
+  color: var(--base-txt-muted);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+.page-header .page-back:hover {
+  background: var(--base-hlt-g-hover);
+  color: var(--base-txt-primary);
+}
+
+/* List pages: header in content, table edge-to-edge */
+.list-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--base-surf-page);
+}
+.list-head {
+  padding: var(--space-16) var(--space-24) 0;
+  flex-shrink: 0;
+}
+
+/* Toolbar: pill button groups (twing-m) */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: var(--space-12);
+}
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--base-cont-top);
+  border: 1px solid var(--base-line-tertiary);
+  border-radius: var(--radius-10);
+  padding: var(--space-2);
+}
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  color: var(--base-txt-tertiary);
+  padding: 5px 10px;
+  border-radius: var(--radius-8);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: var(--transition-colors);
+}
+.tb-btn:hover {
+  background: var(--base-surf-page);
+}
+.tb-btn.active {
+  background: var(--base-hlt-invert);
+  color: var(--base-txt-btn-flip);
+}
+
+/* ============================================================
+   Native <select> — shared style (twing-m / pipeline-dropdown)
+   ============================================================ */
+
+/* Toolbar: framed select 34px */
+.tb-select {
+  height: 34px;
+  min-width: 140px;
+  max-width: 240px;
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--base-line-secondary);
+  border-radius: var(--radius-8);
+  font-size: var(--font-size-13);
+  font-weight: var(--font-weight-medium);
+  color: var(--base-txt-primary);
+  background-color: var(--base-cont-top);
+  background-image: var(--ui-select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+.tb-select:hover {
+  background-color: var(--base-surf-page);
+}
+.tb-select:focus {
+  border-color: var(--base-hlt-invert);
+  box-shadow: 0 0 0 2px var(--base-hlt-easy);
+}
+
+/* Forms and modals: framed select 36px */
+.form-select,
+.form-field select {
+  height: 36px;
+  min-width: 0;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--base-line-tertiary);
+  border-radius: var(--radius-6);
+  font-size: var(--font-size-13);
+  color: var(--base-txt-primary);
+  background-color: var(--base-cont-top);
+  background-image: var(--ui-select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+.form-field .form-select,
+.form-field select {
+  flex: 1;
+}
+.form-select:focus,
+.form-field select:focus {
+  border-color: var(--base-hlt-invert);
+  box-shadow: 0 0 0 2px var(--base-hlt-easy);
+}
+.form-select:disabled,
+.form-field select:disabled {
+  color: var(--base-txt-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Search row with chips and filter — toolbar item (twing-m) */
+.search-box {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: 34px;
+  background: var(--base-cont-top);
+  border: 1px solid var(--base-line-tertiary);
+  border-radius: var(--radius-10);
+  color: var(--base-txt-muted);
+  overflow: visible;
+}
+.search-box .search-icon-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  padding-right: var(--space-4);
+}
+.search-box .search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-13);
+  color: var(--base-txt-primary);
+  outline: none;
+  font-family: inherit;
+  padding: 0 var(--space-8) 0 0;
+  height: 100%;
+  align-self: stretch;
+}
+.search-box .search-input:focus {
+  box-shadow: none;
+}
+
+/* White content card (twing-m .card) */
+.content-card {
+  background: var(--base-cont-top);
+  border-radius: var(--radius-8);
+  padding: var(--space-24);
+}
+.content-card .card-title {
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-semibold);
+  color: var(--base-txt-primary);
+  margin: 0 0 var(--space-16);
+}
+
+/* Table container card (twing-m .table-card) */
+.table-card {
+  background: var(--base-cont-top);
+  border: 1px solid var(--base-line-tertiary);
+  border-radius: var(--radius-12);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Detail pages: card panels on the gray canvas
+   ============================================================ */
+.detail-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--space-16);
+  padding: 0 var(--space-24) var(--space-20);
+}
+.detail-panel {
+  background: var(--base-cont-top);
+  border: 1px solid var(--base-line-tertiary);
+  border-radius: var(--radius-12);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Editable entity name input in page-header */
+.detail-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: var(--font-weight-bold);
+  color: var(--base-txt-primary);
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.detail-name:focus {
+  border-bottom-color: var(--base-hlt-invert);
+}
+
+/* ============================================================
+   Shared data-table style for <table> pages
+   (th 10/uppercase on gray, 44px rows, hover)
+   ============================================================ */
+table.data-grid {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--base-cont-top);
+  font-size: var(--font-size-13);
+}
+table.data-grid thead th {
+  height: var(--layout-row-height);
+  background: var(--base-surf-page);
+  border-bottom: 1px solid var(--base-line-tertiary);
+  padding: 0 var(--space-12);
+  font-size: var(--font-size-10);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--base-txt-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+table.data-grid tbody td {
+  height: 44px;
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--base-line-ghost);
+  color: var(--base-txt-secondary);
+}
+table.data-grid tbody tr:hover td {
+  background: var(--base-hlt-g-easy);
+}
+table.data-grid tbody tr:last-child td {
+  border-bottom-color: transparent;
+}
+table.data-grid thead th:first-child,
+table.data-grid tbody td:first-child,
+table.data-grid tfoot td:first-child {
+  padding-left: var(--space-16);
+}
+table.data-grid thead th:last-child,
+table.data-grid tbody td:last-child,
+table.data-grid tfoot td:last-child {
+  padding-right: var(--space-16);
+}
+table.data-grid tfoot td {
+  height: 44px;
+  padding: 0 var(--space-12);
+  background: var(--base-surf-page);
+  border-top: 1px solid var(--base-line-tertiary);
+  color: var(--base-txt-primary);
+}
+
+/* ============================================================
+   Auth pages: centered card (pmCRM login-card)
+   ============================================================ */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-20);
+  background: var(--base-surf-page);
+}
+.auth-card {
+  width: 400px;
+  max-width: 100%;
+  background: var(--base-cont-top);
+  border-radius: var(--radius-16);
+  box-shadow: var(--shadow-mod-minor);
+  padding: var(--space-40);
+}
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: var(--space-32);
+}
+.auth-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-12);
+  background: linear-gradient(135deg, var(--base-hlt-invert), var(--base-hlt-b-invert));
+  color: var(--base-txt-btn-flip);
+  margin-bottom: var(--space-16);
+}
+.auth-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-22);
+  font-weight: var(--font-weight-semibold);
+  color: var(--base-txt-primary);
+  margin: 0;
+}
+.auth-subtitle {
+  font-size: var(--font-size-14);
+  color: var(--base-txt-muted);
+  margin: var(--space-4) 0 0;
+}
+.auth-error {
+  background: var(--base-hlt-w-easy);
+  color: var(--base-txt-alert-major);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-8);
+  font-size: var(--font-size-13);
+  margin-bottom: var(--space-20);
+}
+.auth-success {
+  background: var(--color-lime-50);
+  color: var(--base-txt-new-major);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-8);
+  font-size: var(--font-size-13);
+  margin-bottom: var(--space-20);
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+}
+.auth-footer {
+  margin-top: var(--space-20);
+  text-align: center;
+  font-size: var(--font-size-13);
+  color: var(--base-txt-muted);
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.form-group label {
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-medium);
+  color: var(--base-txt-muted);
+}
+.form-group input {
+  height: var(--size-control-40);
+  padding: 0 var(--space-12);
+  background: var(--base-cont-input);
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--base-line-secondary) inset;
+  border-radius: var(--radius-8);
+  color: var(--base-txt-accent);
+  font-size: var(--font-size-14);
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-shadow);
+}
+.form-group input::placeholder {
+  color: var(--base-txt-ghost);
+}
+.form-group input:focus {
+  box-shadow: var(--shadow-focus);
+}
+.form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--base-cont-trans-low);
+}
+.auth-btn {
+  height: var(--size-control-40);
+  background: var(--base-btn-primary-minor);
+  color: var(--base-txt-btn-flip);
+  border: none;
+  border-radius: var(--radius-8);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: var(--transition-colors);
+  font-family: inherit;
+}
+.auth-btn:hover:not(:disabled) {
+  background: var(--base-btn-primary-major);
+}
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* NProgress: accent progress bar color */
+#nprogress .bar {
+  background: var(--base-hlt-invert) !important;
+}
+#nprogress .peg {
+  box-shadow:
+    0 0 10px var(--base-hlt-invert),
+    0 0 5px var(--base-hlt-invert) !important;
+}
+#nprogress .spinner-icon {
+  border-top-color: var(--base-hlt-invert) !important;
+  border-left-color: var(--base-hlt-invert) !important;
 }

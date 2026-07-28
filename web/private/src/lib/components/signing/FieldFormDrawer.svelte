@@ -99,7 +99,7 @@
   }
 
   function onKeydown(e: KeyboardEvent): void {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && isOpen) {
       handleClose();
     }
   }
@@ -113,13 +113,14 @@
   }
 </script>
 
+<svelte:window onkeydown={onKeydown} />
+
 <div
   bind:this={drawerEl}
   tabindex="-1"
   class="field-form-drawer pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
   role="region"
   aria-label="Signing actions"
-  onkeydown={onKeydown}
 >
   <div class="field-form-drawer__panel relative flex flex-col">
     <div class="pb-safe container mx-auto w-full max-w-4xl px-4">
@@ -134,12 +135,12 @@
               {#key field.id}
                 <div class="border-t border-[var(--color-base-200)] px-3 py-3 first:border-t-0 dark:border-neutral-600">
                   <div class="mx-auto max-w-md">
-                    <label class="mb-1.5 block text-xs font-medium text-[--color-base-content]/80">
+                    <span class="mb-1.5 block text-xs font-medium text-[--color-base-content]/80">
                       {getFieldLabel(field)}
                       {#if fieldStates[field.id]?.required || field.required}
                         <span class="text-error">*</span>
                       {/if}
-                    </label>
+                    </span>
                     <FieldInput
                       bind:value
                       type={field.type}

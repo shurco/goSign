@@ -162,6 +162,7 @@
 <div
   bind:this={fieldsRef}
   class="mt-2 mb-1"
+  role="presentation"
   ondragover={(e) => {
     e.preventDefault();
     onFieldDragover(e);
@@ -171,6 +172,7 @@
   {#each submitterFields as field (field.id)}
     <div
       data-uuid={field.id}
+      role="presentation"
       draggable={editable}
       ondragstart={() => {
         dragField = field;

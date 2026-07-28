@@ -18,47 +18,151 @@
     loading = false,
     disabled = false,
     circle = false,
+    class: className = "",
     children,
     ...rest
   }: Props = $props();
 
-  const buttonClasses = $derived.by(() => {
-    const base =
-      "inline-flex items-center justify-center gap-2 font-medium cursor-pointer select-none text-center transition-colors focus:outline-none no-underline normal-case";
-
-    const variants = {
-      primary: "rounded-md border border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100",
-      ghost: "rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
-      outline: "rounded-md border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50",
-      success: "rounded-md border border-green-500 bg-green-50 text-green-700 hover:bg-green-100",
-      warning: "rounded-md border border-yellow-500 bg-yellow-50 text-yellow-700 hover:bg-yellow-100",
-      error: "rounded-md border border-red-500 bg-red-50 text-red-700 hover:bg-red-100",
-      info: "rounded-md border border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100"
-    };
-
-    const sizes = circle
-      ? {
-          sm: "h-8 w-8 rounded-full",
-          md: "h-12 w-12 rounded-full",
-          lg: "h-16 w-16 rounded-full"
-        }
-      : {
-          sm: "px-3 py-2 text-xs rounded-md",
-          md: "px-4 py-2 text-sm rounded-md",
-          lg: "px-6 py-3 text-base rounded-md"
-        };
-
-    const disabledClasses = disabled || loading ? "opacity-60 cursor-not-allowed pointer-events-none" : "";
-
-    return [base, variants[variant], sizes[size], disabledClasses].filter(Boolean).join(" ");
-  });
-
   const spinnerSize = $derived(({ sm: "sm", md: "sm", lg: "md" } as const)[size]);
 </script>
 
-<button class={buttonClasses} disabled={disabled || loading} {...rest}>
+<button
+  class="btn btn-{variant} btn-{size} {className}"
+  class:btn-circle={circle}
+  disabled={disabled || loading}
+  {...rest}
+>
   {#if loading}
-    <LoadingSpinner size={spinnerSize} class="mr-2" />
+    <LoadingSpinner size={spinnerSize} />
   {/if}
   {@render children?.()}
 </button>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    transition: var(--transition-colors), var(--transition-shadow);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* sizes — twing-m: md 34px, sm 28px, lg 40px, r8 */
+  .btn-sm {
+    height: var(--size-control-28);
+    padding: 0 10px;
+    font-size: var(--font-size-12);
+    border-radius: var(--radius-8);
+  }
+  .btn-md {
+    height: 34px;
+    padding: 0 14px;
+    font-size: var(--font-size-13);
+    border-radius: var(--radius-8);
+  }
+  .btn-lg {
+    height: var(--size-control-40);
+    padding: 0 18px;
+    font-size: var(--font-size-14);
+    border-radius: var(--radius-8);
+  }
+
+  .btn-circle {
+    padding: 0;
+    border-radius: var(--radius-full);
+  }
+  .btn-circle.btn-sm {
+    width: var(--size-control-28);
+  }
+  .btn-circle.btn-md {
+    width: 34px;
+  }
+  .btn-circle.btn-lg {
+    width: var(--size-control-40);
+  }
+
+  /* primary — twing-m solid blue */
+  .btn-primary {
+    background: var(--base-btn-primary-minor);
+    color: var(--base-txt-btn-flip);
+    box-shadow: var(--shadow-cont-minor);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--base-btn-primary-major);
+  }
+
+  /* ghost — twing-m secondary: white with border (primary secondary button) */
+  .btn-ghost {
+    background: var(--base-cont-top);
+    color: var(--base-txt-primary);
+    box-shadow: 0 0 0 1px var(--base-btn-brd-minor) inset;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--base-hlt-g-easy);
+    box-shadow: 0 0 0 1px var(--base-line-accent) inset;
+  }
+
+  /* outline — transparent with border */
+  .btn-outline {
+    background: transparent;
+    color: var(--base-txt-secondary);
+    box-shadow: 0 0 0 1px var(--base-btn-brd-minor) inset;
+  }
+  .btn-outline:hover:not(:disabled) {
+    background: var(--base-hlt-g-hover);
+    color: var(--base-txt-primary);
+  }
+
+  /* success — WS2 fresh */
+  .btn-success {
+    background: var(--base-btn-fresh-minor);
+    color: var(--base-txt-btn-flip);
+  }
+  .btn-success:hover:not(:disabled) {
+    background: var(--base-btn-fresh-major);
+  }
+
+  /* warning — WS2 notice */
+  .btn-warning {
+    background: var(--base-btn-notice-minor);
+    color: var(--base-txt-primary);
+  }
+  .btn-warning:hover:not(:disabled) {
+    background: var(--base-btn-notice-major);
+    color: var(--base-txt-btn-flip);
+  }
+
+  /* error — twing-m solid red */
+  .btn-error {
+    background: var(--base-btn-alert-minor);
+    color: var(--base-txt-btn-flip);
+  }
+  .btn-error:hover:not(:disabled) {
+    background: var(--base-btn-alert-major);
+  }
+
+  /* info — soft blue fill */
+  .btn-info {
+    background: var(--base-hlt-notr-easy);
+    color: var(--base-txt-act-major);
+  }
+  .btn-info:hover:not(:disabled) {
+    background: var(--base-hlt-notr-hover);
+  }
+</style>

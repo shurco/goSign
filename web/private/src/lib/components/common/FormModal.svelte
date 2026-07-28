@@ -171,7 +171,7 @@
   {closeOnEscape}
   onClose={handleClose}
 >
-  <div class="py-4">
+  <div>
     {@render formChildren?.(formData, errors)}
   </div>
 

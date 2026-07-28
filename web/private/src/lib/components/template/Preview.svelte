@@ -50,6 +50,7 @@
   <div class="relative">
     <img
       src={`${previewBaseUrl}/p/${previewImage.filename}`}
+      alt={item.name}
       width={previewImage.metadata.width}
       height={previewImage.metadata.height}
       class="rounded border border-[#e7e2df]"
@@ -57,6 +58,7 @@
     />
     <div
       class="group absolute top-0 right-0 bottom-0 left-0 flex cursor-pointer justify-end p-1"
+      role="presentation"
       onclick={() => onScrollTo?.(item)}
     >
       {#if editable}

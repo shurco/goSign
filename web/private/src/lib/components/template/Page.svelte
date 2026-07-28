@@ -164,12 +164,13 @@
     bind:this={imageEl}
     loading="lazy"
     src={`${image.url}/${image.filename}`}
+    alt="Page {number + 1}"
     {width}
     {height}
     class="mb-4 rounded border border-[#e7e2df]"
     onload={onImageLoad}
   />
-  <div class="absolute top-0 right-0 bottom-0 left-0" onpointerdown={onStartDraw}>
+  <div class="absolute top-0 right-0 bottom-0 left-0" role="presentation" onpointerdown={onStartDraw}>
     {#each areas as item, i (i)}
       <FieldArea
         bind:this={areaRefEls[i]}
@@ -201,6 +202,7 @@
     style:display={resizeDirection || isMove || isDrag || newArea || drawField ? null : "none"}
     id="mask"
     bind:this={mask}
+    role="presentation"
     class="absolute top-0 right-0 bottom-0 left-0 z-10 {isDrag || isMove ? 'cursor-grab' : ''} {drawField ||
     resizeDirection === 'nwse'
       ? 'cursor-nwse-resize'

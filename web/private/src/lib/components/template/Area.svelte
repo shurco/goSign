@@ -619,6 +619,7 @@
   style:left={positionStyle.left}
   style:width={positionStyle.width}
   style:height={positionStyle.height}
+  role="presentation"
   onpointerdown={(e) => {
     e.stopPropagation();
     handleDragStart(e);
@@ -653,6 +654,7 @@
             <span
               class="absolute -bottom-1 z-10 h-2.5 w-2.5 cursor-ew-resize rounded-full border border-gray-400 bg-white shadow-md"
               style="left: -4px"
+              role="presentation"
               onpointerdown={(e) => {
                 e.stopPropagation();
                 handleResizeCellStart();
@@ -671,6 +673,7 @@
         ? 'z-10 flex'
         : 'invisible'}"
       style="top: -25px; height: 25px"
+      role="presentation"
       onmousedown={(e) => e.stopPropagation()}
       onpointerdown={(e) => e.stopPropagation()}
     >
@@ -700,6 +703,8 @@
           bind:this={name}
           contenteditable={editable && !defaultField}
           dir="auto"
+          role="textbox"
+          tabindex={editable && !defaultField ? 0 : undefined}
           class="block cursor-text pr-1 outline-none"
           style="min-width: 2px"
           onkeydown={(e) => {
@@ -795,6 +800,8 @@
                   bind:this={defaultValue}
                   contenteditable={editable && !defaultField}
                   dir="auto"
+                  role="textbox"
+                  tabindex={editable && !defaultField ? 0 : undefined}
                   class="min-w-0 flex-1 whitespace-pre-wrap outline-none before:text-base-content/30 empty:before:content-[attr(data-placeholder)] {editable
                     ? 'cursor-text'
                     : ''}"
@@ -829,6 +836,7 @@
   {#if field?.type && editable}
     <span
       class="absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border border-gray-400 bg-white shadow-md md:h-2.5 md:w-2.5"
+      role="presentation"
       onpointerdown={(e) => {
         e.stopPropagation();
         handleResizeStart(e);

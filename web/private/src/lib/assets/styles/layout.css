@@ -1,0 +1,38 @@
+/*
+ * Application shell layout primitives — Worksection 2 model:
+ * dark 64px icon rail (primaryMenu), 64px header, neutral content canvas.
+ * Wired by the (app) layout and chrome components.
+ */
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--base-surf-page);
+}
+
+/* Left navigation rail (dark, icon-only — WS2 primaryMenu) */
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--layout-rail-width);
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-cont-base);
+  z-index: 100;
+  overflow: hidden;
+}
+
+/* Content column offset by the rail */
+.app-main {
+  margin-left: var(--layout-rail-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Content column of a section with a secondary nav panel (WS2 secondaryMenu) */
+.section-page {
+  margin-left: var(--layout-sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

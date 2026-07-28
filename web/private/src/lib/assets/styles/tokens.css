@@ -1,0 +1,489 @@
+/*
+ * pmCRM Design Tokens — reverse-engineered from Worksection 2.
+ *
+ * Three-tier system (mirrors Figma variables 1:1):
+ *   1. Primitives  --color-<family>-<step>, --space-*, --radius-*, --font-size-*, ...
+ *   2. Semantic    --base-<group>-<role>  (cont = container/surface, surf = deep surface,
+ *                  hlt = highlight/interactive, line = border/divider, txt = text, btn = button)
+ *   3. Component    defined next to each component; must reference semantic tokens.
+ *
+ * Figma mapping:  Figma `color/graphite/500`  <->  CSS `--color-graphite-500`
+ *                 Figma `base/txt/primary`    <->  CSS `--base-txt-primary`
+ *
+ * Do not hardcode raw colors/spacing/radius in components — always reference a token.
+ */
+
+:root {
+  /* ============================================================
+   * PRIMITIVES — color palette (Worksection 2 exact values)
+   * ============================================================ */
+
+  /* graphite — neutral scale (surfaces, text, borders) */
+  --color-graphite-0: #ffffff;
+  --color-graphite-50: #f9fafb;
+  --color-graphite-75: #f7f7f8; /* twing-m content canvas */
+  --color-graphite-100: #f2f4f6;
+  --color-graphite-200: #e7ebee;
+  --color-graphite-300: #dce1e5;
+  --color-graphite-400: #c8d0d5;
+  --color-graphite-500: #b7c1c8;
+  --color-graphite-600: #a3adb8;
+  --color-graphite-700: #8f99a3;
+  --color-graphite-800: #6e7a86;
+  --color-graphite-900: #5a6672;
+  --color-graphite-920: #46525d;
+  --color-graphite-960: #272f37;
+  --color-graphite-990: #12181c;
+
+  /* graphite-alpha — translucent neutrals (borders, hovers on light) */
+  --color-graphite-alpha-50: #001f3d05;
+  --color-graphite-alpha-100: #001f3d0d;
+  --color-graphite-alpha-200: #001f3d1a;
+  --color-graphite-alpha-300: #00223d24;
+  --color-graphite-alpha-400: #00253d36;
+  --color-graphite-alpha-500: #00253d47;
+  --color-graphite-alpha-600: #031d3a5c;
+  --color-graphite-alpha-700: #09203475;
+  --color-graphite-alpha-800: #0b203296;
+  --color-graphite-alpha-900: #021627a6;
+  --color-graphite-alpha-920: #041625bd;
+  --color-graphite-alpha-960: #020c12d9;
+  --color-graphite-alpha-990: #02090df0;
+
+  /* interblue — primary accent / links / active states (twing-m royal blue) */
+  --color-interblue-50: #e8f0fe;
+  --color-interblue-100: #dbe7fd;
+  --color-interblue-200: #c3d7fb;
+  --color-interblue-300: #a3c2f9;
+  --color-interblue-400: #7ba7f8;
+  --color-interblue-500: #5590f7;
+  --color-interblue-600: #4285f6;
+  --color-interblue-700: #2e7cf6;
+  --color-interblue-750: #2470ea;
+  --color-interblue-800: #1f66e0;
+  --color-interblue-850: #1b5bc8;
+  --color-interblue-900: #1750b0;
+  --color-interblue-920: #144798;
+
+  /* interblue-alpha — translucent accent (hover/selected/focus) */
+  --color-interblue-alpha-50: #2e7cf60d;
+  --color-interblue-alpha-100: #2e7cf61a;
+  --color-interblue-alpha-200: #2e7cf629;
+  --color-interblue-alpha-300: #2e7cf63d;
+  --color-interblue-alpha-400: #2e7cf65c;
+  --color-interblue-alpha-500: #2e7cf68f;
+
+  /* ink — neutral near-black (twing-m dark rail) */
+  --color-ink-950: #23252e;
+
+  /* titan — dark desaturated blue (dark surfaces, inverted chrome) */
+  --color-titan-300: #d2e6f6;
+  --color-titan-500: #a9c3d8;
+  --color-titan-700: #7a91a7;
+  --color-titan-800: #667b90;
+  --color-titan-850: #566b7e;
+  --color-titan-920: #425567;
+  --color-titan-930: #314557;
+  --color-titan-940: #2c3d4f;
+  --color-titan-950: #283848;
+  --color-titan-960: #253341;
+  --color-titan-970: #202b37;
+  --color-titan-980: #161f27;
+
+  /* red — error / destructive / danger */
+  --color-red-50: #fff5f7;
+  --color-red-100: #ffebee;
+  --color-red-300: #ffd1d5;
+  --color-red-500: #ff99a2;
+  --color-red-700: #f75f6c;
+  --color-red-750: #ea4351;
+  --color-red-800: #d93643;
+  --color-red-850: #c92639;
+  --color-red-900: #ba0331;
+  --color-red-alpha-50: #ff57660f;
+  --color-red-alpha-100: #ff57661f;
+  --color-red-alpha-200: #ff576630;
+  --color-red-alpha-300: #ff576647;
+
+  /* amber — warning / notice */
+  --color-amber-10: #fffdf4;
+  --color-amber-50: #fff7ce;
+  --color-amber-100: #fff0a6;
+  --color-amber-300: #ffe066;
+  --color-amber-400: #ffc61a;
+  --color-amber-500: #ff9900;
+  --color-amber-600: #f2780d;
+  --color-amber-700: #e06900;
+
+  /* green / lime — success / fresh */
+  --color-green-300: #d0eba0;
+  --color-green-500: #93ce2c;
+  --color-green-600: #77bb00;
+  --color-green-750: #529400;
+  --color-lime-50: #e9fce0;
+  --color-lime-200: #c5f6ac;
+  --color-lime-500: #66cc33;
+  --color-lime-600: #4bb814;
+  --color-lime-700: #43a512;
+  --color-lime-alpha-viv-a10: #00ff001a;
+
+  /* pine — teal-green accent (new/fresh labels) */
+  --color-pine-500: #25d0a4;
+  --color-pine-700: #18a581;
+  --color-pine-800: #148a6c;
+
+  /* violet — secondary accent (B variant) */
+  --color-violet-50: #f8f6fe;
+  --color-violet-100: #f1effb;
+  --color-violet-200: #e8e2f8;
+  --color-violet-300: #e2d9f7;
+  --color-violet-500: #c0b1ee;
+  --color-violet-700: #9d85e5;
+  --color-violet-800: #8162e0;
+  --color-violet-900: #6644cc;
+  --color-violet-alpha-50: #9d85e514;
+  --color-violet-alpha-100: #9d85e521;
+  --color-violet-alpha-200: #9d85e53d;
+  --color-violet-alpha-300: #9d85e552;
+  --color-violet-alpha-400: #9d85e570;
+  --color-violet-alpha-500: #9d85e5a3;
+
+  /* purple / teal / blue-desat — extended accents */
+  --color-purple-300: #ead6ea;
+  --color-purple-600: #cc99cc;
+  --color-purple-800: #996699;
+  --color-purple-vivid-700: #cc66cc;
+  --color-teal-500: #5bc8c8;
+  --color-teal-750: #009999;
+  --color-blue-300: #c7e6ff;
+  --color-blue-desat-600: #82a9c9;
+  --color-blue-desat-750: #6088a9;
+
+  /* red-d — desaturated red (dark-surface badges) */
+  --color-red-d-500: #ac4c58;
+
+  /* graphite-alpha-d — light alphas for dark rail hairlines */
+  --color-graphite-alpha-d-100: #e5f6ff12;
+  --color-graphite-alpha-d-200: #e5f6ff1c;
+
+  /* desaturated "easy" tones — data-viz / colored chips (WS2 exact) */
+  --color-red-desat-750-easy: #e05252;
+  --color-blue-desat-700-easy: #549ad4;
+  --color-green-desat-500-easy: #94c238;
+  --color-teal-desat-500-easy: #70c2bb;
+  --color-amber-desat-300-ultra: #eae8e1;
+
+  /* extra red alphas (hlt-w states) */
+  --color-red-alpha-400: #ff576666;
+  --color-red-alpha-500: #fb5b699e;
+
+  /* graphite-retrans — translucent white-on-dark reversers */
+  --color-graphite-retrans-50: #ffffffb3;
+  --color-graphite-retrans-100: #ffffff4d;
+
+  /* yellow alphas (labels / notices) */
+  --color-yellow-alpha-a20: #fff70033;
+  --color-yellow-alpha-a40: #fff70066;
+
+  /* scrim — dimmed overlay behind modals/drawers (twing-m #1c1f26 45%) */
+  --color-scrim: #1c1f2673;
+
+  /* pure alpha overlays */
+  --color-alpha-dark-10: #0000001a;
+  --color-alpha-dark-20: #00000033;
+  --color-alpha-dark-40: #00000066;
+  --color-alpha-dark-60: #00000099;
+  --color-alpha-dark-70: #000000b3;
+  --color-alpha-dark-80: #000000cc;
+  --color-alpha-dark-100: #000000;
+  --color-alpha-light-10: #ffffff1a;
+  --color-alpha-light-15: #ffffff26;
+  --color-alpha-light-20: #ffffff33;
+  --color-alpha-light-40: #ffffff66;
+  --color-alpha-light-60: #ffffff99;
+  --color-alpha-light-80: #ffffffcc;
+  --color-alpha-light-90: #ffffffe6;
+  --color-alpha-light-95: #fffffff2;
+  --color-alpha-light-100: #ffffff;
+
+  /* ============================================================
+   * PRIMITIVES — spacing scale (px)
+   * ============================================================ */
+  --space-0: 0;
+  --space-1: 1px;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-64: 64px;
+
+  /* ============================================================
+   * PRIMITIVES — radius scale (derived from WS component usage)
+   * ============================================================ */
+  --radius-2: 2px; /* inputs */
+  --radius-4: 4px; /* small chips, badges */
+  --radius-5: 5px;
+  --radius-6: 6px; /* buttons (dominant) */
+  --radius-7: 7px; /* nav items */
+  --radius-8: 8px; /* medium containers */
+  --radius-10: 10px;
+  --radius-12: 12px; /* cards, panels */
+  --radius-16: 16px; /* large containers, modals */
+  --radius-full: 9999px;
+
+  /* ============================================================
+   * PRIMITIVES — typography scale
+   * ============================================================ */
+  --font-size-10: 10px;
+  --font-size-11: 11px;
+  --font-size-12: 12px;
+  --font-size-13: 13px; /* body (WS default) */
+  --font-size-14: 14px; /* inputs, comfortable body */
+  --font-size-15: 15px; /* h3 */
+  --font-size-16: 16px;
+  --font-size-18: 18px; /* h2 */
+  --font-size-22: 22px; /* h1 */
+  --font-size-32: 32px; /* display */
+
+  --line-height-16: 16px;
+  --line-height-20: 20px; /* body (WS default) */
+  --line-height-24: 24px;
+  --line-height-28: 28px;
+  --line-height-40: 40px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /*
+   * WS2 native system stack (audited): -apple-system, segoe_x105, system-ui,
+   * "Segoe UI", BlinkMacSystemFont, "Helvetica Neue", ...
+   * segoe_x105 is a proprietary WS webfont — intentionally omitted (inferred).
+   * Display = base (WS2 uses one family everywhere).
+   */
+  --font-family-base:
+    -apple-system, system-ui, "Segoe UI", BlinkMacSystemFont, "Helvetica Neue", Roboto, Arial, sans-serif;
+  --font-family-display: var(--font-family-base);
+  --font-family-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  /* ============================================================
+   * PRIMITIVES — icon sizes, control heights, layout dimensions
+   * ============================================================ */
+  --size-icon-14: 14px;
+  --size-icon-16: 16px;
+  --size-icon-20: 20px;
+  --size-icon-24: 24px;
+
+  --size-control-20: 20px;
+  --size-control-24: 24px;
+  --size-control-28: 28px; /* small button (WS btn-28) */
+  --size-control-32: 32px; /* default control / nav item */
+  --size-control-36: 36px;
+  --size-control-40: 40px;
+  --size-control-44: 44px; /* kanban column title */
+  --size-control-48: 48px;
+  --size-control-52: 52px; /* kanban column collapsed */
+  --size-control-60: 60px; /* filled form field */
+
+  --layout-rail-width: 64px; /* dark icon rail (WS2 primaryMenu) */
+  --layout-menu-width: 265px; /* dropdown/context menu width (WS2) */
+  --layout-sidebar-width: 200px; /* section nav panel (twing-m) */
+  --layout-header-height: 64px;
+  --layout-toolbar-height: 48px;
+  --layout-panel-width: 800px; /* right detail tray */
+  --layout-row-height: 40px;
+  --layout-row-height-sm: 32px;
+  --layout-th-height: 32px;
+  --layout-content-narrow: 660px;
+
+  /* ============================================================
+   * PRIMITIVES — motion
+   * ============================================================ */
+  --duration-fast: 0.15s;
+  --duration-base: 0.2s;
+  --ease-standard: ease-in-out;
+  --transition-colors:
+    color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+  --transition-shadow:
+    box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard);
+
+  /* Chevron for native <select> (lucide chevron-down, graphite-500) */
+  --ui-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B939B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+  /* ============================================================
+   * SEMANTIC — colors (--base-*), mirrors Figma "Tokens" collection
+   * ============================================================ */
+
+  /* containers (foreground surfaces) */
+  --base-cont-top: var(--color-graphite-0); /* cards, popovers (white) */
+  --base-cont-mid: var(--color-graphite-50); /* subtle raised surface */
+  --base-cont-low: var(--color-graphite-100); /* recessed surface */
+  --base-cont-note: var(--color-amber-50); /* note/highlight block */
+  --base-cont-input: var(--color-graphite-0); /* input field fill */
+  --base-cont-trans-mid: var(--color-graphite-alpha-50); /* faint tinted container */
+  --base-cont-trans-low: var(--color-graphite-alpha-100); /* filled input / soft chip */
+  --base-cont-top-opac: var(--color-alpha-light-80); /* glass white 80% */
+  --base-cont-low-opac: #f2f4f6cc; /* glass graphite-100 80% */
+
+  /* deep surfaces (page background layers) */
+  --base-surf-page: var(--color-graphite-75); /* app content background (twing-m canvas) */
+  --base-surf-top: var(--color-graphite-200); /* inset surface */
+  --base-surf-low: var(--color-graphite-400); /* deepest inset */
+  --base-surf-sidebar: var(--color-ink-950); /* dark icon rail (twing-m) */
+  --base-surf-panel: var(--color-graphite-0); /* light section panel (twing-m: solid white) */
+
+  /* interactive highlights — accent (interblue) */
+  --base-hlt-easy: var(--color-interblue-alpha-50);
+  --base-hlt-hover: var(--color-interblue-alpha-100);
+  --base-hlt-selected: var(--color-interblue-alpha-200);
+  --base-hlt-pressed: var(--color-interblue-alpha-300);
+  --base-hlt-active: var(--color-interblue-alpha-400);
+  --base-hlt-focus: var(--color-interblue-alpha-500);
+  --base-hlt-invert: var(--color-interblue-700);
+  --base-hlt-invert-minor: var(--color-interblue-600);
+  --base-hlt-invert-major: var(--color-interblue-800);
+  --base-hlt-notr-easy: var(--color-interblue-50);
+  --base-hlt-notr-hover: var(--color-interblue-100);
+  --base-hlt-notr-selected: var(--color-interblue-200);
+  --base-hlt-notr-focus: var(--color-interblue-500);
+
+  /* interactive highlights — neutral (graphite) */
+  --base-hlt-g-easy: var(--color-graphite-alpha-50);
+  --base-hlt-g-hover: var(--color-graphite-alpha-100);
+  --base-hlt-g-selected: var(--color-graphite-alpha-200);
+  --base-hlt-g-pressed: var(--color-graphite-alpha-300);
+  --base-hlt-g-active: var(--color-graphite-alpha-400);
+  --base-hlt-g-focus: var(--color-graphite-alpha-600);
+  --base-hlt-g-invert-minor: var(--color-graphite-alpha-920);
+  --base-hlt-g-invert: var(--color-graphite-alpha-960);
+  --base-hlt-g-invert-major: var(--color-graphite-alpha-990);
+  --base-hlt-g-notr-hover: var(--color-graphite-100);
+  --base-hlt-g-notr-selected: var(--color-graphite-200);
+
+  /* interactive highlights — danger (red) */
+  --base-hlt-w-easy: var(--color-red-alpha-50);
+  --base-hlt-w-hover: var(--color-red-alpha-100);
+  --base-hlt-w-selected: var(--color-red-alpha-200);
+  --base-hlt-w-pressed: var(--color-red-alpha-300);
+  --base-hlt-w-active: var(--color-red-alpha-400);
+  --base-hlt-w-focus: var(--color-red-alpha-500);
+  --base-hlt-w-invert-minor: var(--color-red-700);
+  --base-hlt-w-invert: var(--color-red-800);
+  --base-hlt-w-invert-major: var(--color-red-900);
+  --base-hlt-w-notr-easy: var(--color-red-50);
+
+  /* interactive highlights — secondary accent (violet) */
+  --base-hlt-b-easy: var(--color-violet-alpha-50);
+  --base-hlt-b-hover: var(--color-violet-alpha-100);
+  --base-hlt-b-selected: var(--color-violet-alpha-200);
+  --base-hlt-b-pressed: var(--color-violet-alpha-300);
+  --base-hlt-b-active: var(--color-violet-alpha-400);
+  --base-hlt-b-focus: var(--color-violet-alpha-500);
+  --base-hlt-b-invert: var(--color-violet-800);
+  --base-hlt-b-invert-major: var(--color-violet-900);
+  --base-hlt-b-notr-easy: var(--color-violet-50);
+  --base-hlt-b-notr-hover: var(--color-violet-100);
+  --base-hlt-b-notr-selected: var(--color-violet-200);
+
+  /* borders / dividers */
+  --base-line-accent: var(--color-graphite-alpha-500);
+  --base-line-primary: var(--color-graphite-alpha-700);
+  --base-line-secondary: var(--color-graphite-alpha-400);
+  --base-line-tertiary: var(--color-graphite-alpha-200); /* default border */
+  --base-line-ghost: var(--color-graphite-alpha-100); /* faint divider */
+  --base-line-act-major: var(--color-interblue-800);
+  --base-line-act-minor: var(--color-interblue-700);
+  --base-line-alert: var(--color-red-750);
+  --base-line-alt-cardbrd: var(--color-graphite-alpha-400);
+
+  /* text hierarchy */
+  --base-txt-max: var(--color-alpha-dark-100);
+  --base-txt-accent: var(--color-graphite-alpha-990);
+  --base-txt-primary: var(--color-graphite-990);
+  --base-txt-secondary: var(--color-graphite-960);
+  --base-txt-tertiary: var(--color-graphite-900);
+  --base-txt-muted: var(--color-graphite-700);
+  --base-txt-ghost: var(--color-graphite-500);
+  --base-txt-link-major: var(--color-interblue-800);
+  --base-txt-link-minor: var(--color-interblue-700);
+  --base-txt-act-major: var(--color-interblue-800);
+  --base-txt-act-minor: var(--color-interblue-700);
+  --base-txt-alert-major: var(--color-red-850);
+  --base-txt-alert-minor: var(--color-red-700);
+  --base-txt-new-major: var(--color-pine-800);
+  --base-txt-new-minor: var(--color-pine-700);
+  --base-txt-notice-major: var(--color-amber-700);
+  --base-txt-notice-minor: var(--color-amber-600);
+  --base-txt-btn-a: var(--color-interblue-800);
+  --base-txt-btn-b: var(--color-violet-900);
+  --base-txt-btn-w: var(--color-red-800);
+  --base-txt-btn-flip: var(--color-alpha-light-95);
+  --base-txt-alt-light: var(--color-alpha-light-95);
+  --base-txt-alt-info: var(--color-purple-vivid-700);
+
+  /* button fills / borders / toggles */
+  --base-btn-primary-minor: var(--color-interblue-700);
+  --base-btn-primary-major: var(--color-interblue-800);
+  --base-btn-secondary-major: var(--color-interblue-700);
+  --base-btn-secondary-minor: var(--color-interblue-alpha-200);
+  --base-btn-tertiary-major: var(--color-interblue-alpha-200);
+  --base-btn-tertiary-minor: var(--color-graphite-alpha-100);
+  --base-btn-alert-major: var(--color-red-850);
+  --base-btn-alert-minor: var(--color-red-700);
+  --base-btn-fresh-major: var(--color-green-750);
+  --base-btn-fresh-minor: var(--color-green-600);
+  --base-btn-notice-major: var(--color-amber-600);
+  --base-btn-notice-minor: var(--color-amber-500);
+  --base-btn-brd-major: var(--color-interblue-700);
+  --base-btn-brd-minor: var(--color-graphite-alpha-400);
+  --base-btn-togg-on: var(--color-lime-500);
+  --base-btn-togg-off: var(--color-red-700);
+  --base-btn-togg-ghost: var(--color-graphite-alpha-500);
+
+  /* dark rail (component-level, mirrors Figma sidebar/* — twing-m) */
+  --sidebar-cont-base: var(--color-ink-950);
+  --sidebar-cont-hover: var(--color-alpha-light-10);
+  --sidebar-cont-active: var(--color-alpha-light-15);
+  --sidebar-ico-base: var(--color-alpha-light-60);
+  --sidebar-ico-hover: var(--color-alpha-light-80);
+  --sidebar-ico-active: var(--color-alpha-light-100);
+  --sidebar-badge-alert: var(--color-red-750);
+
+  /* ============================================================
+   * SEMANTIC — elevation (box-shadow), mirrors Figma effect styles
+   * ============================================================ */
+  --shadow-cont-minor: 0 2px 8px -2px var(--color-graphite-alpha-300);
+  --shadow-cont-major: 0 2px 8px -2px var(--color-graphite-alpha-500);
+  --shadow-cont-minor-outline: 0 0 0 1px var(--base-line-ghost), 0 2px 8px -2px var(--color-graphite-alpha-300);
+  --shadow-cont-major-outline: 0 0 0 1px var(--base-line-tertiary), 0 2px 8px -2px var(--color-graphite-alpha-500);
+  --shadow-mod-minor:
+    0 0 0 1px var(--color-graphite-300), 0 4px 8px -2px var(--color-graphite-alpha-200),
+    0 12px 20px -6px var(--color-graphite-alpha-100);
+  --shadow-mod-major:
+    0 0 0 1px var(--base-line-tertiary), 0 6px 12px -4px var(--color-graphite-alpha-300),
+    0 6px 48px -4px var(--color-graphite-alpha-200), 0 20px 56px -8px var(--color-graphite-alpha-200);
+  --shadow-tray-major:
+    0 0 0 1px var(--base-line-tertiary), 0 0 12px -4px var(--color-graphite-alpha-500),
+    0 0 48px -16px var(--color-graphite-alpha-300), 0 0 56px -32px var(--color-graphite-alpha-300);
+  --shadow-focus: 0 0 0 1px var(--color-interblue-800), 0 0 0 4px var(--color-interblue-alpha-300);
+
+  /* borders as inset rings (WS2 pattern: box-shadow instead of border) */
+  --shadow-brd-enable: inset 0 0 0 1px var(--base-line-secondary);
+  --shadow-brd-hover: inset 0 0 0 1px var(--base-line-accent);
+  --shadow-brd-focus: 0 0 0 1px var(--color-interblue-800), 0 0 0 4px var(--color-interblue-alpha-300);
+  --shadow-brd-error: inset 0 0 0 1px var(--base-line-alert);
+
+  /* component shadows (WS2 audited) */
+  --shadow-card: 0 0 1px var(--color-graphite-alpha-300), 0 4px 16px -8px var(--color-graphite-alpha-100);
+  --shadow-menu-dropdown: 0 0 1px var(--color-graphite-alpha-100), 0 4px 16px var(--color-graphite-alpha-200);
+  --shadow-modal: 0 0 1px var(--color-graphite-alpha-100), 0 16px 48px -8px var(--color-graphite-alpha-300);
+  --shadow-seg-thumb: 0 2px 8px -2px var(--color-graphite-alpha-300);
+}
