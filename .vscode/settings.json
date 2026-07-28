@@ -1,25 +1,70 @@
 {
-  "scss.lint.unknownAtRules": "ignore",
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
 
-  "eslint.validate": ["javascript", "typescript", "vue"],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  "go.toolsManagement.autoUpdate": true,
+  "go.lintTool": "golangci-lint",
+  "go.testTimeout": "120s",
 
   "npm.packageManager": "bun",
 
-  "[vue]": {
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
-    "editor.formatOnSave": true
+  "eslint.validate": ["javascript", "typescript", "svelte"],
+  "eslint.workingDirectories": [
+    {
+      "directory": "web/private",
+      "changeProcessCWD": true
+    }
+  ],
+
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
-  "[javascript]": {
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "[svelte]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
   },
   "[typescript]": {
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[shellscript]": {
     "editor.defaultFormatter": "foxundermoon.shell-format",
     "editor.formatOnSave": true
+  },
+
+  "scss.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.configFile": "web/private/src/lib/assets/app.css",
+
+  "search.exclude": {
+    "**/bin": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/graphify-out": true,
+    "cmd/server/lc_pages": true,
+    "cmd/server/base": true
   }
 }

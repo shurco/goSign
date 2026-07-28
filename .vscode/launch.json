@@ -2,38 +2,54 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "goSign",
+      "name": "server",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/goSign",
-      "envFile": "${workspaceFolder}/cmd/goSign/.env",
-      "args": ["serve"],
-      //"args": ["gen", "--config"],
+      "program": "${workspaceFolder}/cmd/server",
+      "envFile": "${workspaceFolder}/cmd/server/.env",
+      "cwd": "${workspaceFolder}"
     },
     {
-      "name": "pdf",
+      "name": "worker",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/pdf",
-      "args": [""]
+      "program": "${workspaceFolder}/cmd/worker",
+      "envFile": "${workspaceFolder}/cmd/server/.env",
+      "cwd": "${workspaceFolder}"
     },
     {
-      "name": "pdf-cert",
-      "type": "go",
+      "name": "frontend (web/private)",
+      "type": "node",
       "request": "launch",
-      "mode": "auto",
-      "program": "${workspaceFolder}/cmd/pdf-cert",
-      "args": [""]
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/web/private",
+      "console": "integratedTerminal"
     },
     {
-      "name": "cert",
+      "name": "exp/pdf-cert",
       "type": "go",
       "request": "launch",
       "mode": "auto",
-      "program": "${workspaceFolder}/cmd/cert",
-      "args": [""]
+      "program": "${workspaceFolder}/exp/pdf-cert",
+      "cwd": "${workspaceFolder}/exp/pdf-cert"
     },
+    {
+      "name": "exp/cert",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/exp/cert",
+      "cwd": "${workspaceFolder}/exp/cert"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "gosign (server + worker)",
+      "configurations": ["server", "worker"],
+      "stopAll": true
+    }
   ]
 }
