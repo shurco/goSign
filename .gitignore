@@ -43,9 +43,9 @@ exp/pdf-cert/*.pdf
 fixtures/migration/*_private.sql
 docker/core/
 __debug_bin*
-cmd/server/lc_*
-cmd/server/assets/
-cmd/server/base/
+cmd/*/lc_*
+cmd/*/assets/
+cmd/*/base/
 
 .eslintcache
 

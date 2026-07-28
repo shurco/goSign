@@ -16,9 +16,15 @@ kill_backend() {
       return 1
     fi
 
-    # Prefer /proc when available (Linux). Fallback to ps for limited environments.
+    # Prefer /proc when available (Linux). macOS: lsof (ps -o cwd= is unsupported).
     local cwd exe_file args
-    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ' || true)
+    cwd=$(readlink -f "/proc/$pid/cwd" 2>/dev/null || true)
+    if [[ -z "$cwd" ]]; then
+      cwd=$(lsof -p "$pid" 2>/dev/null | awk '/ cwd / {print $NF; exit}' || true)
+    fi
+    if [[ -z "$cwd" ]]; then
+      cwd=$(ps -p "$pid" -o cwd= 2>/dev/null | tr -d ' ' || true)
+    fi
     exe_file=$(readlink -f "/proc/$pid/exe" 2>/dev/null || echo "")
     args=$(ps -p "$pid" -o args= 2>/dev/null || echo "")
 
@@ -40,7 +46,7 @@ kill_backend() {
   }
 
   # First, try to find processes by name patterns
-  arr_backend=("gosign-server" "gosign-worker" "__debug_bin" "cmd/server/main.go" "cmd/worker/main.go")
+  arr_backend=("gosign-server" "gosign-worker" "__debug_bin" "cmd/server/main.go" "cmd/worker/main.go" "bin/goSign")
   for process_name in "${arr_backend[@]}"; do
     pids="$(pgrep -f "$process_name" 2>/dev/null || true)"
     for pid in $pids; do
