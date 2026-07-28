@@ -1,0 +1,53 @@
+body {
+  @apply bg-[#faf7f5] text-sm;
+}
+
+/* Ensure all links show hand cursor (also when using button.link). */
+a,
+.link,
+button.link {
+  cursor: pointer;
+}
+
+.autocomplete {
+  background: white;
+  z-index: 1000;
+  font:
+    14px/22px "-apple-system",
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  overflow: auto;
+  box-sizing: border-box;
+  @apply mt-1 rounded-md border border-[#e7e2df];
+}
+
+.autocomplete * {
+  font: inherit;
+}
+
+.autocomplete > div {
+  @apply px-2 py-1 text-sm font-normal;
+}
+
+.autocomplete .group {
+  background: #eee;
+}
+
+.autocomplete > div:hover:not(.group),
+.autocomplete > div.selected {
+  @apply bg-[#e7e2df];
+  cursor: pointer;
+}
+
+/* DocuSeal-aligned input styles for signing form */
+.base-input {
+  @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none;
+}
+
+.base-textarea {
+  @apply block w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-base shadow-sm focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none;
+}

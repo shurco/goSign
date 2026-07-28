@@ -1,0 +1,282 @@
+/* Form components - replacement for daisyUI form elements */
+
+/* Input base styles */
+.input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-color: var(--color-base-100, #ffffff);
+  color: var(--color-base-content, #1f2937);
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.input:focus {
+  outline: 2px solid var(--color-primary, #570df8);
+  outline-offset: 2px;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+.input[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-base-200, #f2f2f2);
+}
+
+/* Input bordered variant */
+.input-bordered {
+  border-color: var(--color-base-300, #e5e6e6);
+}
+
+.input-bordered:hover {
+  border-color: var(--color-base-content, #1f2937);
+  border-color: rgba(31, 41, 55, 0.2);
+}
+
+/* Input sizes */
+.input-xs {
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  min-height: 1.75rem;
+}
+
+.input-sm {
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  min-height: 2rem;
+}
+
+.input-md {
+  height: 3rem;
+  padding: 0 1rem;
+  min-height: 3rem;
+}
+
+.input-lg {
+  height: 4rem;
+  padding: 0 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  min-height: 4rem;
+}
+
+/* Select base styles */
+.select {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  appearance: none;
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-color: var(--color-base-100, #ffffff);
+  color: var(--color-base-content, #1f2937);
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+.select:focus {
+  outline: 2px solid var(--color-primary, #570df8);
+  outline-offset: 2px;
+}
+
+.select[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-base-200, #f2f2f2);
+}
+
+/* Select bordered variant */
+.select-bordered {
+  border-color: var(--color-base-300, #e5e6e6);
+}
+
+.select-bordered:hover {
+  border-color: var(--color-base-content, #1f2937);
+  border-color: rgba(31, 41, 55, 0.2);
+}
+
+/* Select sizes */
+.select-xs {
+  height: 1.75rem;
+  padding: 0 2rem 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  min-height: 1.75rem;
+}
+
+.select-sm {
+  height: 2rem;
+  padding: 0 2.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  min-height: 2rem;
+}
+
+.select-md {
+  height: 3rem;
+  padding: 0 2.5rem 0 1rem;
+  min-height: 3rem;
+}
+
+.select-lg {
+  height: 4rem;
+  padding: 0 3rem 0 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  min-height: 4rem;
+}
+
+/* Textarea styles */
+.textarea {
+  display: block;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-color: var(--color-base-100, #ffffff);
+  color: var(--color-base-content, #1f2937);
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: 2px solid var(--color-primary, #570df8);
+  outline-offset: 2px;
+}
+
+.textarea::placeholder {
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+.textarea[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-base-200, #f2f2f2);
+}
+
+.textarea-bordered {
+  border-color: var(--color-base-300, #e5e6e6);
+}
+
+.textarea-bordered:hover {
+  border-color: var(--color-base-content, #1f2937);
+  border-color: rgba(31, 41, 55, 0.2);
+}
+
+/* Toggle (Switch) styles */
+.toggle {
+  --toggle-size: 1.5rem;
+  display: inline-block;
+  height: var(--toggle-size);
+  width: calc(var(--toggle-size) * 2);
+  border-radius: 9999px;
+  background-color: var(--color-base-300, #e5e6e6);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  outline: none;
+  border: none;
+  flex-shrink: 0;
+}
+
+.toggle:before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: calc(var(--toggle-size) - 4px);
+  width: calc(var(--toggle-size) - 4px);
+  border-radius: 9999px;
+  background-color: white;
+  transition: transform 0.3s;
+}
+
+.toggle:checked {
+  background-color: var(--color-primary, #570df8);
+}
+
+.toggle:checked:before {
+  transform: translateX(var(--toggle-size));
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-primary, #570df8);
+  outline-offset: 2px;
+}
+
+.toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Toggle sizes */
+.toggle-xs {
+  --toggle-size: 1rem;
+}
+
+.toggle-sm {
+  --toggle-size: 1.25rem;
+}
+
+.toggle-md {
+  --toggle-size: 1.5rem;
+}
+
+.toggle-lg {
+  --toggle-size: 2rem;
+}
+
+/* Label styles for forms */
+.label {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.label-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-base-content, #1f2937);
+}
+
+.label-text-alt {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #6b7280;
+}
+
+/* Form control wrapper */
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
