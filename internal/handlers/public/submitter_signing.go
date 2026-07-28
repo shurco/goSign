@@ -26,6 +26,12 @@ type WebhookSender interface {
 	SendEvent(ctx context.Context, accountID string, event *models.WebhookEvent)
 }
 
+// GeoLocator resolves an IP address to a human-readable location.
+// Implemented by the worker gRPC adapter (internal/rpc/workerclient).
+type GeoLocator interface {
+	GetLocation(ip string) *geolocation.Location
+}
+
 // PublicSigningHandler exposes public (no-auth) endpoints for signing by slug.
 // This is used by the signer-facing UI at /s/:slug.
 type PublicSigningHandler struct {
@@ -34,7 +40,7 @@ type PublicSigningHandler struct {
 	userQueries     *queries.UserQueries
 	notificationSvc *notification.Service
 	completedDoc    *services.CompletedDocumentBuilder
-	geolocationSvc  *geolocation.Service
+	geolocationSvc  GeoLocator
 	webhooks        WebhookSender
 }
 
@@ -44,7 +50,7 @@ func NewPublicSigningHandler(
 	userQueries *queries.UserQueries,
 	notificationSvc *notification.Service,
 	completedDoc *services.CompletedDocumentBuilder,
-	geolocationSvc *geolocation.Service,
+	geolocationSvc GeoLocator,
 	webhooks WebhookSender,
 ) *PublicSigningHandler {
 	return &PublicSigningHandler{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
@@ -11,12 +12,23 @@ import (
 
 const envPrefix = "GOSIGN_"
 
-var cfg *Config
+var (
+	cfg   *Config
+	cfgMu sync.Mutex
+)
 
 // Config is the application configuration (infrastructure only; app settings are in DB).
 // All values are read from environment variables with GOSIGN_ prefix.
 type Config struct {
-	HTTPAddr           string
+	HTTPAddr string
+	// WorkerGRPCAddr is the internal gRPC endpoint of the worker: the worker
+	// listens on it, the server dials it. It must never be exposed publicly.
+	// The server side also accepts a comma-separated list of addresses or a
+	// dns:/// target for load balancing across worker replicas.
+	WorkerGRPCAddr string
+	// WorkerGRPCToken authenticates server->worker gRPC calls (bearer token).
+	// Defaults to JWTSecret so auth is always on.
+	WorkerGRPCToken    string
 	DevMode            bool
 	JWTSecret          string
 	CORSAllowedOrigins []string
@@ -37,9 +49,10 @@ func (c *Config) AppLink(path string) string {
 // Default returns config with default values (used when env vars are not set).
 func Default() *Config {
 	return &Config{
-		DevMode:   false,
-		HTTPAddr:  "0.0.0.0:8088",
-		JWTSecret: "",
+		DevMode:        false,
+		HTTPAddr:       "0.0.0.0:8088",
+		WorkerGRPCAddr: "127.0.0.1:8089",
+		JWTSecret:      "",
 		Postgres: postgres.Config{
 			URL: "postgres://goSign:postgresPassword@localhost:5432/goSign?pool_max_conns=10",
 		},
@@ -93,6 +106,7 @@ var defaultDevCORSOrigins = []string{
 func Load() error {
 	config := Default()
 	config.HTTPAddr = getenv("HTTP_ADDR", config.HTTPAddr)
+	config.WorkerGRPCAddr = getenv("WORKER_GRPC_ADDR", config.WorkerGRPCAddr)
 	config.DevMode = getenvBool("DEV_MODE", config.DevMode)
 	config.Postgres.URL = getenv("POSTGRES_URL", config.Postgres.URL)
 	config.Redis.Address = getenv("REDIS_ADDRESS", config.Redis.Address)
@@ -101,18 +115,24 @@ func Load() error {
 	if config.JWTSecret == "" {
 		return fmt.Errorf("GOSIGN_JWT_SECRET environment variable is required")
 	}
+	config.WorkerGRPCToken = getenv("WORKER_GRPC_TOKEN", config.JWTSecret)
 	config.AppURL = strings.TrimRight(getenv("APP_URL", ""), "/")
 	if raw := getenv("CORS_ALLOWED_ORIGINS", ""); raw != "" {
 		config.CORSAllowedOrigins = splitCommaNonEmpty(raw)
 	} else if config.DevMode {
 		config.CORSAllowedOrigins = append([]string(nil), defaultDevCORSOrigins...)
 	}
+
+	cfgMu.Lock()
 	cfg = config
+	cfgMu.Unlock()
 	return nil
 }
 
 // Data returns the loaded config (or default if Load was not called).
 func Data() *Config {
+	cfgMu.Lock()
+	defer cfgMu.Unlock()
 	if cfg == nil {
 		cfg = Default()
 	}

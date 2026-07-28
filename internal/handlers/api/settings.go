@@ -5,9 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,30 +13,33 @@ import (
 
 	"github.com/shurco/gosign/internal/models"
 	"github.com/shurco/gosign/internal/queries"
+	workerv1 "github.com/shurco/gosign/internal/rpc/workerv1"
 	"github.com/shurco/gosign/pkg/appdir"
-	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/notification"
 	"github.com/shurco/gosign/pkg/storage"
 	"github.com/shurco/gosign/pkg/utils"
 	"github.com/shurco/gosign/pkg/utils/webutil"
 )
 
-// SettingsHandler handles requests to settings
+// SettingsHandler handles requests to settings.
+// GeoLite2 operations (download, refresh) are delegated to the worker via
+// gRPC; the server process never touches the database file itself.
 type SettingsHandler struct {
 	notificationSvc *notification.Service
 	accountQueries  *queries.AccountQueries
 	userQueries     *queries.UserQueries
-	geolocationSvc  *geolocation.Service
+	worker          workerv1.WorkerServiceClient
 	settingQueries  *queries.SettingQueries
 }
 
-// NewSettingsHandler creates new handler
-func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, geolocationSvc *geolocation.Service, settingQueries *queries.SettingQueries) *SettingsHandler {
+// NewSettingsHandler creates new handler; worker may be nil (GeoLite2
+// download endpoints respond 503 until workers are reachable).
+func NewSettingsHandler(notificationSvc *notification.Service, accountQueries *queries.AccountQueries, userQueries *queries.UserQueries, worker workerv1.WorkerServiceClient, settingQueries *queries.SettingQueries) *SettingsHandler {
 	return &SettingsHandler{
 		notificationSvc: notificationSvc,
 		accountQueries:  accountQueries,
 		userQueries:     userQueries,
-		geolocationSvc:  geolocationSvc,
+		worker:          worker,
 		settingQueries:  settingQueries,
 	}
 }
@@ -732,88 +732,6 @@ func (h *SettingsHandler) UpdateGeolocation(c fiber.Ctx) error {
 	})
 }
 
-// prepareGeoLite2Download validates that a download should proceed (checks
-// existing file + force flag) and ensures the target directory exists.
-// Returns (dbPath, tmpDBPath, nil) on success, or a Fiber response error to short-circuit.
-func (h *SettingsHandler) prepareGeoLite2Download(c fiber.Ctx, force bool) (string, string, error) {
-	baseDir := appdir.Base()
-	dbPath := filepath.Join(baseDir, "GeoLite2-City.mmdb")
-
-	if _, err := os.Stat(dbPath); err == nil && !force {
-		return "", "", webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
-			"status":  "skipped",
-			"message": "GeoLite2 database already exists",
-			"path":    dbPath,
-		})
-	}
-
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		log.Error().Err(err).Str("base_dir", baseDir).Msg("Failed to create base directory")
-		return "", "", webutil.Response(c, fiber.StatusInternalServerError, "Failed to create base directory", nil)
-	}
-
-	tmpDBPath := dbPath + ".tmp"
-	_ = os.Remove(tmpDBPath)
-	return dbPath, tmpDBPath, nil
-}
-
-// finalizeGeoLite2Install atomically replaces the DB file, reloads the
-// in-memory geolocation service, and persists the last-update timestamp.
-func (h *SettingsHandler) finalizeGeoLite2Install(c fiber.Ctx, dbPath, tmpDBPath, source string) error {
-	if err := os.Rename(tmpDBPath, dbPath); err != nil {
-		_ = os.Remove(tmpDBPath)
-		return webutil.Response(c, fiber.StatusInternalServerError, "Failed to replace database file", map[string]any{
-			"error": err.Error(),
-		})
-	}
-
-	if h.geolocationSvc != nil {
-		if err := h.geolocationSvc.Reload(); err != nil {
-			log.Error().Err(err).Msg("Failed to reload GeoLite2 database after update")
-			return webutil.Response(c, fiber.StatusInternalServerError, "Database updated but failed to reload", map[string]any{
-				"error": err.Error(),
-			})
-		}
-	}
-
-	if h.accountQueries != nil {
-		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && accountID != "" {
-			_ = h.accountQueries.UpdateAccountGeolocationLastUpdate(c.Context(), accountID, time.Now(), source)
-		}
-	}
-
-	return nil
-}
-
-// downloadToTempAndExtractTarGz downloads a URL to a temp file, extracts
-// the .mmdb from the tar.gz archive into tmpDBPath.
-func downloadToTempAndExtractTarGz(url, tmpDBPath string) error {
-	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Get(url)
-	if err != nil {
-		return fmt.Errorf("download failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
-	}
-
-	tmpFile, err := os.CreateTemp("", "geolite2-*.tar.gz")
-	if err != nil {
-		return fmt.Errorf("temp file: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		return fmt.Errorf("save archive: %w", err)
-	}
-
-	return geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath)
-}
-
 // DownloadGeoLite2Request request body for downloading the GeoLite2 database.
 // Method selects the source: "url" (direct or archive URL) or "maxmind"
 // (official MaxMind API, license key from request or saved settings).
@@ -825,9 +743,15 @@ type DownloadGeoLite2Request struct {
 	Force      bool   `json:"force,omitempty"`
 }
 
-// DownloadGeoLite2 downloads the GeoLite2 database from a URL or MaxMind
+// geoLite2SyncTimeout bounds the worker download RPC (the network download
+// itself can take minutes).
+const geoLite2SyncTimeout = 6 * time.Minute
+
+// DownloadGeoLite2 downloads the GeoLite2 database from a URL or MaxMind.
+// The download is performed by the worker (gRPC); across worker replicas
+// only one download runs at a time.
 // @Summary Download GeoLite2 database
-// @Description Downloads GeoLite2-City.mmdb from a URL (method=url) or from MaxMind (method=maxmind)
+// @Description Downloads GeoLite2-City.mmdb via the worker from a URL (method=url) or from MaxMind (method=maxmind)
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -843,6 +767,10 @@ func (h *SettingsHandler) DownloadGeoLite2(c fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
+	if h.worker == nil {
+		return webutil.Response(c, fiber.StatusServiceUnavailable, "Worker is not available", nil)
+	}
+
 	method := req.Method
 	if method == "" {
 		if req.URL != "" {
@@ -851,137 +779,56 @@ func (h *SettingsHandler) DownloadGeoLite2(c fiber.Ctx) error {
 			method = "maxmind"
 		}
 	}
-
-	if method == "url" {
-		if req.URL == "" {
-			return webutil.Response(c, fiber.StatusBadRequest, "Field 'url' is required for method 'url'", nil)
-		}
-		return h.downloadGeoLite2FromURL(c, req)
+	if method == "url" && req.URL == "" {
+		return webutil.Response(c, fiber.StatusBadRequest, "Field 'url' is required for method 'url'", nil)
 	}
-	return h.downloadGeoLite2FromMaxMind(c, req)
-}
 
-// downloadGeoLite2FromURL downloads the GeoLite2 database from a direct URL.
-func (h *SettingsHandler) downloadGeoLite2FromURL(c fiber.Ctx, req DownloadGeoLite2Request) error {
-	dbPath, tmpDBPath, err := h.prepareGeoLite2Download(c, req.Force)
+	accountID := ""
+	if id, err := ResolveAccountID(c, h.userQueries); err == nil {
+		accountID = id
+	}
+
+	// Keep the per-account license key resolution on the API side; the
+	// worker falls back to globally saved settings otherwise.
+	licenseKey := strings.TrimSpace(req.LicenseKey)
+	if method == "maxmind" && licenseKey == "" && h.accountQueries != nil && accountID != "" {
+		licenseKey, _ = h.accountQueries.GetAccountGeolocationLicenseKey(c.Context(), accountID)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), geoLite2SyncTimeout)
+	defer cancel()
+
+	resp, err := h.worker.SyncGeoLite2(ctx, &workerv1.SyncGeoLite2Request{
+		Force:      req.Force,
+		Method:     method,
+		Url:        req.URL,
+		LicenseKey: licenseKey,
+		AccountId:  accountID,
+	})
 	if err != nil {
-		return err
+		log.Error().Err(err).Str("method", method).Msg("GeoLite2 download via worker failed")
+		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download GeoLite2 database", map[string]any{"error": err.Error()})
 	}
 
-	client := &http.Client{
-		Timeout: 5 * time.Minute,
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("stopped after 10 redirects")
-			}
-			return nil
-		},
-	}
-	resp, err := client.Get(req.URL)
-	if err != nil {
-		log.Error().Err(err).Str("url", req.URL).Msg("Failed to download file")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{"error": err.Error()})
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download file", map[string]any{
-			"error": fmt.Sprintf("HTTP status: %d", resp.StatusCode),
+	switch resp.GetStatus() {
+	case workerv1.SyncStatus_SYNC_STATUS_SKIPPED:
+		return webutil.Response(c, fiber.StatusOK, "database_already_exists", map[string]any{
+			"status":  "skipped",
+			"message": "GeoLite2 database already exists",
+			"path":    appdir.GeoLite2(),
+		})
+	case workerv1.SyncStatus_SYNC_STATUS_BUSY:
+		return webutil.Response(c, fiber.StatusConflict, "update_in_progress", map[string]any{
+			"status":  "busy",
+			"message": "Another worker replica is updating the database right now",
+		})
+	default:
+		log.Info().Str("method", method).Msg("GeoLite2 database downloaded via worker")
+		return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
+			"status": "success",
+			"path":   appdir.GeoLite2(),
 		})
 	}
-
-	urlLower := strings.ToLower(req.URL)
-	contentType := resp.Header.Get("Content-Type")
-	isDirectMMDB := strings.HasSuffix(urlLower, ".mmdb") && !strings.HasSuffix(urlLower, ".mmdb.gz")
-	isGzipMMDB := strings.HasSuffix(urlLower, ".mmdb.gz") || strings.HasSuffix(urlLower, ".gz")
-	isTarGz := strings.HasSuffix(urlLower, ".tar.gz") || strings.Contains(contentType, "application/x-gzip") || strings.Contains(contentType, "application/gzip")
-
-	if isDirectMMDB {
-		outFile, err := os.Create(tmpDBPath)
-		if err != nil {
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create output file", nil)
-		}
-		defer outFile.Close()
-		if _, err := io.Copy(outFile, resp.Body); err != nil {
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save database file", nil)
-		}
-	} else {
-		tmpFile, err := os.CreateTemp("", "geolite2-*")
-		if err != nil {
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to create temporary file", nil)
-		}
-		defer os.Remove(tmpFile.Name())
-		defer tmpFile.Close()
-
-		if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-			return webutil.Response(c, fiber.StatusInternalServerError, "Failed to save archive file", nil)
-		}
-
-		switch {
-		case isTarGz:
-			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from tar.gz", map[string]any{"error": err.Error()})
-			}
-		case isGzipMMDB:
-			if err := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); err != nil {
-				return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database from mmdb.gz", map[string]any{"error": err.Error()})
-			}
-		default:
-			if err := geolocation.ExtractFromTarGz(tmpFile.Name(), tmpDBPath); err != nil {
-				if gzErr := geolocation.ExtractFromGzip(tmpFile.Name(), tmpDBPath); gzErr != nil {
-					return webutil.Response(c, fiber.StatusInternalServerError, "Failed to extract database", map[string]any{
-						"error": fmt.Sprintf("tar.gz: %s; gzip: %s", err.Error(), gzErr.Error()),
-					})
-				}
-			}
-		}
-	}
-
-	if err := h.finalizeGeoLite2Install(c, dbPath, tmpDBPath, "url"); err != nil {
-		return err
-	}
-
-	log.Info().Str("path", dbPath).Str("url", req.URL).Msg("GeoLite2 database downloaded and extracted successfully")
-	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
-		"status": "success",
-		"path":   dbPath,
-	})
-}
-
-// downloadGeoLite2FromMaxMind downloads the GeoLite2 database from the
-// MaxMind API using the license key from the request or saved settings.
-func (h *SettingsHandler) downloadGeoLite2FromMaxMind(c fiber.Ctx, req DownloadGeoLite2Request) error {
-	licenseKey := strings.TrimSpace(req.LicenseKey)
-	if licenseKey == "" {
-		if accountID, err := ResolveAccountID(c, h.userQueries); err == nil && h.accountQueries != nil && accountID != "" {
-			licenseKey, _ = h.accountQueries.GetAccountGeolocationLicenseKey(c.Context(), accountID)
-		}
-	}
-
-	if licenseKey == "" {
-		return webutil.Response(c, fiber.StatusBadRequest, "MaxMind license key is required. Please configure it in settings first.", nil)
-	}
-
-	dbPath, tmpDBPath, err := h.prepareGeoLite2Download(c, req.Force)
-	if err != nil {
-		return err
-	}
-
-	downloadURL := fmt.Sprintf("https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=%s&suffix=tar.gz", licenseKey)
-	if err := downloadToTempAndExtractTarGz(downloadURL, tmpDBPath); err != nil {
-		log.Error().Err(err).Msg("Failed to download from MaxMind")
-		return webutil.Response(c, fiber.StatusBadRequest, "Failed to download from MaxMind", map[string]any{"error": err.Error()})
-	}
-
-	if err := h.finalizeGeoLite2Install(c, dbPath, tmpDBPath, "maxmind"); err != nil {
-		return err
-	}
-
-	log.Info().Str("path", dbPath).Msg("GeoLite2 database downloaded from MaxMind successfully")
-	return webutil.Response(c, fiber.StatusOK, "database_downloaded", map[string]any{
-		"status": "success",
-		"path":   dbPath,
-	})
 }
 
 // DeleteGeolocationMaxMindKey removes the saved MaxMind license key from account settings.

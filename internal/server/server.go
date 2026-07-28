@@ -21,19 +21,15 @@ import (
 	"github.com/shurco/gosign/internal/middleware"
 	"github.com/shurco/gosign/internal/queries"
 	"github.com/shurco/gosign/internal/routes"
+	"github.com/shurco/gosign/internal/rpc/workerclient"
 	"github.com/shurco/gosign/internal/services"
 	"github.com/shurco/gosign/internal/services/submission"
 	"github.com/shurco/gosign/pkg/appdir"
-	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 	"github.com/shurco/gosign/pkg/storage/redis"
 	"github.com/shurco/gosign/pkg/webhook"
 )
-
-// geoLite2ReloadInterval is how often the server checks whether the worker
-// replaced the GeoLite2 database file on disk.
-const geoLite2ReloadInterval = 10 * time.Minute
 
 // Run starts the HTTP server and blocks until an interrupt signal.
 func Run() error {
@@ -112,13 +108,22 @@ func Run() error {
 
 	submissionService := submission.NewService(submissionRepo, notificationService, webhookNotifier)
 
+	// Internal authenticated gRPC client to worker replicas (lazy connect;
+	// the API works without workers, degrading geolocation and health data).
+	workerConn, workerClient, err := workerclient.New(cfg.WorkerGRPCAddr, cfg.WorkerGRPCToken)
+	if err != nil {
+		log.Warn().Err(err).Str("addr", cfg.WorkerGRPCAddr).Msg("Worker gRPC client init failed, worker-backed features are disabled")
+	} else {
+		defer workerConn.Close()
+	}
+
 	// web init
 	app := fiber.New(fiber.Config{
 		BodyLimit: 50 * 1024 * 1024,
 	})
 
 	middleware.Fiber(app, log, cfg)
-	routes.SiteRoutes(app)
+	routes.SiteRoutes(app, public.NewHealthHandler(workerClient))
 	app.Use("/drive/pages", static.New(appdir.LcPages()))
 	app.Use("/drive/signed", static.New(appdir.LcSigned()))
 	app.Use("/drive/uploads", static.New(appdir.LcUploads()))
@@ -132,13 +137,9 @@ func Run() error {
 		AssetsDir:       assetPaths.Dir,
 	}
 
-	// Geolocation lookups (best-effort; works without database file).
-	// The worker downloads/refreshes the file; the server reloads it on change.
-	geolocationSvc, geolocationErr := geolocation.NewService(appdir.GeoLite2())
-	if geolocationErr != nil {
-		log.Warn().Err(geolocationErr).Str("path", appdir.GeoLite2()).Msg("GeoLite2 database is not available yet, location will be empty until the worker downloads it")
-	}
-	go watchGeoLite2(geolocationSvc, log)
+	// Geolocation lookups go through the worker over gRPC (best-effort):
+	// the worker owns the GeoLite2 database, the server never touches it.
+	geoLocator := workerclient.NewGeoLocator(workerClient)
 
 	// Initialize API key repository and service
 	apiKeyRepo := queries.NewAPIKeyRepository(pool)
@@ -156,7 +157,7 @@ func Run() error {
 		SigningLinks:   api.NewSigningLinkHandler(pool, templateQueries, completedDoc),
 		Templates:      api.NewTemplateHandler(templateRepo, templateQueries),
 		Webhooks:       api.NewWebhookHandler(webhookQueries),
-		Settings:       api.NewSettingsHandler(notificationService, accountQueries, userQueries, geolocationSvc, settingQueries),
+		Settings:       api.NewSettingsHandler(notificationService, accountQueries, userQueries, workerClient, settingQueries),
 		APIKeys:        api.NewAPIKeyHandler(apiKeyService),
 		Stats:          api.NewStatsHandler(pool),
 		Events:         api.NewEventHandler(pool),
@@ -167,7 +168,7 @@ func Run() error {
 		I18n:           api.NewI18nHandler(userQueries, accountQueries),
 		Branding:       api.NewBrandingHandler(accountQueries),
 		EmailTemplates: api.NewEmailTemplateHandler(emailTemplateQueries, userQueries),
-		PublicSigning:  public.NewPublicSigningHandler(pool, templateQueries, userQueries, notificationService, completedDoc, geolocationSvc, webhookNotifier),
+		PublicSigning:  public.NewPublicSigningHandler(pool, templateQueries, userQueries, notificationService, completedDoc, geoLocator, webhookNotifier),
 		Embed:          public.NewEmbedHandler(submissionRepo),
 	}
 
@@ -177,31 +178,26 @@ func Run() error {
 	fmt.Printf("├─[🚀] API: http://%s/v1/\n", cfg.HTTPAddr)
 	fmt.Printf("└─[🚀] Health: http://%s/health\n", cfg.HTTPAddr)
 
-	// Listen on port
+	// Listen on port; a bind failure must terminate the process (fail fast)
+	listenErr := make(chan error, 1)
 	go func() {
-		if err := app.Listen(cfg.HTTPAddr, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
-			log.Err(err).Send()
-		}
+		listenErr <- app.Listen(cfg.HTTPAddr, fiber.ListenConfig{DisableStartupMessage: true})
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
-	<-quit
 
-	fmt.Print("\n✍️ Shutting down server...\n")
-	return app.Shutdown()
-}
-
-// watchGeoLite2 periodically reloads the GeoLite2 database when the file
-// on disk changes (the worker downloads updates into the shared volume).
-func watchGeoLite2(svc *geolocation.Service, log *logging.Logger) {
-	ticker := time.NewTicker(geoLite2ReloadInterval)
-	defer ticker.Stop()
-	for range ticker.C {
-		if err := svc.ReloadIfChanged(); err != nil {
-			log.Warn().Err(err).Msg("Failed to reload GeoLite2 database")
+	select {
+	case err := <-listenErr:
+		if err != nil {
+			log.Err(err).Send()
+			return err
 		}
+		return nil
+	case <-quit:
+		fmt.Print("\n✍️ Shutting down server...\n")
+		return app.Shutdown()
 	}
 }
 

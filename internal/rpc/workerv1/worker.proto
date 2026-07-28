@@ -1,0 +1,81 @@
+// Internal server <-> worker contract. The worker exposes this service on a
+// private gRPC address (GOSIGN_WORKER_GRPC_ADDR); it must never be published
+// on a public network. Every call must carry a bearer token
+// (GOSIGN_WORKER_GRPC_TOKEN). Regenerate Go code with: ./scripts/proto
+syntax = "proto3";
+
+package gosign.worker.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/shurco/gosign/internal/rpc/workerv1;workerv1";
+
+// WorkerService serves requests coming from the API server. Workers may run
+// as multiple replicas: mutating operations are serialized with a Postgres
+// advisory lock, so exactly one replica performs the update at a time.
+service WorkerService {
+  // Status reports worker health and the state of maintenance tasks.
+  rpc Status(StatusRequest) returns (StatusResponse);
+  // LookupIP resolves an IP address to a location using the GeoLite2
+  // database owned by the worker.
+  rpc LookupIP(LookupIPRequest) returns (LookupIPResponse);
+  // SyncGeoLite2 triggers an on-demand GeoLite2 database refresh.
+  rpc SyncGeoLite2(SyncGeoLite2Request) returns (SyncGeoLite2Response);
+  // UpdateTrustLists triggers an on-demand Adobe trust list refresh.
+  rpc UpdateTrustLists(UpdateTrustListsRequest) returns (UpdateTrustListsResponse);
+}
+
+// SyncStatus is the outcome of a mutating maintenance operation.
+enum SyncStatus {
+  SYNC_STATUS_UNSPECIFIED = 0;
+  // The operation completed successfully.
+  SYNC_STATUS_SUCCESS = 1;
+  // Nothing to do (e.g. database already exists and force=false).
+  SYNC_STATUS_SKIPPED = 2;
+  // Another worker replica holds the maintenance lock right now.
+  SYNC_STATUS_BUSY = 3;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  google.protobuf.Timestamp started_at = 1;
+  google.protobuf.Timestamp last_run_at = 2;
+  bool geolite2_available = 3;
+  google.protobuf.Timestamp geolite2_modified_at = 4;
+}
+
+message LookupIPRequest {
+  string ip = 1;
+}
+
+message LookupIPResponse {
+  bool found = 1;
+  string city = 2;
+  string country = 3;
+  // Full is the "City, Country" human-readable form.
+  string full = 4;
+}
+
+message SyncGeoLite2Request {
+  // Download even when the database file already exists.
+  bool force = 1;
+  // Download method: "url" or "maxmind". Empty = use saved settings.
+  string method = 2;
+  // Direct download URL (method "url").
+  string url = 3;
+  // MaxMind license key (method "maxmind"). Empty = key from saved settings.
+  string license_key = 4;
+  // Account to record the last-update timestamp for (optional).
+  string account_id = 5;
+}
+
+message SyncGeoLite2Response {
+  SyncStatus status = 1;
+}
+
+message UpdateTrustListsRequest {}
+
+message UpdateTrustListsResponse {
+  SyncStatus status = 1;
+}

@@ -6,7 +6,7 @@ import (
 	handlers "github.com/shurco/gosign/internal/handlers/public"
 )
 
-// SiteRoutes is ...
-func SiteRoutes(c *fiber.App) {
-	c.Get("/health", handlers.Health)
+// SiteRoutes wires public site endpoints.
+func SiteRoutes(c *fiber.App, health *handlers.HealthHandler) {
+	c.Get("/health", health.Health)
 }

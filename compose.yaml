@@ -161,6 +161,12 @@ services:
         condition: service_completed_successfully
     environment:
       GOSIGN_HTTP_ADDR: "0.0.0.0:8088"
+      # Worker gRPC endpoint (private network only, port is not published).
+      # dns:/// + round robin spreads calls across worker replicas
+      # (docker compose up --scale worker=N).
+      GOSIGN_WORKER_GRPC_ADDR: "dns:///worker:8089"
+      # Bearer token for server->worker gRPC calls (defaults to JWT secret).
+      GOSIGN_WORKER_GRPC_TOKEN: "${GOSIGN_WORKER_GRPC_TOKEN:-}"
       GOSIGN_DEV_MODE: "false"
       GOSIGN_JWT_SECRET: "${GOSIGN_JWT_SECRET:?set GOSIGN_JWT_SECRET in .env}"
       GOSIGN_POSTGRES_URL: "postgres://${POSTGRES_USER:-goSign}:${POSTGRES_PASSWORD:-postgresPassword}@postgres:5432/${POSTGRES_DB:-goSign}?pool_max_conns=10"
@@ -188,11 +194,14 @@ services:
       - private
     logging: *default-logging
 
-  # Background worker: Adobe trust lists + GeoLite2 updates.
-  # Shares the base volume with the API so the server picks up fresh GeoLite2 files.
+  # Background worker: GeoLite2 (download + IP lookups over gRPC) and Adobe
+  # trust lists. Serves authenticated gRPC requests from the API server and
+  # opens no public web ports (8089 is reachable only inside the private
+  # network, never published). Scalable: docker compose up --scale worker=N;
+  # a Postgres advisory lock guarantees only one replica updates the shared
+  # database file at a time (no container_name so replicas can start).
   worker:
     image: ghcr.io/shurco/gosign-worker:latest
-    container_name: service.worker
     restart: always
     depends_on:
       migrate:
@@ -200,6 +209,10 @@ services:
     environment:
       GOSIGN_JWT_SECRET: "${GOSIGN_JWT_SECRET:?set GOSIGN_JWT_SECRET in .env}"
       GOSIGN_POSTGRES_URL: "postgres://${POSTGRES_USER:-goSign}:${POSTGRES_PASSWORD:-postgresPassword}@postgres:5432/${POSTGRES_DB:-goSign}?pool_max_conns=4"
+      GOSIGN_WORKER_GRPC_ADDR: "0.0.0.0:8089"
+      GOSIGN_WORKER_GRPC_TOKEN: "${GOSIGN_WORKER_GRPC_TOKEN:-}"
+    expose:
+      - "8089"
     volumes:
       - gosign_base:/app/base
     deploy:

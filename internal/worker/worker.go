@@ -1,6 +1,7 @@
 // Package worker runs scheduled maintenance tasks (Adobe trust lists,
-// GeoLite2 database updates) as a process separate from the HTTP API,
-// so the API stays stateless and horizontally scalable.
+// GeoLite2 database updates) and serves internal gRPC requests coming
+// from the API server. It opens no public web ports, so the API stays
+// the single HTTP entry point.
 package worker
 
 import (
@@ -12,9 +13,8 @@ import (
 
 	"github.com/shurco/gosign/internal/config"
 	"github.com/shurco/gosign/internal/queries"
-	"github.com/shurco/gosign/internal/trust"
-	"github.com/shurco/gosign/internal/worker/tasks"
 	"github.com/shurco/gosign/pkg/appdir"
+	"github.com/shurco/gosign/pkg/geolocation"
 	"github.com/shurco/gosign/pkg/logging"
 	"github.com/shurco/gosign/pkg/storage/postgres"
 )
@@ -59,17 +59,53 @@ func Run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	// The worker owns the GeoLite2 database: it downloads updates and serves
+	// IP lookups over gRPC. The reader reloads when a replica swaps the file.
+	geoSvc, geoErr := geolocation.NewService(appdir.GeoLite2())
+	if geoErr != nil {
+		log.Warn().Err(geoErr).Str("path", appdir.GeoLite2()).Msg("GeoLite2 database is not available yet, lookups return empty results until it is downloaded")
+	}
+	defer geoSvc.Close()
+	go watchGeoLite2(ctx, geoSvc, log)
+
+	// Internal gRPC endpoint serving requests from the API server.
+	svc := newRPCService(pool, geoSvc, log)
+	grpcSrv, err := serveGRPC(cfg.WorkerGRPCAddr, cfg.WorkerGRPCToken, svc, log)
+	if err != nil {
+		log.Err(err).Send()
+		return err
+	}
+
+	fmt.Printf("├─[🔌] gRPC: %s (internal, requests from the API server)\n", cfg.WorkerGRPCAddr)
 	fmt.Printf("└─[⚙️] Maintenance tasks scheduled every %s\n", checkInterval)
 
 	runEvery(ctx, checkInterval, func() {
-		if err := trust.Update(); err != nil {
-			log.Err(err).Msg("Adobe trust list update failed")
-		}
-		tasks.SyncGeoLite2(ctx, pool, log)
+		svc.runScheduled(ctx)
 	})
 
 	fmt.Print("\n✍️ Shutting down worker...\n")
+	grpcSrv.GracefulStop()
 	return nil
+}
+
+// geoLite2ReloadInterval is how often each replica checks whether another
+// replica replaced the GeoLite2 database file on the shared volume.
+const geoLite2ReloadInterval = time.Minute
+
+// watchGeoLite2 reloads the GeoLite2 reader when the file on disk changes.
+func watchGeoLite2(ctx context.Context, svc *geolocation.Service, log *logging.Logger) {
+	ticker := time.NewTicker(geoLite2ReloadInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := svc.ReloadIfChanged(); err != nil {
+				log.Warn().Err(err).Msg("Failed to reload GeoLite2 database")
+			}
+		}
+	}
 }
 
 // runEvery executes fn immediately and then on every tick until ctx is done.
